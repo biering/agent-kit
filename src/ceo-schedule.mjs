@@ -28,7 +28,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from './config.mjs'
-import { AGENT, main, prepareTree, scheduledPrompt, tree } from './lib/ceo.mjs'
+import { AGENT, CEO_ARGS, main, prepareTree, scheduledPrompt, tree } from './lib/ceo.mjs'
 import * as herdr from './lib/herdr.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -142,8 +142,7 @@ function run() {
       ready = Boolean(
         ws?.pane &&
           herdr.startClaude(AGENT, ws.pane, [
-            '--agent',
-            'ceo',
+            ...CEO_ARGS,
             '--permission-mode',
             'auto',
             '--remote-control',
@@ -168,7 +167,7 @@ function run() {
   if (!prepared) prepareTree()
   const child = spawnSync(
     'claude',
-    ['-p', '--agent', 'ceo', '--permission-mode', 'auto', scheduledPrompt({ now, headless: true })],
+    ['-p', ...CEO_ARGS, '--permission-mode', 'auto', scheduledPrompt({ now, headless: true })],
     {
       cwd: tree,
       encoding: 'utf8',

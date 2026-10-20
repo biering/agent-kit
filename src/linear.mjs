@@ -162,7 +162,7 @@ async function setup() {
           name: GROUP,
           isGroup: true,
           color: '#95A2B3',
-          description: `Needs ${config.linear.owner}. Filed by the CEO agent (ops/CEO.md).`,
+          description: `Needs ${config.linear.owner}. Filed by the CEO agent (${config.ceo.manual}).`,
         },
       },
     )
