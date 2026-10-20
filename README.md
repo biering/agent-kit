@@ -34,7 +34,9 @@ under `claude --agent`). A repo that gates every session wires it in its own
    ```
 
    Other keys: `linear.labels` folds labels another process already uses
-   for "waits on the owner" into the inbox, `ceo.manual` moves the operating
+   for "waits on the owner" into the inbox, `linear.states` names the state
+   for each role (`ask`, `task`, `start`, `done`, `canceled`) where a team's
+   own rules place issues, `linear.close: false` leaves closing to people, `ceo.manual` moves the operating
    manual from `ops/CEO.md`, and `bootstrap` is the repo's own preparation of a
    new checkout. Defaults follow from `name`: the CEO checkout `../<name>-ceo`, its herdr
    agent `<name>-ceo`, sessions in `../<name>-worktrees`, launchd label

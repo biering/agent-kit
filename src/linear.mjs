@@ -46,6 +46,7 @@ const GROUP = config.linear.group
 // second queue; that process, not the CEO, acts on the answers.
 const EXTRA = config.linear.labels
 const CLOSED = ['completed', 'canceled', 'duplicate']
+const ROLE_TYPE = { ask: 'unstarted', task: 'unstarted', start: 'started', done: 'completed', canceled: 'canceled' }
 const inGroup = { labels: { some: { parent: { name: { eq: GROUP } } } } }
 const waiting = {
   team: { key: { eq: TEAM_KEY } },
@@ -131,7 +132,13 @@ async function context() {
     team,
     group: labels.find((l) => l.isGroup && l.name === GROUP),
     kindLabel: (name) => labels.find((l) => !l.isGroup && l.name === name),
-    state: (type) => team.states.nodes.find((s) => s.type === type),
+    // A role's state: named in the config (a team whose own rules place new
+    // issues, e.g. Leverage: asks in Waiting, tasks in Triage), else by type.
+    state: (role) => {
+      const name = config.linear.states[role]
+      if (!name) return team.states.nodes.find((s) => s.type === ROLE_TYPE[role])
+      return team.states.nodes.find((s) => s.name === name) ?? die(`No state "${name}" in ${TEAM_KEY}.`)
+    },
   }
 }
 
@@ -252,7 +259,7 @@ async function ask(args) {
         assigneeId: ctx.viewerId,
         labelIds: [label.id],
         priority,
-        stateId: ctx.state('unstarted')?.id,
+        stateId: ctx.state('ask')?.id,
         ...(project ? { projectId: project.id } : {}),
       },
     },
@@ -289,7 +296,7 @@ async function task(args) {
         title,
         description,
         projectId: project.id,
-        stateId: ctx.state('unstarted')?.id,
+        stateId: ctx.state('task')?.id,
       },
     },
   )
@@ -303,13 +310,15 @@ async function start(args) {
     `mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success } }`,
     {
       id: issue.id,
-      input: { stateId: ctx.state('started').id },
+      input: { stateId: ctx.state('start').id },
     },
   )
   console.log(`▶ ${issue.identifier} in progress`)
 }
 
 async function close(args) {
+  if (!config.linear.close)
+    die(`In ${config.linear.workspace} people close issues, not agents (agent-kit.config.json). Comment instead.`)
   const canceled = bool(args, 'canceled')
   const issue = await issueId(args.shift() ?? die('Which issue?'))
   const ctx = await context()
@@ -317,7 +326,7 @@ async function close(args) {
     `mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success } }`,
     {
       id: issue.id,
-      input: { stateId: ctx.state(canceled ? 'canceled' : 'completed').id },
+      input: { stateId: ctx.state(canceled ? 'canceled' : 'done').id },
     },
   )
   console.log(`✓ ${issue.identifier} ${canceled ? 'canceled' : 'done'}`)
