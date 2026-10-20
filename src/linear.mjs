@@ -47,11 +47,30 @@ const GROUP = config.linear.group
 const EXTRA = config.linear.labels
 const CLOSED = ['completed', 'canceled', 'duplicate']
 const ROLE_TYPE = { ask: 'unstarted', task: 'unstarted', start: 'started', done: 'completed', canceled: 'canceled' }
-const inGroup = { labels: { some: { parent: { name: { eq: GROUP } } } } }
-const waiting = {
-  team: { key: { eq: TEAM_KEY } },
-  state: { type: { nin: CLOSED } },
-  ...(EXTRA.length ? { or: [inGroup, { labels: { some: { name: { in: EXTRA } } } }] } : inGroup),
+/**
+ * What waits on the owner: the CEO's own asks, assigned to the owner (a team
+ * workspace: not a teammate's), and the other queue's issues whoever holds
+ * them. By the group's id: a `parent: { name }` filter also matches every
+ * label without a parent.
+ */
+function waiting(groupId) {
+  // Each clause its own object: inside an `or`, Linear ORs an object's fields.
+  const asks = groupId && {
+    and: [
+      { labels: { some: { parent: { id: { eq: groupId } } } } },
+      { assignee: { isMe: { eq: true } } },
+    ],
+  }
+  const queue = EXTRA.length && { labels: { some: { name: { in: EXTRA } } } }
+  const any = [asks, queue].filter(Boolean)
+  if (!any.length) die(`No label group ${GROUP} yet: run \`linear setup\` first.`)
+  return {
+    and: [
+      { team: { key: { eq: TEAM_KEY } } },
+      { state: { type: { nin: CLOSED } } },
+      any.length === 1 ? any[0] : { or: any },
+    ],
+  }
 }
 const KINDS = {
   blocker: { name: 'Blocker', color: '#EB5757', what: 'the agent cannot proceed until you act' },
@@ -119,19 +138,20 @@ async function context() {
     `query($key: String!) {
       viewer { id }
       teams(filter: { key: { eq: $key } }) { nodes { id states { nodes { id name type } } } }
-      issueLabels(filter: { or: [{ name: { eq: "${GROUP}" } }, { parent: { name: { eq: "${GROUP}" } } }] }) {
-        nodes { id name isGroup parent { id } }
+      issueLabels(filter: { name: { eq: "${GROUP}" } }) {
+        nodes { id name isGroup children { nodes { id name } } }
       }
     }`,
     { key: TEAM_KEY },
   )
   const team = d.teams.nodes[0] ?? die(`No team ${TEAM_KEY} in this workspace.`)
-  const labels = d.issueLabels.nodes
+  const group = d.issueLabels.nodes.find((l) => l.isGroup)
   return {
     viewerId: d.viewer.id,
     team,
-    group: labels.find((l) => l.isGroup && l.name === GROUP),
-    kindLabel: (name) => labels.find((l) => !l.isGroup && l.name === name),
+    group,
+    // Only the group's own children: a workspace may have a "Decision" elsewhere.
+    kindLabel: (name) => group?.children.nodes.find((l) => l.name === name),
     // A role's state: named in the config (a team whose own rules place new
     // issues, e.g. Leverage: asks in Waiting, tasks in Triage), else by type.
     state: (role) => {
@@ -195,8 +215,7 @@ async function setup() {
   const views = await gql(`{ organization { urlKey } customViews { nodes { id name slugId } } }`)
   const viewUrl = (v) => `https://linear.app/${views.organization.urlKey}/view/${v.slugId}`
   const existing = views.customViews.nodes.find((v) => v.name === VIEW)
-  // A team workspace: only what waits on the owner, not on a teammate.
-  const filterData = { ...waiting, assignee: { isMe: { eq: true } } }
+  const filterData = waiting(ctx.group.id)
   if (existing) {
     await gql(
       `mutation($id: String!, $input: CustomViewUpdateInput!) { customViewUpdate(id: $id, input: $input) { success } }`,
@@ -236,8 +255,8 @@ async function ask(args) {
 
   // One open issue per question: re-asking on every run would bury the inbox.
   const dupe = await gql(
-    `query($title: String!) { issues(filter: { title: { eqIgnoreCase: $title }, team: { key: { eq: "${TEAM_KEY}" } }, labels: { some: { parent: { name: { eq: "${GROUP}" } } } }, state: { type: { nin: ${JSON.stringify(CLOSED)} } } }) { nodes { identifier url } } }`,
-    { title },
+    `query($title: String!, $group: ID!) { issues(filter: { title: { eqIgnoreCase: $title }, team: { key: { eq: "${TEAM_KEY}" } }, labels: { some: { parent: { id: { eq: $group } } } }, state: { type: { nin: ${JSON.stringify(CLOSED)} } } }) { nodes { identifier url } } }`,
+    { title, group: ctx.group.id },
   )
   if (dupe.issues.nodes[0]) {
     const i = dupe.issues.nodes[0]
@@ -361,9 +380,10 @@ function latest(issue) {
 }
 
 async function inbox() {
+  const ctx = await context()
   const d = await gql(
     `query($filter: IssueFilter) { issues(first: 100, filter: $filter) { nodes { ${ISSUE_FIELDS} } } }`,
-    { filter: { ...waiting, assignee: { isMe: { eq: true } } } },
+    { filter: waiting(ctx.group?.id) },
   )
   const rows = d.issues.nodes.map((i) => {
     const last = latest(i)

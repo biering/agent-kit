@@ -1,6 +1,6 @@
 {
   "name": "@biering/agent-kit",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "The CEO agent and its tools (Linear inbox, herdr sessions, daily run, stats, mail), vendored into each repo",
   "type": "module",
