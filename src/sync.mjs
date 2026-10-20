@@ -38,9 +38,15 @@ for (const part of ['bin', 'src', 'hooks', 'README.md']) {
 }
 
 // The herdr plugin, with this repo's id and paths relative to its folder.
+// owner/repo from origin, so this repo's link handlers claim only its own PRs.
+const origin = execFileSync('git', ['-C', target, 'remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim()
+const github = origin.match(/github\.com[:/](.+?)(\.git)?$/)?.[1] ?? ''
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&')
 const plugin = readFileSync(join(kit, 'herdr-plugin/herdr-plugin.toml'), 'utf8')
   .replaceAll('{{id}}', config.herdr?.plugin ?? `${config.name}.ops`)
   .replaceAll('{{name}}', config.name)
+  .replaceAll('{{github}}', escape(github))
+  .replaceAll('{{team}}', escape(config.linear?.team ?? '[A-Z]+'))
 mkdirSync(join(dest, 'herdr-plugin'), { recursive: true })
 writeFileSync(join(dest, 'herdr-plugin/herdr-plugin.toml'), plugin)
 

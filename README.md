@@ -6,7 +6,8 @@ Leverage). One source here; each repo carries a vendored copy.
 | Command | What it does |
 |---|---|
 | `agent-kit linear setup` / `inbox` / `ask` / `task` / `issue` / … | Linear as the human-in-the-loop inbox: a "Human" label group (Blocker, Decision, Approval, Spend), a "Needs me" view filtered to the owner, one project per bet as the agents' queue |
-| `agent-kit herdr ceo` / `new <slug>` / `worker <slug> --brief f` / `list` / `sync` / `cleanup` | The CEO and every topic session as herdr panes, each in its own worktree, cleaned up when finished |
+| `agent-kit herdr ceo` / `new <slug>` / `worker <slug> --brief f` / `list` / `sync` / `cleanup` | The CEO and every topic session as herdr panes, each in its own worktree, cleaned up when finished, and closed when their checkout is gone; the plugin re-syncs PR, CI and issue on every agent status change, at most once a minute |
+| `agent-kit herdr open-link <url>` | A ctrl+click on this repo's PR or Linear issue link in herdr: the session working on it, else the browser (the plugin's link handlers) |
 | `agent-kit herdr install-cursor-hooks` | Cursor chats report their state for the control panel |
 | `agent-kit ceo-schedule install` / `status` / `run` | The CEO's daily run (launchd), in its own checkout on `origin/main` |
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
