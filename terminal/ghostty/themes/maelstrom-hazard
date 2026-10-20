@@ -1,0 +1,27 @@
+# Maelstrom hazard signage, dark (Maelstrom Console, 02b): warm black, bone
+# white and greys, with periwinkle #948ef5 as the accent. Hazard orange is
+# red (errors, red PRs); yellow and lime stand in for warning and success.
+background = #0e0e0d
+foreground = #edede8
+cursor-color = #948ef5
+cursor-text = #0e0e0d
+selection-background = #3a3a37
+selection-foreground = #edede8
+# ANSI 0-7: black, red, green, yellow, blue, magenta, cyan, white
+palette = 0=#1a1a18
+palette = 1=#ff5a1f
+palette = 2=#c6ff3d
+palette = 3=#ffd400
+palette = 4=#a3a39e
+palette = 5=#948ef5
+palette = 6=#d8d8d0
+palette = 7=#a3a39e
+# ANSI 8-15: the design's greys, then brighter accents
+palette = 8=#5a5a56
+palette = 9=#ff7a45
+palette = 10=#d8ff6e
+palette = 11=#ffe14d
+palette = 12=#c8c8c2
+palette = 13=#b5b0f8
+palette = 14=#edede8
+palette = 15=#ffffff

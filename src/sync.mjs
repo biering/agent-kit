@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Vendor this kit into a repo: `agent-kit sync <repo>` from the kit's own
- * checkout. Copies bin/, src/, hooks/ and the README to <repo>/vendor/agent-kit,
+ * checkout. Copies bin/, src/, hooks/, terminal/ and the README to <repo>/vendor/agent-kit,
  * writes the repo's herdr plugin manifest (its own id; herdr needs ids
  * unique), and records the kit's commit in <repo>/agent-kit.lock.json.
  *
@@ -33,7 +33,7 @@ const dest = join(target, 'vendor/agent-kit')
 
 rmSync(dest, { recursive: true, force: true })
 mkdirSync(dest, { recursive: true })
-for (const part of ['bin', 'src', 'hooks', 'README.md']) {
+for (const part of ['bin', 'src', 'hooks', 'terminal', 'README.md']) {
   if (existsSync(join(kit, part))) cpSync(join(kit, part), join(dest, part), { recursive: true })
 }
 

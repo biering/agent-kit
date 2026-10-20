@@ -1,0 +1,41 @@
+# Each workspace starts with its repo (Maelstrom green, Leverage in its
+# leverage.immo brand blue, #564fff), then its branch and, for a board task,
+# its summary and progress.
+# Tokens come from `pnpm herdr sync` in the maelstrom repo (docs/herdr.md).
+[ui.sidebar.spaces]
+rows = [
+  [
+    { token = "$repo", fg = "#a3a39e", bold = true, rules = [
+      { equals = "maelstrom", fg = "#75df8f" },
+      { equals = "leverage", fg = "#564fff" },
+    ] },
+    "state_icon",
+    "workspace",
+  ],
+  ["branch", "git_status"],
+  # The work board (herdr-projects): the task's summary and progress.
+  [{ token = "$summary", dim = true }, "$progress"],
+]
+
+# Hazard signage, dark (Maelstrom Console 02b): warm black panels, bone white
+# text, greys for chrome, periwinkle #948ef5 as the accent (orange is red).
+[theme.custom]
+accent = "#948ef5"
+panel_bg = "#0e0e0d"
+sidebar_bg = "#0e0e0d"
+active_row_bg = "#1a1a18"
+selection_bg = "#2a2a28"
+surface0 = "#1a1a18"
+surface1 = "#262624"
+surface_dim = "#0e0e0d"
+overlay0 = "#3a3a37"
+overlay1 = "#5a5a56"
+text = "#edede8"
+subtext0 = "#8a8a85"
+mauve = "#948ef5"
+green = "#c6ff3d"
+yellow = "#ffd400"
+red = "#ff5a1f"
+blue = "#a3a39e"
+teal = "#d8d8d0"
+peach = "#ff8a5c"

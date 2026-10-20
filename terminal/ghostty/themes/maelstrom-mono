@@ -1,0 +1,23 @@
+# Maelstrom mono: black, white and grey, green and yellow as the only accents.
+background = #000000
+foreground = #ededed
+cursor-color = #ededed
+cursor-text = #000000
+selection-background = #2a2a2a
+selection-foreground = #ffffff
+palette = 0=#1a1a1a
+palette = 1=#ff6b6b
+palette = 2=#2ecd70
+palette = 3=#f2d74c
+palette = 4=#8ab4f8
+palette = 5=#c792ea
+palette = 6=#7fdbca
+palette = 7=#bdbdbd
+palette = 8=#646464
+palette = 9=#ff8a8a
+palette = 10=#5be496
+palette = 11=#ffe57a
+palette = 12=#a8c7fa
+palette = 13=#d9b3f5
+palette = 14=#a3e9dc
+palette = 15=#ffffff
