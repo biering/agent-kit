@@ -58,6 +58,10 @@ export const config = {
     group: raw.linear?.group ?? 'Human',
     view: raw.linear?.view ?? 'Needs me',
     labels: raw.linear?.labels ?? [],
+    // State names per role (ask, task, start, done, canceled); unset roles go by state type.
+    states: raw.linear?.states ?? {},
+    // false where only people close issues: `close` then refuses.
+    close: raw.linear?.close ?? true,
   },
   ceo: {
     checkout: at(raw.ceo?.checkout ?? `../${name}-ceo`),
