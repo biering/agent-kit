@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# PreToolUse / Bash gate for the agents' merge right (AGENTS.md, Merging).
+# PreToolUse / Bash gate for the agents' merge right (ops/CEO.md).
 #
-# Agents may squash-merge their own PRs, except the three kinds Christoph keeps:
+# Agents may squash-merge their own PRs, except the three kinds the owner keeps:
 #   1. production data structure: migrations, SQL, Supabase, Convex schema,
 #      directory-core, a var that points at another database
 #   2. prices and payments: entitlement, Stripe, Polar, RevenueCat, StoreKit,
 #      checkout, billing, paywalls, plan and tier tables, price-id vars
 #   3. a first public launch: a new wrangler.jsonc, or a new custom_domain
-# Those are blocked outright: file `pnpm linear ask approval …` and Christoph
-# merges them himself. Everything else merges only with every check green.
+# Those are blocked outright: file `pnpm linear ask approval …` and the owner
+# merges them. Everything else merges only with every check green.
 #
 # Also blocks the commands that change live prices: `pnpm iap … --apply` and
 # `pnpm release … --price … --apply`.
@@ -29,7 +29,7 @@ PNPM='pnpm([[:space:]]+run)?[[:space:]]+'
 if has "(app-store-iap\.mjs|${PNPM}iap)[^;|&]*--apply" \
   || has "(app-store-release\.mjs|${PNPM}release)[^;|&]*--price[^;|&]*--apply" \
   || has "(app-store-release\.mjs|${PNPM}release)[^;|&]*--apply[^;|&]*--price"; then
-  echo "BLOCKED: this changes a live App Store price, which Christoph approves (AGENTS.md, Merging). Run it without --apply, then file \`pnpm linear ask approval\` with the report." >&2
+  echo "BLOCKED: this changes a live App Store price, which the owner approves (ops/CEO.md). Run it without --apply, then file \`pnpm linear ask approval\` with the report." >&2
   exit 2
 fi
 
@@ -39,6 +39,10 @@ MERGE_RE='(^|[^[:alnum:]_-])gh([[:space:]]+(-R|--repo)([[:space:]]+|=)[^[:space:
 has "$MERGE_RE" || exit 0
 
 cd "$(hook_cwd)" 2>/dev/null || exit 0
+# `-R owner/repo` names another repository than the one in this directory:
+# every gh call below must look at that one (gh reads GH_REPO, {owner}/{repo} too).
+REPO="$(printf '%s\n' "$CMD" | grep -oE "(^|[[:space:]])(-R|--repo)([[:space:]]+|=)[^[:space:];|&)\"'\`]+" | head -1 | sed -E 's/.*(-R|--repo)([[:space:]]+|=)//')"
+[ -n "$REPO" ] && export GH_REPO="$REPO"
 
 # The arguments of the first merge: up to the next ; | & ) quote or backtick.
 ARGS="$(printf '%s\n' "$CMD" | grep -oE "${MERGE_RE}[^;|&)\"'\`]*" | head -1 | sed -E 's/.*pr[[:space:]]+merge//')"
@@ -111,7 +115,7 @@ add 'prices and payments' "$money"
 add 'first public launch' "$launch"
 
 if [ -n "$reasons" ]; then
-  echo "BLOCKED: PR $PR is one Christoph merges himself (AGENTS.md, Merging):${reasons}" >&2
+  echo "BLOCKED: PR $PR is one the owner merges (ops/CEO.md):${reasons}" >&2
   echo "File it: pnpm linear ask approval \"Merge #$PR: <what it changes>\" --body \"<PR link, what changes, risk, how verified>\"" >&2
   exit 2
 fi

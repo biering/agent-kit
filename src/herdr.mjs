@@ -51,12 +51,8 @@ const PLUGIN_ID = config.herdr.plugin
 const SESSIONS = config.sessions.dir
 const DAY = 24 * 60 * 60 * 1000
 const AGENTS = ['claude', 'cursor']
-/**
- * Which agent runs a session unless --agent says otherwise. MAELSTROM_WORKER_AGENT
- * in the repo-root .env moves every session to Cursor while the Claude weekly
- * limit is tight, without anyone remembering a flag.
- */
-const defaultAgent = envReader(main)('MAELSTROM_WORKER_AGENT') || 'claude'
+/** Which agent runs a session unless --agent says otherwise (config.mjs, sessions.agent). */
+const defaultAgent = envReader(main)('AGENT_KIT_WORKER_AGENT') || config.sessions.agent
 
 const args = process.argv.slice(2)
 const die = (msg) => {
@@ -100,7 +96,7 @@ function ceo() {
     openWorktree({ repo: main, path: tree, label: 'ceo' }) ??
     die('herdr could not open the CEO checkout.')
   // Remote Control: the CEO is reachable from claude.ai and the phone app too.
-  startClaude(AGENT, ws.pane, ['--agent', 'ceo', '--remote-control', 'ceo']) ??
+  startClaude(AGENT, ws.pane, ['--agent', 'ceo', '--remote-control', AGENT]) ??
     die('herdr could not start Claude Code in the CEO pane.')
   herdr(['agent', 'focus', AGENT])
   prompt(

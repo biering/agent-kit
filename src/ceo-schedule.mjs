@@ -147,7 +147,7 @@ function run() {
             '--permission-mode',
             'auto',
             '--remote-control',
-            'ceo',
+            AGENT,
           ]),
       )
     }

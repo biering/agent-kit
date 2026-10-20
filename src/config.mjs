@@ -10,11 +10,13 @@
  *
  *   {
  *     "name": "maelstrom",                       // required
- *     "linear": { "team": "MAE", "workspace": "Maelstrom Lab", "owner": "Christoph" },
+ *     "linear": { "team": "MAE", "workspace": "Maelstrom Lab", "owner": "Christoph",
+ *                 "labels": ["needs-decision"] },             // existing queues to fold in
  *     "ceo": { "checkout": "../maelstrom-ceo", "launchd": "com.maelstrom.ceo", "hour": 8 },
- *     "sessions": { "dir": "../maelstrom-worktrees" },
+ *     "sessions": { "dir": "../maelstrom-worktrees", "agent": "claude" },
  *     "stats": { "repos": { "maelstrom": ".", "leverage": "../../leverage/leverage" } },
- *     "mail": { "inbox": "maelstrom@agentmail.to" }
+ *     "mail": { "inbox": "maelstrom@agentmail.to" },
+ *     "bootstrap": ["pnpm", "worktree:prepare"]          // prepares a new checkout
  *   }
  *
  * Paths are relative to the repo's main checkout.
@@ -55,6 +57,7 @@ export const config = {
     owner: raw.linear?.owner ?? 'the owner',
     group: raw.linear?.group ?? 'Human',
     view: raw.linear?.view ?? 'Needs me',
+    labels: raw.linear?.labels ?? [],
   },
   ceo: {
     checkout: at(raw.ceo?.checkout ?? `../${name}-ceo`),
@@ -63,10 +66,16 @@ export const config = {
     logs: join(homedir(), 'Library/Logs', `${name}-ceo`),
     agent: raw.ceo?.agent ?? `${name}-ceo`,
   },
-  sessions: { dir: at(raw.sessions?.dir ?? `../${name}-worktrees`) },
+  sessions: {
+    dir: at(raw.sessions?.dir ?? `../${name}-worktrees`),
+    // AGENT_KIT_WORKER_AGENT=cursor in the root .env moves sessions to Cursor
+    // while the Claude weekly limit is tight, without a flag on every call.
+    agent: raw.sessions?.agent ?? 'claude',
+  },
   herdr: { plugin: raw.herdr?.plugin ?? `${name}.ops`, source: `${name}-sessions` },
   stats: {
     repos: Object.fromEntries(Object.entries(raw.stats?.repos ?? { [name]: '.' }).map(([k, p]) => [k, at(p)])),
   },
   mail: { inbox: raw.mail?.inbox },
+  bootstrap: raw.bootstrap,
 }
