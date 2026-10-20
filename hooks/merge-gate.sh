@@ -39,6 +39,10 @@ MERGE_RE='(^|[^[:alnum:]_-])gh([[:space:]]+(-R|--repo)([[:space:]]+|=)[^[:space:
 has "$MERGE_RE" || exit 0
 
 cd "$(hook_cwd)" 2>/dev/null || exit 0
+# `-R owner/repo` names another repository than the one in this directory:
+# every gh call below must look at that one (gh reads GH_REPO, {owner}/{repo} too).
+REPO="$(printf '%s\n' "$CMD" | grep -oE "(^|[[:space:]])(-R|--repo)([[:space:]]+|=)[^[:space:];|&)\"'\`]+" | head -1 | sed -E 's/.*(-R|--repo)([[:space:]]+|=)//')"
+[ -n "$REPO" ] && export GH_REPO="$REPO"
 
 # The arguments of the first merge: up to the next ; | & ) quote or backtick.
 ARGS="$(printf '%s\n' "$CMD" | grep -oE "${MERGE_RE}[^;|&)\"'\`]*" | head -1 | sed -E 's/.*pr[[:space:]]+merge//')"
