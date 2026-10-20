@@ -1,0 +1,16 @@
+# Maelstrom themes live in ~/.config/ghostty/themes: maelstrom-hazard (02b,
+# hazard signage) and maelstrom-mono (the black/grey/green look before it).
+# Switch with `~/.config/maelstrom-themes/switch mono|hazard`, or edit this
+# line and reload (cmd+shift+,).
+theme = maelstrom-hazard
+
+adjust-cell-height = 15%
+window-padding-x = 20
+window-padding-y = 16
+window-padding-balance = true
+window-padding-color = extend
+macos-titlebar-style = transparent
+cursor-style = block
+
+# Cmd+K opens herdr-bar: send the chord herdr reads as ctrl+alt+k.
+keybind = cmd+k=text:\x1b[107;7u

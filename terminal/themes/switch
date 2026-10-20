@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Switch the terminal look: ~/.config/maelstrom-themes/switch hazard|mono
+#
+#   hazard  Maelstrom Console 02b, hazard signage dark: warm black, bone white,
+#           hazard orange.
+#   mono    black, white and grey with acid green (the look before 2026-10-20).
+#
+# It changes Ghostty's `theme =` line (themes in ~/.config/ghostty/themes), the
+# block between the markers in ~/.config/herdr/config.toml (from <theme>/herdr.toml
+# here), and the THEME line of any Claude Code mod that has one, then reloads
+# herdr. Ghostty: press cmd+shift+, to reload. The mods reload at the end of the
+# next Claude turn. Installed from agent-kit (terminal/install.sh).
+set -euo pipefail
+theme="${1:-}"
+here="$(cd "$(dirname "$0")" && pwd)"
+case "$theme" in
+  hazard | mono) ;;
+  *)
+    echo "usage: $0 hazard|mono" >&2
+    exit 1
+    ;;
+esac
+
+ghostty="$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
+herdr="$HOME/.config/herdr/config.toml"
+
+sed -i '' -E "s/^theme = maelstrom-[a-z]+$/theme = maelstrom-$theme/" "$ghostty"
+
+python3 - "$herdr" "$here/$theme/herdr.toml" <<'EOF'
+import sys
+path, block = sys.argv[1], open(sys.argv[2]).read()
+s = open(path).read()
+start = s.index('# >>> maelstrom theme')
+start = s.index('\n', start) + 1
+end = s.index('# <<< maelstrom theme')
+open(path, 'w').write(s[:start] + block + s[end:])
+EOF
+
+for f in "$HOME"/.claude/dev-mods/*/*/hooks/register.tsx; do
+  [ -f "$f" ] && grep -q "^const THEME = " "$f" && sed -i '' -E "s/^const THEME = '[a-z]+' as/const THEME = '$theme' as/" "$f"
+done
+
+# The Maelstrom panel (ops/herdr-panel in that repo) reads its palette from here.
+echo "$theme" > "$here/current"
+
+herdr config check >/dev/null && herdr server reload-config >/dev/null 2>&1 || true
+echo "theme: $theme (Ghostty: cmd+shift+, to reload; the Claude mods reload after the next turn)"

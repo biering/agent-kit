@@ -12,6 +12,7 @@ Leverage). One source here; each repo carries a vendored copy.
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
 | `agent-kit mail …` | The agents' AgentMail inbox |
 | `agent-kit sync <repo>` | Vendor this kit into a repo |
+| `terminal/install.sh` | The shared terminal setup: Ghostty, herdr's config, the theme switch, Raycast commands for the Mac minis (`terminal/README.md`) |
 
 `hooks/merge-gate.sh` is the Claude Code hook that holds back merges needing
 the owner's decision (data structure, prices, a first launch) and blocks red

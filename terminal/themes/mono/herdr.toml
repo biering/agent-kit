@@ -1,0 +1,41 @@
+# Each workspace starts with its repo, coloured like that repo's VS Code window
+# (Maelstrom green, Leverage indigo), then its branch and, for a board task,
+# its summary and progress.
+# Tokens come from `pnpm herdr sync` in the maelstrom repo (docs/herdr.md).
+[ui.sidebar.spaces]
+rows = [
+  [
+    { token = "$repo", fg = "#9aa0a6", bold = true, rules = [
+      { equals = "maelstrom", fg = "#75df8f" },
+      { equals = "leverage", fg = "#99a6ff" },
+    ] },
+    "state_icon",
+    "workspace",
+  ],
+  ["branch", "git_status"],
+  # The work board (herdr-projects): the task's summary and progress.
+  [{ token = "$summary", dim = true }, "$progress"],
+]
+
+# Mono, to match Ghostty: black panels, grey chrome, green as the accent.
+# Delete this block to get dracula back.
+[theme.custom]
+accent = "#2ecd70"
+panel_bg = "#000000"
+sidebar_bg = "#0a0a0a"
+active_row_bg = "#1a1a1a"
+selection_bg = "#2a2a2a"
+surface0 = "#111111"
+surface1 = "#1f1f1f"
+surface_dim = "#000000"
+overlay0 = "#3a3a3a"
+overlay1 = "#646464"
+text = "#ededed"
+subtext0 = "#8a8a8a"
+mauve = "#c792ea"
+green = "#2ecd70"
+yellow = "#f2d74c"
+red = "#ff6b6b"
+blue = "#8ab4f8"
+teal = "#7fdbca"
+peach = "#ffa657"

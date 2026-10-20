@@ -1,0 +1,36 @@
+#!/bin/bash
+# Jump to a Mac mini's herdr session in Ghostty, or open it in a new window:
+#
+#   attach-mini lucy          # herdr --remote lucy@lucy
+#   attach-mini levi levi     # host, then user (the host by default)
+#
+# herdr titles a remote session "<host>: <workspace>" (lucy.local: ...), so a
+# terminal whose title starts with the host is the open session. The Raycast
+# commands in ../raycast call this.
+set -euo pipefail
+mini="${1:?usage: attach-mini <host> [user]}"
+user="${2:-$mini}"
+herdr="$(command -v herdr || echo /opt/homebrew/bin/herdr)"
+osascript - "$mini" "$herdr --remote $user@$mini" <<'APPLESCRIPT'
+on run argv
+  set mini to item 1 of argv
+  set remote to item 2 of argv
+  tell application "Ghostty"
+    repeat with w in windows
+      repeat with t in tabs of w
+        repeat with s in terminals of t
+          if name of s starts with mini then
+            focus s
+            activate
+            return
+          end if
+        end repeat
+      end repeat
+    end repeat
+    set cfg to new surface configuration
+    set command of cfg to remote
+    new window with configuration cfg
+    activate
+  end tell
+end run
+APPLESCRIPT

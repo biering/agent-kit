@@ -1,0 +1,104 @@
+onboarding = false
+
+[theme]
+name = "dracula"
+auto_switch = false
+
+[ui]
+# Wide enough for "repo · state · workspace · PR" without cutting every name.
+sidebar_width = 34
+sidebar_min_width = 32
+sidebar_max_width = 44
+
+# Agent "done" and "needs input" toasts reach macOS, not only the herdr window.
+# Without terminal-notifier herdr falls back to osascript.
+[ui.toast]
+delivery = "system"
+
+# Agents in the sidebar as the work board shows them (herdr-projects docs/install.md):
+# the board's own tab names hidden, the agent, then the task's summary and progress.
+[ui.sidebar.agents]
+rows = [["state_icon", "machine", "workspace", { token = "tab", rules = [{ equals = "Agent", hide = true }, { starts_with = "Reviewer #", hide = true }] }], ["agent"], [{ token = "$summary", dim = true }, "$progress"]]
+
+# >>> maelstrom theme (~/.config/maelstrom-themes/switch replaces this block)
+# Each workspace starts with its repo (Maelstrom green, Leverage in its
+# leverage.immo brand blue, #564fff), then its branch and, for a board task,
+# its summary and progress.
+# Tokens come from `pnpm herdr sync` in the maelstrom repo (docs/herdr.md).
+[ui.sidebar.spaces]
+rows = [
+  [
+    { token = "$repo", fg = "#a3a39e", bold = true, rules = [
+      { equals = "maelstrom", fg = "#75df8f" },
+      { equals = "leverage", fg = "#564fff" },
+    ] },
+    "state_icon",
+    "workspace",
+  ],
+  ["branch", "git_status"],
+  # The work board (herdr-projects): the task's summary and progress.
+  [{ token = "$summary", dim = true }, "$progress"],
+]
+
+# Hazard signage, dark (Maelstrom Console 02b): warm black panels, bone white
+# text, greys for chrome, periwinkle #948ef5 as the accent (orange is red).
+[theme.custom]
+accent = "#948ef5"
+panel_bg = "#0e0e0d"
+sidebar_bg = "#0e0e0d"
+active_row_bg = "#1a1a18"
+selection_bg = "#2a2a28"
+surface0 = "#1a1a18"
+surface1 = "#262624"
+surface_dim = "#0e0e0d"
+overlay0 = "#3a3a37"
+overlay1 = "#5a5a56"
+text = "#edede8"
+subtext0 = "#8a8a85"
+mauve = "#948ef5"
+green = "#c6ff3d"
+yellow = "#ffd400"
+red = "#ff5a1f"
+blue = "#a3a39e"
+teal = "#d8d8d0"
+peach = "#ff8a5c"
+# <<< maelstrom theme
+
+# herdr-bar (jeffarese/herdr-bar): fuzzy-jump to any tab, agent, repo or
+# branch. Cmd+K in Ghostty sends ctrl+alt+k (its config); prefix+f anywhere.
+# Not prefix+k: that is herdr's "focus the pane above".
+[[keys.command]]
+key = ["prefix+f", "ctrl+alt+k"]
+type = "plugin_action"
+command = "herdr-bar.open"
+description = "command bar"
+
+# herdr-dagr (aemrebarut/herdr-dagr): the run's live DAG in a split.
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "herdr-dagr.open-dagr"
+description = "open dagr run DAG in split"
+
+# herdr-projects (eliasstravik/herdr-projects): the work board and its Coordinator.
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "herdr-projects.open"
+description = "work board"
+
+# herdr-plugin-manager (speardragon/herdr-plugin-manager): install, update,
+# enable and remove plugins. Not prefix+p: that is herdr's previous tab.
+[[keys.command]]
+key = "prefix+m"
+type = "plugin_action"
+command = "ray.plugin-manager.open"
+description = "plugin manager"
+
+# The Maelstrom panel (maelstrom repo, ops/herdr-panel): swarm, needs you, board,
+# in a pane on the left of the current one. Not prefix+g: that is herdr's goto.
+[[keys.command]]
+key = "prefix+i"
+type = "plugin_action"
+command = "maelstrom.panel.open"
+description = "Maelstrom panel on the left"
