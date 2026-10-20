@@ -15,7 +15,10 @@ Leverage). One source here; each repo carries a vendored copy.
 
 `hooks/merge-gate.sh` is the Claude Code hook that holds back merges needing
 the owner's decision (data structure, prices, a first launch) and blocks red
-checks; a repo wires it in `.claude/settings.json`.
+checks. By default only the CEO carries it (`ceo.gate`, passed at launch as
+`--settings hooks/ceo-settings.json`, since hooks in an agent file do not run
+under `claude --agent`). A repo that gates every session wires it in its own
+`.claude/settings.json` and sets `"gate": false`.
 
 ## Adopting it in a repo
 
@@ -30,15 +33,18 @@ checks; a repo wires it in `.claude/settings.json`.
    }
    ```
 
-   Defaults follow from `name`: the CEO checkout `../<name>-ceo`, its herdr
+   Other keys: `linear.labels` folds labels another process already uses
+   for "waits on the owner" into the inbox, `ceo.manual` moves the operating
+   manual from `ops/CEO.md`, and `bootstrap` is the repo's own preparation of a
+   new checkout. Defaults follow from `name`: the CEO checkout `../<name>-ceo`, its herdr
    agent `<name>-ceo`, sessions in `../<name>-worktrees`, launchd label
    `com.<name>.ceo` at 08:00, herdr plugin `<name>.ops`. `src/config.mjs` lists
    every key.
 2. From this checkout: `node bin/agent-kit.mjs sync <repo>`. It writes
    `<repo>/vendor/agent-kit/` and `<repo>/agent-kit.lock.json` (the commit).
 3. In the repo: package scripts that call `node vendor/agent-kit/bin/agent-kit.mjs <command>`,
-   the merge gate in `.claude/settings.json`, a `.claude/agents/ceo.md` and an
-   `ops/CEO.md` with that company's mandate and decision rights, and
+   a `.claude/agents/ceo.md` and the manual with that company's mandate and
+   decision rights, and
    `LINEAR_API_KEY` in the root `.env`. Then `agent-kit linear setup`.
 
 ## Why vendored

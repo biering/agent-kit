@@ -31,7 +31,7 @@ import {
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { config, kitRoot } from './config.mjs'
-import { AGENT, bootstrapCheckout, main, prepareTree, tree } from './lib/ceo.mjs'
+import { AGENT, CEO_ARGS, bootstrapCheckout, main, prepareTree, tree } from './lib/ceo.mjs'
 import {
   agent,
   available,
@@ -76,7 +76,7 @@ const run = (cmd, a, cwd = main) => spawnSync(cmd, a, { cwd, encoding: 'utf8' })
 
 const WORKER_FOOTER = `
 
-You are a worker for the CEO agent (ops/CEO.md, Delegation), in your own checkout on your own branch.
+You are a worker for the CEO agent (${config.ceo.manual}, Delegation), in your own checkout on your own branch.
 - Follow .agents/loops/dev-loop/SKILL.md and stop at a green PR. The CEO merges it.
 - Anything only ${config.linear.owner} can do goes in the PR body under "Needs ${config.linear.owner}"; do not ask in this pane.
 - Your last message is the PR URL, or one line on why there is none.`
@@ -84,7 +84,7 @@ You are a worker for the CEO agent (ops/CEO.md, Delegation), in your own checkou
 function ceo() {
   if (!available()) {
     console.log('No herdr server: starting the CEO in this terminal.')
-    const r = spawnSync('claude', ['--agent', 'ceo'], { stdio: 'inherit' })
+    const r = spawnSync('claude', CEO_ARGS, { stdio: 'inherit' })
     process.exit(r.status ?? 0)
   }
   if (agent(AGENT)) {
@@ -96,12 +96,12 @@ function ceo() {
     openWorktree({ repo: main, path: tree, label: 'ceo' }) ??
     die('herdr could not open the CEO checkout.')
   // Remote Control: the CEO is reachable from claude.ai and the phone app too.
-  startClaude(AGENT, ws.pane, ['--agent', 'ceo', '--remote-control', AGENT]) ??
+  startClaude(AGENT, ws.pane, [...CEO_ARGS, '--remote-control', AGENT]) ??
     die('herdr could not start Claude Code in the CEO pane.')
   herdr(['agent', 'focus', AGENT])
   prompt(
     AGENT,
-    `${config.linear.owner} opened this session. Read your state as ops/CEO.md says, give the five-line report, then wait.`,
+    `${config.linear.owner} opened this session. Read your state as ${config.ceo.manual} says, give the five-line report, then wait.`,
   )
   console.log(`CEO started in ${tree} (agent "${AGENT}", workspace ${ws.workspace}).`)
 }
@@ -177,7 +177,7 @@ function newSession() {
 function worker() {
   const slug = args.shift() ?? die('Which worker? pnpm herdr worker <slug> --brief <file>')
   const brief =
-    readBrief(option('brief')) ?? die('--brief <file> is required (ops/CEO.md, Delegation).')
+    readBrief(option('brief')) ?? die(`--brief <file> is required (${config.ceo.manual}, Delegation).`)
   const branch = option('branch') ?? `feat/${slug}`
   const kind = agentKind()
   // Remote Control on (Claude only): Christoph can look in from his phone.

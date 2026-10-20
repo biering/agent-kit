@@ -65,6 +65,10 @@ export const config = {
     hour: raw.ceo?.hour ?? 8,
     logs: join(homedir(), 'Library/Logs', `${name}-ceo`),
     agent: raw.ceo?.agent ?? `${name}-ceo`,
+    // Where the CEO's operating manual lives (Leverage keeps agent bodies in skills).
+    manual: raw.ceo?.manual ?? 'ops/CEO.md',
+    // The merge gate for the CEO alone; false when the repo's own settings gate every session.
+    gate: raw.ceo?.gate ?? true,
   },
   sessions: {
     dir: at(raw.sessions?.dir ?? `../${name}-worktrees`),

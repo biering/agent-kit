@@ -6,7 +6,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { config, main } from '../config.mjs'
+import { config, kitRoot, main } from '../config.mjs'
 
 export { main }
 
@@ -17,6 +17,17 @@ export const tree = config.ceo.checkout
 
 /** The herdr agent name of the one CEO. */
 export const AGENT = config.ceo.agent
+
+/**
+ * How every CEO starts: the repo's `ceo` agent, plus the merge gate when the
+ * repo gates only its CEO (config ceo.gate). Agent-file hooks do not run under
+ * `claude --agent`, so the gate comes in as settings.
+ */
+export const CEO_ARGS = [
+  '--agent',
+  'ceo',
+  ...(config.ceo.gate ? ['--settings', join(kitRoot, 'hooks/ceo-settings.json')] : []),
+]
 
 const sh = (cmd, args, opts = {}) => execFileSync(cmd, args, { encoding: 'utf8', ...opts }).trim()
 
@@ -65,7 +76,7 @@ export function scheduledPrompt({ now = new Date(), headless = false } = {}) {
     `Scheduled run, ${weekday} ${now.toISOString().slice(0, 10)}. ` +
     'Nobody may be at the keyboard: ask only through Linear. ' +
     (headless ? 'Run workers in the foreground. ' : '') +
-    'Follow ops/CEO.md' +
+    `Follow ${config.ceo.manual}` +
     (weekday === 'Monday' ? ', including the Monday review.' : '.')
   )
 }
