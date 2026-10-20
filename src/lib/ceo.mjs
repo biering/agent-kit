@@ -37,12 +37,18 @@ export function prepareTree() {
 }
 
 /**
- * What a fresh checkout of this repo needs before an agent can work in it:
- * dependencies, and the per-machine approvals of project MCP servers
- * (Playwright), which are gitignored. `.env` needs nothing: repo-env.mjs reads
- * the main checkout's.
+ * What a fresh checkout of this repo needs before an agent can work in it.
+ * A repo with its own preparation names it (config `bootstrap`, e.g. Leverage's
+ * `pnpm worktree:prepare`). Otherwise: dependencies, and the per-machine
+ * approvals of project MCP servers (Playwright), which are gitignored. `.env`
+ * needs nothing: repo-env.mjs reads the main checkout's.
  */
 export function bootstrapCheckout(dir) {
+  if (config.bootstrap) {
+    const [cmd, ...args] = config.bootstrap
+    spawnSync(cmd, args, { cwd: dir, stdio: 'ignore' })
+    return
+  }
   const local = join(main, '.claude/settings.local.json')
   if (existsSync(local) && dir !== main)
     copyFileSync(local, join(dir, '.claude/settings.local.json'))

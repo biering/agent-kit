@@ -41,6 +41,17 @@ const key = env('LINEAR_API_KEY')
 
 const TEAM_KEY = config.linear.team
 const GROUP = config.linear.group
+// Labels another process already uses for "waits on the owner" (Leverage's
+// triage skill: needs-decision). They join the inbox and the view instead of a
+// second queue; that process, not the CEO, acts on the answers.
+const EXTRA = config.linear.labels
+const CLOSED = ['completed', 'canceled', 'duplicate']
+const inGroup = { labels: { some: { parent: { name: { eq: GROUP } } } } }
+const waiting = {
+  team: { key: { eq: TEAM_KEY } },
+  state: { type: { nin: CLOSED } },
+  ...(EXTRA.length ? { or: [inGroup, { labels: { some: { name: { in: EXTRA } } } }] } : inGroup),
+}
 const KINDS = {
   blocker: { name: 'Blocker', color: '#EB5757', what: 'the agent cannot proceed until you act' },
   decision: {
@@ -57,7 +68,6 @@ const KINDS = {
 }
 const VIEW = config.linear.view
 const AGENT_MARK = '🤖 **CEO agent:**'
-const CLOSED = ['completed', 'canceled', 'duplicate']
 
 if (!key) {
   console.error(
@@ -178,12 +188,8 @@ async function setup() {
   const views = await gql(`{ organization { urlKey } customViews { nodes { id name slugId } } }`)
   const viewUrl = (v) => `https://linear.app/${views.organization.urlKey}/view/${v.slugId}`
   const existing = views.customViews.nodes.find((v) => v.name === VIEW)
-  const filterData = {
-    labels: { some: { parent: { name: { eq: GROUP } } } },
-    state: { type: { nin: CLOSED } },
-    // A team workspace: only what waits on the owner, not on a teammate.
-    assignee: { isMe: { eq: true } },
-  }
+  // A team workspace: only what waits on the owner, not on a teammate.
+  const filterData = { ...waiting, assignee: { isMe: { eq: true } } }
   if (existing) {
     await gql(
       `mutation($id: String!, $input: CustomViewUpdateInput!) { customViewUpdate(id: $id, input: $input) { success } }`,
@@ -347,11 +353,13 @@ function latest(issue) {
 
 async function inbox() {
   const d = await gql(
-    `{ issues(first: 100, filter: { labels: { some: { parent: { name: { eq: "${GROUP}" } } } }, state: { type: { nin: ${JSON.stringify(CLOSED)} } } }) { nodes { ${ISSUE_FIELDS} } } }`,
+    `query($filter: IssueFilter) { issues(first: 100, filter: $filter) { nodes { ${ISSUE_FIELDS} } } }`,
+    { filter: { ...waiting, assignee: { isMe: { eq: true } } } },
   )
   const rows = d.issues.nodes.map((i) => {
     const last = latest(i)
-    return { ...i, answered: Boolean(last && !last.body.startsWith(AGENT_MARK)), last }
+    const ours = i.labels.nodes.some((l) => Object.values(KINDS).some((k) => k.name === l.name))
+    return { ...i, answered: Boolean(ours && last && !last.body.startsWith(AGENT_MARK)), last }
   })
   rows.sort(
     (a, b) => Number(b.answered) - Number(a.answered) || (a.priority || 5) - (b.priority || 5),
@@ -359,7 +367,9 @@ async function inbox() {
   if (!rows.length) return console.log(`Inbox empty: nothing waits on ${config.linear.owner}.`)
   for (const r of rows) {
     const kind =
-      r.labels.nodes.find((l) => Object.values(KINDS).some((k) => k.name === l.name))?.name ?? '?'
+      r.labels.nodes.find((l) => Object.values(KINDS).some((k) => k.name === l.name))?.name ??
+      r.labels.nodes.find((l) => EXTRA.includes(l.name))?.name ??
+      '?'
     console.log(
       `${r.answered ? 'ANSWERED' : 'waiting '} ${r.identifier} [${kind}] ${r.title}${r.project ? ` (${r.project.name})` : ''}`,
     )
