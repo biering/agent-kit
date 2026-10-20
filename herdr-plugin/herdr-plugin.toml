@@ -1,0 +1,41 @@
+# {{name}} ops in herdr, written by `agent-kit sync`. Link once per machine:
+#   herdr plugin link "$(git rev-parse --show-toplevel)/vendor/agent-kit/herdr-plugin"
+# Commands run from this directory, without a shell: argv only.
+id = "{{id}}"
+name = "{{name}} ops"
+version = "0.2.0"
+min_herdr_version = "0.9.0"
+description = "Open the {{name}} CEO agent, show sessions by bet and the Linear inbox, prepare new worktrees"
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "ceo"
+title = "Open the {{name}} CEO agent"
+contexts = ["workspace"]
+command = ["node", "../bin/agent-kit.mjs", "herdr", "ceo"]
+
+[[panes]]
+id = "inbox"
+title = "{{name}}: needs me"
+placement = "overlay"
+command = ["sh", "-c", "node ../bin/agent-kit.mjs linear inbox; printf '\\nEnter closes this pane. '; read -r _"]
+
+[[panes]]
+id = "sessions"
+title = "{{name}}: sessions by bet"
+placement = "overlay"
+command = ["sh", "-c", "node ../bin/agent-kit.mjs herdr list; printf '\\nEnter closes this pane. '; read -r _"]
+
+# After a server restart, put each session's bet, issue and PR back into the sidebar.
+[[startup]]
+command = ["node", "../bin/agent-kit.mjs", "herdr", "sync"]
+
+# Every new checkout of this repo gets its dependencies and MCP approvals.
+[[events]]
+on = "worktree.created"
+command = ["node", "../bin/agent-kit.mjs", "herdr", "bootstrap"]
+
+# Any new workspace, in any repo, gets its $repo token at once.
+[[events]]
+on = "workspace.created"
+command = ["node", "../bin/agent-kit.mjs", "herdr", "sync", "--repos-only"]
