@@ -14,8 +14,9 @@
  *   pnpm mail send --to a@b.c --subject "…" --body-file draft.md [--inbox <addr>]
  *   pnpm mail reply <message_id> --body-file reply.md [--inbox <addr>]
  *
- * The default inbox is maelstrom@agentmail.to. What may be sent without asking
- * is ops/CEO.md's business, not this script's: it sends what it is given.
+ * The default inbox is `mail.inbox` in agent-kit.config.json. What may be sent
+ * without asking is the CEO manual's business, not this script's: it sends what
+ * it is given.
  */
 import { readFileSync } from 'node:fs'
 import { config, main } from './config.mjs'

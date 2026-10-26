@@ -77,7 +77,7 @@ const run = (cmd, a, cwd = main) => spawnSync(cmd, a, { cwd, encoding: 'utf8' })
 const WORKER_FOOTER = `
 
 You are a worker for the CEO agent (${config.ceo.manual}, Delegation), in your own checkout on your own branch.
-- Follow .agents/loops/dev-loop/SKILL.md and stop at a green PR. The CEO merges it.
+- Follow the dev-loop skill and stop at a green PR. The CEO merges it.
 - Anything only ${config.linear.owner} can do goes in the PR body under "Needs ${config.linear.owner}"; do not ask in this pane.
 - Your last message is the PR URL, or one line on why there is none.`
 

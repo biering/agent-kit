@@ -1,0 +1,35 @@
+{
+  "skill_name": "copywriting",
+  "evals": [
+    {
+      "id": 0,
+      "name": "one-liner-generation-de",
+      "prompt": "Wir brauchen einen neuen Einzeiler für unsere KI-Assistentin für Immobilienkäufer. Sie überwacht Portale, prüft jedes Exposé gegen das Suchprofil des Nutzers und meldet sich, wenn ein Angebot passt. Gib mir was Kurzes für die Startseite.",
+      "expected_output": "At least five German candidates in the repo's address form, each 5 words or fewer, spanning at least two angles (analogue and descriptive), each scored against the 6-criterion rubric with both hard gates applied. No buzzwords (KI-gestützt as a quality adjective, Plattform, Lösung, All-in-One, nahtlos), no abstractions (Ebene, Bausteine, OS). A top 3 with an explicit recommendation and a note on what would have to be proven to ship the boldest one. No file edits: proposal only."
+    },
+    {
+      "id": 1,
+      "name": "landing-hero-refine-pair",
+      "prompt": "Der Hero auf unserer Landingpage ist mir zu schwach. Aktuell: landing.abovefold.ti = 'Immobilien. Smart und transparent' und landing.abovefold.lb = 'Finde, berechne und bewerte KI-gestützt deine Immobilien an einem Ort.' Mach das besser.",
+      "expected_output": "A proposal table with Key | Current DE | Proposed DE | Current EN | Proposed EN | Score | Why, both locales handled together and the EN written as its own line, not translated. Diagnoses the title as adjective-led and ambiguous (smart/transparent describe a mood) and the subhead as benefit without mechanism. Respects the repo's key-suffix rules from docs/agent-kit/copywriting.md when present. Writes nothing to locale files before the user picks a winner, and says so."
+    },
+    {
+      "id": 2,
+      "name": "buzzword-line-critique",
+      "prompt": "Reicht das als Claim? 'Die All-in-One-Plattform-Ebene für datengetriebene Immobilien-Workflows: ganzheitlich, nahtlos, revolutionär.'",
+      "expected_output": "A rejection with the categories named: buzzwords (All-in-One, ganzheitlich, nahtlos, revolutionär), abstractions (Plattform, Ebene), ambiguous category anchor ('X für Y' where Y is a workflow category), and the clarity gate failing, with two other products the line could describe. Then concrete rewrites in at least two angles. May cite copy_scan.py output; must not merely run the scanner and stop."
+    },
+    {
+      "id": 3,
+      "name": "sloppy-section-prose",
+      "prompt": "Bitte den Abschnitt für die Landingpage überarbeiten: 'In der heutigen digitalen Welt spielt die Immobilien-Analyse eine entscheidende Rolle. Unsere innovative Lösung revolutioniert den Prozess und hebt deine Kalkulation auf ein neues Level. Die Grunderwerbsteuer von 3,5 % in Bayern berechnen wir automatisch mit. Zusammenfassend: Die Zukunft bleibt spannend.'",
+      "expected_output": "Routes the prose through the unslop skill for the slop tells (in der heutigen digitalen Welt, entscheidende Rolle, innovative Lösung, revolutioniert, neues Level, Zusammenfassend, Die Zukunft bleibt spannend) without re-listing that catalog, AND judges whether the section says the right thing (the only concrete claim is the Grunderwerbsteuer automation, which should lead). Preserves 3,5 % and Bayern verbatim. Delivers a rewrite plus a short list of what changed and why, and keeps the Du-form of the input."
+    },
+    {
+      "id": 4,
+      "name": "cta-and-no-change-outcome",
+      "prompt": "Zwei Buttons auf der Preisseite: 'Mehr erfahren' und 'Kostenlos starten'. Verbesserungsvorschläge?",
+      "expected_output": "Flags 'Mehr erfahren' as a generic CTA that promises nothing and proposes concrete alternatives naming what happens on click (verb plus object, 4 words max). Recognises 'Kostenlos starten' as already doing its job and says no change is needed instead of churning it."
+    }
+  ]
+}

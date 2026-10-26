@@ -15,7 +15,8 @@
  *     "ceo": { "checkout": "../maelstrom-ceo", "launchd": "com.maelstrom.ceo", "hour": 8 },
  *     "sessions": { "dir": "../maelstrom-worktrees", "agent": "claude" },
  *     "stats": { "repos": { "maelstrom": ".", "leverage": "../../leverage/leverage" } },
- *     "mail": { "inbox": "maelstrom@agentmail.to" },
+ *     "mail": { "inbox": "<inbox>@agentmail.to" },
+ *     "loop": { "verify": "pnpm gates", "docs": "pnpm verify:docs", "gate": null },  // dev-loop skill
  *     "bootstrap": ["pnpm", "worktree:prepare"]          // prepares a new checkout
  *   }
  *
@@ -85,5 +86,7 @@ export const config = {
     repos: Object.fromEntries(Object.entries(raw.stats?.repos ?? { [name]: '.' }).map(([k, p]) => [k, at(p)])),
   },
   mail: { inbox: raw.mail?.inbox },
+  // Read by the dev-loop skill, not by the CLI: the repo's local verify, docs check and gate script.
+  loop: { verify: raw.loop?.verify, docs: raw.loop?.docs, gate: raw.loop?.gate ?? null },
   bootstrap: raw.bootstrap,
 }

@@ -1,0 +1,9 @@
+{
+  "max_fixes_per_run": 3,
+  "max_open_value_loop_prs": 5,
+  "max_open_prs_total": 15,
+  "gate_batch_size": 8,
+  "figure_stale_after_days": 60,
+  "lookback_after_days": 30,
+  "label": "value-loop"
+}

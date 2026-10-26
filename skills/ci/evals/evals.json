@@ -1,0 +1,41 @@
+{
+  "skill_name": "ci",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "CI is red on my branch, can you check what's failing and fix it?",
+      "expected_output": "Agent reads docs/agent-kit/ci.md, reads gh pr view and the failed run logs, shows a failure table with local repro commands taken from the workflow, reproduces locally, fixes only what the failing checks imply, and reports what to push.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "The lint job failed on my PR, here's the log snippet. Fix it.",
+      "expected_output": "Agent runs the same lint command the workflow runs in the right package, applies the repo's format or lint fix, re-runs the check locally and notes a push is needed.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "CI says ERR_PNPM_OUTDATED_LOCKFILE on the install step.",
+      "expected_output": "Agent runs pnpm install from the repo root, commits the updated lockfile and explains frozen-lockfile behavior in CI.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "The external deploy check on my PR is red but every GitHub Actions workflow is green. What's wrong?",
+      "expected_output": "Agent tells StatusContext from CheckRun, reads the log at targetUrl, compares build config with the repo's deploy docs, and either fixes the app build or hands dashboard-only config to the user.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "My PR has no checks at all and it's a draft. Is it passing?",
+      "expected_output": "Agent explains that drafts run no CI in repos that gate on draft, runs the local gate, and runs gh pr ready only when it is green and the work is finished, then reruns any cancelled run.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Address the review comments on my PR.",
+      "expected_output": "Agent fetches unresolved threads via GraphQL, triages each as valid, partially valid or not applicable against the current code, fixes the valid ones, pushes, replies on every thread and resolves it.",
+      "files": []
+    }
+  ]
+}

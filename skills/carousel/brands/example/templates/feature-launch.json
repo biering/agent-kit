@@ -1,0 +1,62 @@
+{
+  "title": "[Feature name]",
+  "brand": "example",
+  "crops": [
+    {
+      "from": "[repo path to the feature's screenshot].png",
+      "to": "screenshot.png",
+      "x": 0,
+      "y": 0,
+      "w": 1500,
+      "h": 1000
+    }
+  ],
+  "lang": "en",
+  "slides": [
+    {
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "New in [product]",
+      "headline": "[A question or gain in the user's words] *[the answer in 2 or 3 words.]*",
+      "subline": "[What the feature is, in one sentence.]"
+    },
+    {
+      "type": "feature",
+      "kicker": "Until now",
+      "title": "[The problem, concrete, from the user's day.]",
+      "body": "[A scene where the problem hurts. With a real detail.]"
+    },
+    {
+      "type": "feature",
+      "kicker": "New: [name in the product]",
+      "title": "[What works now, as a sentence with a verb.]",
+      "body": "[How it works, one or two sentences.]",
+      "image": "out/assets/screenshot.png"
+    },
+    {
+      "type": "steps",
+      "kicker": "How it works",
+      "title": "[In three steps ...]",
+      "steps": [
+        { "title": "[Step 1]", "body": "[What you do.]" },
+        { "title": "[Step 2]", "body": "[What you do.]" },
+        { "title": "[Step 3]", "body": "[What you do.]" }
+      ]
+    },
+    {
+      "type": "feature",
+      "kicker": "Good to know",
+      "title": "[The detail that convinces a sceptic.]",
+      "body": "[An example or a limit, said plainly.]",
+      "bullets": ["[The plan it is in]", "[A second fact]"]
+    },
+    {
+      "type": "cta",
+      "theme": "dark",
+      "kicker": "Try it",
+      "headline": "[The first action worth taking.]",
+      "button": "[The landing's CTA text]",
+      "url": "[domain]"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+/* Example brand: neutral tokens, system fonts. Every token scripts/slides.css reads is here; a
+   repo's brand copies this file and sets each one from the app's own design doc. */
+:root {
+  --brand-50: #f4f4f5;
+  --brand-100: #e4e4e7;
+  --brand-200: #d4d4d8;
+  --brand-300: #a1a1aa;
+  --brand-500: #52525b;
+  --brand-600: #27272a;
+  --brand-700: #18181b;
+  --ink: #09090b;
+  --ink-raise: #18181b;
+  --ink-line: rgba(255, 255, 255, 0.08);
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-700: #3f3f46;
+  --zinc-950: #09090b;
+  /* functional colours: a finding's severity, a finished step */
+  --red: #dc2626;
+  --amber: #d97706;
+  --green: #16a34a;
+  /* RGB triplets for the tinted grounds and shadows */
+  --tint: 82 82 91;
+  --tint-light: 161 161 170;
+  --shadow-tint: 24 24 27;
+  /* lettered slides: the ground, the marker behind the highlighted word, the lettering face */
+  --paper: #ffffff;
+  --highlight: #fde68a;
+  --hand: 'Caveat', 'Bradley Hand', 'Segoe Print', cursive;
+  --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+  --serif: Georgia, 'Times New Roman', serif;
+  --pad: 88px;
+}

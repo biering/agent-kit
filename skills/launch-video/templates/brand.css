@@ -1,0 +1,44 @@
+/* Placeholder brand for the templates. A film links its product's own brand.css instead
+   (where the repo keeps it: docs/agent-kit/launch-video.md), with the same variable names
+   filled from the product's DESIGN.md and design tokens. Two voices are allowed:
+   - the app (--app-*): every rebuilt screen
+   - the marketing site (--sans, --serif accent): hook, captions, end card
+   Fonts load by root-absolute path from the repo (render.mjs serves the repo root), never from a
+   font CDN: a render must not depend on the network. Declare them here with @font-face. */
+:root {
+  --brand-50: #eef4ff;
+  --brand-100: #dbe6ff;
+  --brand-200: #bcd0ff;
+  --brand-300: #93b2ff;
+  --brand-500: #3f6bff; /* primary button, the mark */
+  --brand-600: #2f55e6; /* marketing accent, CTAs */
+  --ink: #0e0e10;
+
+  --zinc-50: #fafafa;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #9f9fa9;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+
+  --app-body: var(--zinc-50);
+  --text-muted: var(--zinc-600);
+  --text: var(--zinc-800);
+  --text-highlighted: var(--zinc-900);
+  --border: var(--zinc-200);
+  --border-accented: var(--zinc-300);
+
+  --green: #00c950;
+  --yellow: #f0b100;
+  --red: #fb2c36;
+  --orange: #ff6900;
+
+  --app-sans: ui-sans-serif, system-ui, sans-serif;
+  --app-display: ui-sans-serif, system-ui, sans-serif;
+  --sans: ui-sans-serif, system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, monospace;
+  --serif: Georgia, serif;
+}

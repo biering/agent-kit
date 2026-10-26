@@ -1,7 +1,9 @@
 # agent-kit
 
 The CEO agent and its tools, shared by every repo that runs one (Maelstrom,
-Leverage). One source here; each repo carries a vendored copy.
+Leverage). One source here; each repo carries a vendored copy. The skills
+install is the prompt under [Install prompt](#install-prompt). Paste it to an
+agent in the repo.
 
 | Command | What it does |
 |---|---|
@@ -30,9 +32,21 @@ under `claude --agent`). A repo that gates every session wires it in its own
      "name": "leverage",
      "linear": { "team": "LEV", "workspace": "Leverage", "owner": "Christoph" },
      "stats": { "repos": { "leverage": "." } },
-     "mail": { "inbox": "leverage@agentmail.to" }
+     "mail": { "inbox": "<inbox>@agentmail.to" },
+     "loop": {
+       "verify": "pnpm verify:local",
+       "docs": "pnpm verify:docs",
+       "gate": "node scripts/dev-loop.mjs status"
+     }
    }
    ```
+
+   `loop` is read by the `dev-loop` skill, not the CLI: `verify` is the local
+   check before a PR, `docs` the extra one when docs or skills changed, `gate`
+   an optional script that reports what the branch still owes (`null` when
+   hooks do that job). Two more blocks belong to skills: `carousel` (the brands
+   folder, where Playwright lives) and `ads` (the landing-page register and the
+   URL pattern per brand, for `ads-landingpage`).
 
    Other keys: `linear.labels` folds labels another process already uses
    for "waits on the owner" into the inbox, `linear.states` names the state
@@ -50,9 +64,88 @@ under `claude --agent`). A repo that gates every session wires it in its own
    decision rights, and
    `LINEAR_API_KEY` in the root `.env`. Then `agent-kit linear setup`.
 
+## Install prompt
+
+This is the only way to install the skills. Paste it to an agent in the repo:
+
+```text
+Install the skills from https://github.com/biering/agent-kit into this repo.
+
+From the repo root, run:
+
+npx skills add biering/agent-kit --skill '*' -a claude-code codex -y
+
+Then make the layout match:
+
+- The skill files live in .agents/skills/<name>/. That is the copy you commit.
+- .claude/skills/<name> and .codex/skills/<name> are relative symlinks to ../../.agents/skills/<name>. If the installer wrote a real directory, replace it with the symlink. Never copy skill files into a second directory.
+- skills-lock.json must record source biering/agent-kit and sourceType github. A local path means the install used a checkout; reinstall from GitHub.
+- Do not edit an installed skill. A rule that differs in this repo goes in AGENTS.md, in docs/agent-kit/<skill>.md, or in agent-kit.config.json (the loop, carousel and ads blocks). Those files are not overwritten by a later npx skills update.
+- If this repo already says which skills stay out of .claude/skills, follow that and say which ones you left unlinked. Otherwise link all of them.
+- If this repo links a subset of skills from .cursor/skills, link the new ones the same way.
+- If a kit skill has the same name as a skill this repo wrote itself, stop and ask before replacing it.
+- Do not commit unless asked.
+```
+
+Later, `npx skills update` pulls new versions. That diff is reviewed like any other.
+
+The CEO tools are not part of this prompt. They are vendored with
+`agent-kit sync`, in [Adopting it in a repo](#adopting-it-in-a-repo).
+
+## Skills
+
+`skills/<name>/SKILL.md` holds the skills the prompt installs, via the
+[skills CLI](https://github.com/vercel-labs/skills).
+
+The directory name is the install key, so skills are not renamed here. The table groups them by the job.
+
+| Area | Skills |
+|------|--------|
+| Ship | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix` |
+| Review | `review-code`, `review-api`, `legal-review` (DE/EU, not legal advice), `onboarding-review` |
+| Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
+| Build | `scaffold` (a new app on this kit's stack, Python services included), `design` |
+| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog` |
+| Market | `aso`, `app-screenshots`, `launch-video` (with X player cards), `carousel`, `ads-landingpage` |
+| Decide | `value-loop` (keep only what moves customers or revenue) |
+| Editor | `workspace-chrome` (title bar and status bar only) |
+
+Every listed description costs room in the harness's skill listing. A repo
+that caps that listing says so in its own docs; the prompt follows that and
+leaves the extra skills unlinked from `.claude/skills`.
+
+The installer records each skill's hash in `skills-lock.json`. Never edit an
+installed copy: change it here and update.
+A repo's own rules stay in that repo: `AGENTS.md`, the `loop` block in
+`agent-kit.config.json`, and `docs/agent-kit/<skill>.md`, which every skill
+reads before it acts (a repo's PR scope, its copy carve-outs, its launch
+steps). Nothing a repo writes there is overwritten by `npx skills update`.
+
+Skills that are already published upstream (coss, nuxt-ui, heroui-native,
+emil-design-eng, supabase-postgres-best-practices, stripe-best-practices) are
+installed from their own repositories; this kit names them and never copies
+them. `skills/design/references/taste/` is the exception: it is vendored from
+[Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (MIT, licence
+beside it) because the design router needs it as a reference, not a skill.
+`skills/design/references/landing-page.md` adapts the strategy half of
+[elayadesign/ai-design-skills](https://github.com/elayadesign/ai-design-skills)'
+`landing-page-design` (MIT, credited there) instead of installing it: installed
+whole, it claims every web UI task and sets fonts, icons and invented proof that
+the repos' design systems and the taste kit rule out.
+
 ## Why vendored
 
-The repository is private. A git dependency on it would break every CI install
-that cannot reach it; a committed copy keeps each repo self-contained, and an
-update is a reviewed diff (`agent-kit sync`, then a PR). Never edit
-`vendor/agent-kit/` in a repo: change it here and sync.
+A committed copy keeps each repo self-contained: CI installs never reach out to
+this repository, and an update is a reviewed diff (`agent-kit sync`, then a PR).
+Never edit `vendor/agent-kit/` in a repo: change it here and sync.
+
+## This repository is public
+
+Everything here is generic. Maelstrom and Leverage appear as examples of how a
+repo fills in its config, never as the only way. Never commit secret values,
+tokens, `.env` contents, real inbox addresses, customer or deal data, revenue
+numbers or anything a repo keeps in its own `ops/` or findings folders. A value
+that differs per repo belongs in `agent-kit.config.json`, with a placeholder
+like `<inbox>` in the docs here. `npm run check` (`scripts/check-public.mjs`, also run on every
+push) fails on secret-shaped values, account and project ids, private hosts, real
+mailboxes and SEO-findings text anywhere in the tree.

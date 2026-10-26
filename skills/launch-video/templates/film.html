@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Launch film</title>
+<!-- The brand of the product the feature lives in. Swap this link for the repo's own brand.css
+     (docs/agent-kit/launch-video.md says where it is). Root-absolute: render.mjs serves the film
+     from the repo root. -->
+<link rel="stylesheet" href="/.agents/skills/launch-video/templates/brand.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--app-body); }
+  body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--app-body); }
+  .layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .abs { position: absolute; }
+  .mask { display: inline-block; overflow: hidden; vertical-align: bottom; padding: 0 0.04em 0.16em; margin: 0 -0.04em -0.16em; }
+  .w { display: inline-block; white-space: pre; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world" class="layer">
+    <div id="shape" class="abs" style="background:var(--brand-600);display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <span class="mask"><span class="w" id="label" style="color:#fff;font-size:44px;font-weight:600;white-space:nowrap">Launch</span></span>
+    </div>
+  </div>
+</div>
+<script src="/.agents/skills/launch-video/templates/kit.js"></script>
+<script>
+const { W, H, lerp, spring, camera, camCss, $, riseWords, score, hud } = kit(1920, 1080)
+
+// ───────── the score: write every time in beats ─────────
+const { BEAT, b } = score(120)
+const DURATION = b(4)
+
+const ready = (async () => {
+  // one document.fonts.load per weight the film uses, in the brand's face
+  await document.fonts.load('600 44px sans-serif')
+  await document.fonts.ready
+})()
+
+// ───────── the test scene: a dot springs into a pill, the label rises inside ─────────
+function seek(t) {
+  $('world').style.transform = camCss(camera(t, [[0, 1.4, 960, 540], [DURATION, 1, 960, 540]]))
+  const s = spring(t, b(0.5), { freq: 1.6, damp: 0.7 })
+  const w = lerp(0, 120, spring(t, b(0.25), { freq: 2.2, damp: 0.6 })) + lerp(0, 260, s)
+  const h = lerp(0, 120, spring(t, b(0.25), { freq: 2.2, damp: 0.6 }))
+  Object.assign($('shape').style, { left: `${960 - w / 2}px`, top: `${540 - h / 2}px`, width: `${w}px`, height: `${h}px`, borderRadius: `${h / 2}px` })
+  riseWords([$('label')], t, b(1.4))
+}
+
+// cuts: every handoff, so `render.mjs --stills cuts` can draw the frames either side of it
+window.film = { width: W, height: H, fps: 60, duration: DURATION, beat: BEAT, cuts: [b(1.4)], ready, seek: async (t) => { await ready; seek(t) } }
+hud(window.film)
+</script>
+</body>
+</html>
