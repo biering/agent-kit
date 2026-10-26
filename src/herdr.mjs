@@ -320,8 +320,18 @@ function syncRepos() {
   }
 }
 
+// When the last sync started: `sync --if-stale <seconds>` skips a run inside that window.
+const SYNC_STAMP = join(homedir(), '.local/state/agent-kit', `${config.name}-sync`)
+
 /** The sidebar tokens: $repo everywhere, $topic $issue $pr $owner per session (docs/herdr.md). */
 function sync() {
+  // The plugin syncs on every agent status change; a burst of them is one sync.
+  const window = Number(option('if-stale') ?? 0)
+  if (window) {
+    if (existsSync(SYNC_STAMP) && Date.now() - statSync(SYNC_STAMP).mtimeMs < window * 1000) return
+    mkdirSync(dirname(SYNC_STAMP), { recursive: true })
+    writeFileSync(SYNC_STAMP, '')
+  }
   syncRepos()
   // The plugin's workspace.created hook only needs the cheap part.
   if (flag('repos-only')) return
@@ -426,6 +436,46 @@ function cleanup() {
     if (!known && existsSync(s.path)) rmSync(s.path, { recursive: true, force: true })
     if (verdict.branch) run('git', ['-C', main, 'branch', '-D', s.branch])
   }
+  closeOrphans(dry)
+}
+
+/**
+ * Workspaces whose session checkout is gone, removed by hand or by a merge in
+ * another tool: no worktree left, so `sessions()` never sees them, and they sit
+ * in the sidebar with the last tokens they were given.
+ */
+function closeOrphans(dry) {
+  for (const w of herdr(['workspace', 'list'])?.workspaces ?? []) {
+    const panes = herdr(['pane', 'list', '--workspace', w.workspace_id])?.panes ?? []
+    const cwd = panes[0]?.cwd ?? ''
+    if (!cwd.startsWith(`${SESSIONS}/`)) continue
+    const root = join(SESSIONS, cwd.slice(SESSIONS.length + 1).split('/')[0])
+    if (existsSync(root)) continue
+    const busy = panes.find((p) => p.agent_status && !['idle', 'done'].includes(p.agent_status))
+    if (busy) {
+      console.log(`keep    ${w.label} (checkout gone, agent ${busy.agent_status})`)
+      continue
+    }
+    console.log(`${dry ? 'would close' : 'close  '} ${w.label} (checkout gone)`)
+    if (!dry) herdr(['workspace', 'close', w.workspace_id])
+  }
+}
+
+/**
+ * A ctrl+click on a PR or Linear issue link (the plugin's link handlers): the
+ * session working on it if one is open, else the browser.
+ */
+function openLink() {
+  const url = process.env.HERDR_PLUGIN_CLICKED_URL ?? args[0] ?? die('Which URL?')
+  const pr = url.match(/\/pull\/(\d+)/)?.[1]
+  const issue = url.match(/\/issue\/([A-Za-z]+-\d+)/)?.[1]?.toUpperCase()
+  const session = (herdr(['workspace', 'list'])?.workspaces ?? []).find(
+    (w) =>
+      (pr && w.tokens?.pr?.startsWith(`#${pr} `)) ||
+      (issue && w.tokens?.issue?.split(' ')[0] === issue),
+  )
+  if (session) herdr(['workspace', 'focus', session.workspace_id])
+  else run('open', [url])
 }
 
 function pluginLinked() {
@@ -494,6 +544,7 @@ const commands = {
   workers: list,
   sync,
   cleanup,
+  'open-link': openLink,
   bootstrap,
   notify: notifyCmd,
   'install-cursor-hooks': installCursorHooks,

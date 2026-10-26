@@ -3,7 +3,7 @@
 # Commands run from this directory, without a shell: argv only.
 id = "{{id}}"
 name = "{{name}} ops"
-version = "0.2.0"
+version = "0.3.0"
 min_herdr_version = "0.9.0"
 description = "Open the {{name}} CEO agent, show sessions by bet and the Linear inbox, prepare new worktrees"
 platforms = ["macos", "linux"]
@@ -13,6 +13,25 @@ id = "ceo"
 title = "Open the {{name}} CEO agent"
 contexts = ["workspace"]
 command = ["node", "../bin/agent-kit.mjs", "herdr", "ceo"]
+
+# ctrl+click on a PR or Linear issue link: the session working on it, else the browser.
+[[actions]]
+id = "open-link"
+title = "Open the session for this PR or issue"
+contexts = ["workspace"]
+command = ["node", "../bin/agent-kit.mjs", "herdr", "open-link"]
+
+[[link_handlers]]
+id = "pull-request"
+title = "{{name}}: jump to the session working on this PR"
+pattern = "^https://github\\.com/{{github}}/pull/[0-9]+"
+action = "open-link"
+
+[[link_handlers]]
+id = "linear-issue"
+title = "{{name}}: jump to the session working on this issue"
+pattern = "^https://linear\\.app/[^/]+/issue/{{team}}-[0-9]+"
+action = "open-link"
 
 [[panes]]
 id = "inbox"
@@ -34,6 +53,12 @@ command = ["node", "../bin/agent-kit.mjs", "herdr", "sync"]
 [[events]]
 on = "worktree.created"
 command = ["node", "../bin/agent-kit.mjs", "herdr", "bootstrap"]
+
+# Each session's PR, CI and issue stay current while agents work: a status
+# change syncs, at most once a minute.
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "../bin/agent-kit.mjs", "herdr", "sync", "--if-stale", "60"]
 
 # Any new workspace, in any repo, gets its $repo token at once.
 [[events]]
