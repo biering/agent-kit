@@ -18,3 +18,15 @@ describe('readme', () => {
     assert.deepEqual(areas, ['Area', 'Ship', 'Review', 'Harness', 'Build', 'Write', 'Market', 'Decide', 'Editor'])
   })
 })
+
+describe('landing anatomy', () => {
+  it('is what the design skill reads for a landing page, with the canonical ids', () => {
+    const root = new URL('..', import.meta.url)
+    const skill = readFileSync(new URL('skills/design/SKILL.md', root), 'utf8')
+    const anatomy = readFileSync(new URL('skills/design/references/landing-anatomy.md', root), 'utf8')
+    assert.match(skill, /landing-page\.md.*landing-anatomy\.md/)
+    for (const id of ['hero', 'trust', 'benefits', 'how-it-works', 'pricing', 'testimonials', 'faq', 'cta']) {
+      assert.match(anatomy, new RegExp(`id="${id}"`))
+    }
+  })
+})

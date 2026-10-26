@@ -185,6 +185,13 @@ Don't invent a third shape (separate splash/onboarding site, marketing on one Wo
 another) unless the intake gives a concrete reason — extra deploys, extra DNS, and a second
 place for `Astro.locals.user` logic to drift out of sync are the actual cost of splitting them.
 
+## Landing sections
+
+The marketing page follows the design skill's `references/landing-anatomy.md`: one component per
+section, content passed in as props, each section carrying that file's id. Prices on the page are
+the prices checkout charges. A section the anatomy marks honesty-gated is omitted when the proof
+does not exist, and the PR says so. The taste run decides how each section looks.
+
 ## Feature modules (add per intake)
 
 - **Supabase + auth** — cookie-based `@supabase/ssr`, middleware populates `Astro.locals.user`, auth
