@@ -10,4 +10,11 @@ describe('readme', () => {
     assert.equal(readme.match(/npx skills add/g)?.length, 1)
     assert.match(prompt, /npx skills add biering\/agent-kit --skill '\*' -a claude-code codex -y/)
   })
+
+  it('groups skills by the job, under the names that install them', () => {
+    const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
+    const skills = readme.slice(readme.indexOf('## Skills'))
+    const areas = [...skills.matchAll(/^\| ([A-Za-z]+) \|/gm)].map((match) => match[1])
+    assert.deepEqual(areas, ['Area', 'Ship', 'Review', 'Harness', 'Build', 'Write', 'Market', 'Decide', 'Editor'])
+  })
 })

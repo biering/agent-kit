@@ -97,13 +97,18 @@ The CEO tools are not part of this prompt. They are vendored with
 `skills/<name>/SKILL.md` holds the skills the prompt installs, via the
 [skills CLI](https://github.com/vercel-labs/skills).
 
+The directory name is the install key, so skills are not renamed here. The table groups them by the job.
+
 | Area | Skills |
 |------|--------|
-| Shipping | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix`, `review-code`, `review-api` |
+| Ship | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix` |
+| Review | `review-code`, `review-api`, `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
-| Building | `scaffold` (a new app on this kit's stack, Python services included), `design`, `onboarding-review`, `workspace-chrome` |
-| Copy | `unslop` (AI-sounding prose, German and English), `copywriting`, `product-changelog`, `legal-review` (DE/EU, not legal advice) |
-| Growth | `aso`, `app-screenshots`, `launch-video` (with X player cards), `carousel`, `ads-landingpage`, `value-loop` |
+| Build | `scaffold` (a new app on this kit's stack, Python services included), `design` |
+| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog` |
+| Market | `aso`, `app-screenshots`, `launch-video` (with X player cards), `carousel`, `ads-landingpage` |
+| Decide | `value-loop` (keep only what moves customers or revenue) |
+| Editor | `workspace-chrome` (title bar and status bar only) |
 
 Every listed description costs room in the harness's skill listing. A repo
 that caps that listing says so in its own docs; the prompt follows that and
