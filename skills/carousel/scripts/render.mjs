@@ -25,7 +25,7 @@
  *
  * Exit 0 = rendered, 1 = rendered with placeholders or overflow under --strict, 2 = invalid input.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -722,7 +722,7 @@ async function main(argv) {
   return strict && warnings.length ? 1 : 0
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) {
   main(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (err) => {

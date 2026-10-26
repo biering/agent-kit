@@ -15,7 +15,7 @@
  * pixel, because a hand-picked grey that is one shade off leaves a visible seam.
  * Exit 0 = written, 2 = usage.
  */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -98,7 +98,7 @@ async function main(argv) {
   return 0
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) {
   main(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (err) => {

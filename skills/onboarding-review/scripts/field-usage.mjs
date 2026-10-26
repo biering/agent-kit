@@ -7,9 +7,9 @@
  * Prints a JSON summary per column.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync, realpathSync } from 'node:fs'
 import { extname, join, relative, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 const CODE_EXTENSIONS = new Set([
   '.astro',
@@ -118,7 +118,7 @@ function main(argv = process.argv.slice(2)) {
 
 if (
   process.argv[1] &&
-  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+  realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))
 ) {
   main()
 }

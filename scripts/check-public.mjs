@@ -10,9 +10,16 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 const DENY = [
-  ['Stripe key', /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{8,}/],
+  ['Stripe key', /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{8,}|\bpk_live_[A-Za-z0-9]{8,}/],
+  ['OpenAI or Anthropic key', /\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}/],
+  ['Google API key', /\bAIza[0-9A-Za-z_-]{35}/],
+  ['npm token', /\bnpm_[A-Za-z0-9]{36}/],
+  ['database URL with a password', /\bpostgres(?:ql)?:\/\/[^:\s/]+:[^@\s<>${}]+@/],
+  // a pasted .env line: an upper-case secret name with a real-looking value, not a placeholder
+  ['secret assignment', /\b[A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD)\s*=\s*['"]?(?![<${])[A-Za-z0-9_\-./+]{16,}/],
+  ['phone number', /\+\d{2}[ (]?\d{2,4}[) /-]?\d{3,}[ /-]?\d{2,}/],
   ['Stripe webhook secret', /\bwhsec_[A-Za-z0-9]{8,}/],
-  ['GitHub token', /\b(?:ghp|gho|ghs|ghu)_[A-Za-z0-9]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}/],
+  ['GitHub token', /\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}/],
   ['Slack token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
   ['AWS key', /\bAKIA[0-9A-Z]{16}\b/],
   ['Linear key', /\blin_api_[A-Za-z0-9]{10,}/],
@@ -35,7 +42,8 @@ const DENY = [
 
 // A mailbox is fine when it is a placeholder or a reserved example domain.
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b/g
-const EMAIL_OK = /^(?:[^@]*[<>{}$][^@]*@|.*@(?:example\.(?:com|org|net)|users\.noreply\.github\.com)$)/
+// A placeholder (`<inbox>@agentmail.to`, `${user}@x.y`) never matches: the local part must touch the @.
+const EMAIL_OK = /@(?:example\.(?:com|org|net)|users\.noreply\.github\.com)$/
 
 const BINARY = /\.(?:png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|mp4|webm|mp3|wav|pdf|zip)$/i
 
@@ -49,23 +57,24 @@ function* walk(dir) {
   }
 }
 
-// Upstream data vendored verbatim (its licence sits beside it) is not ours to rewrite; this file
-// names the patterns it hunts.
-const SKIP = /^(?:skills\/design\/references\/taste\/library\/|scripts\/check-public\.mjs$)/
-const files = [...walk(root)].filter((f) => !SKIP.test(path.relative(root, f).split(path.sep).join('/')))
+// This file names the patterns it hunts. Upstream data vendored verbatim (its licence sits beside
+// it) carries its authors' credits, so it is scanned for secrets but not for mailboxes.
+const SKIP = /^scripts\/check-public\.mjs$/
+const NO_EMAIL = /^skills\/design\/references\/taste\/library\//
+const unix = (f) => path.relative(root, f).split(path.sep).join('/')
+const files = [...walk(root)].filter((f) => !SKIP.test(unix(f)))
 const problems = []
 for (const file of files) {
-  const rel = path.relative(root, file)
+  const rel = unix(file)
+  const emails = !NO_EMAIL.test(rel)
   const lines = readFileSync(file, 'utf8').split('\n')
   lines.forEach((line, i) => {
     for (const [label, re] of DENY) {
       if (re.test(line)) problems.push(`${rel}:${i + 1}: ${label}`)
     }
+    if (!emails) return
     for (const [address] of line.matchAll(EMAIL)) {
-      // `<inbox>@agentmail.to` keeps its placeholder just before the match.
-      const before = line.slice(0, line.indexOf(address))
-      if (!EMAIL_OK.test(address) && !/[<{]\w*[>}]$/.test(before))
-        problems.push(`${rel}:${i + 1}: mailbox ${address}`)
+      if (!EMAIL_OK.test(address)) problems.push(`${rel}:${i + 1}: mailbox ${address}`)
     }
   })
 }

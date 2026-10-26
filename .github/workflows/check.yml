@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-public.mjs
-      - run: node --test test/*.test.mjs
+      - run: node --test

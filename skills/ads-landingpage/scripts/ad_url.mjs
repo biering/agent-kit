@@ -21,7 +21,7 @@
  * and a campaign that does not start with the page's slug: those are the mistakes that make a
  * campaign unreadable afterwards.
  */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -81,7 +81,7 @@ function parseArgs(argv) {
   return options
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   try {
     const options = parseArgs(process.argv.slice(2))
     if (!options.brand || !options.slug) {

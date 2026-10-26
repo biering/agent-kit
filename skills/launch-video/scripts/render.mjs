@@ -37,7 +37,7 @@
 // Needs ffmpeg on PATH and `playwright` resolvable from the working directory
 // (npm i playwright && npx playwright install chromium).
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
-import { createReadStream, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync, realpathSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -175,12 +175,13 @@ export function psnr(a, b) {
 export function manifest(root, film, query, meta, settings) {
   const git = (...a) => spawnSync('git', a, { cwd: root, encoding: 'utf8' }).stdout?.trim() ?? ''
   const rel = relative(root, film).split(sep).join('/')
+  const commit = git('rev-parse', 'HEAD') || null
   return {
     film: rel,
     query,
-    commit: git('rev-parse', 'HEAD') || null,
+    commit,
     // uncommitted edits to the film's folder mean the commit alone cannot rebuild this file
-    dirty: git('status', '--porcelain', '--', dirname(rel) || '.') !== '',
+    dirty: commit ? git('status', '--porcelain', '--', dirname(rel) || '.') !== '' : null,
     width: meta.width,
     height: meta.height,
     duration: meta.duration,
@@ -239,10 +240,22 @@ async function main() {
     const report = (line) => { problems.push(line); console.error(line) }
     page.on('pageerror', (e) => report(`[page error] ${e.message}`))
     page.on('console', (m) => m.type() === 'error' && console.error('[console]', m.text()))
-    page.on('requestfailed', (r) => isBlocking(r.url()) && report(`[request failed] ${r.url()}`))
+    // Chromium aborts media requests it only wanted the start of; that is not a missing file
+    page.on('requestfailed', (r) => isBlocking(r.url()) && r.failure()?.errorText !== 'net::ERR_ABORTED' && report(`[request failed] ${r.url()}`))
     page.on('response', (r) => r.status() >= 400 && isBlocking(r.url()) && report(`[${r.status()}] ${r.url()}`))
     await page.goto(url)
-    await page.waitForFunction(() => window.film)
+    // A film whose own script failed to load never sets window.film: say so at once, not after
+    // Playwright's 30 s timeout.
+    const stop = () => problems.length && !has('lenient')
+    for (let waited = 0; !(await page.evaluate(() => Boolean(window.film))); waited += 100) {
+      if (stop()) break
+      if (waited >= 30000) throw new Error('the page never set window.film (render.mjs header says what it needs)')
+      await new Promise((r) => setTimeout(r, 100))
+    }
+    if (stop()) {
+      await page.close()
+      throw new Error(`${problems.length} load problem(s) above; fix them, or pass --lenient for a sketch`)
+    }
     const meta = await page.evaluate(async () => {
       await window.film.ready
       await document.fonts.ready
@@ -264,8 +277,8 @@ async function main() {
     const out = []
     for (const el of document.querySelectorAll('body *')) {
       if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue
+      if (!el.offsetHeight || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue
       const cs = getComputedStyle(el)
-      if (cs.visibility !== 'visible' || Number(cs.opacity) === 0 || !el.offsetHeight) continue
       const r = el.getBoundingClientRect()
       if (r.width < 1 || r.height < 1 || r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) continue
       const px = Number.parseFloat(cs.fontSize) * (r.height / el.offsetHeight)
@@ -345,7 +358,7 @@ async function main() {
         console.log(small.length ? `${file}  small text: ${small.map((s) => `${s.px} px "${s.text}"`).join(', ')}` : file)
       }
       const contact = flag('contact')
-      if (contact) {
+      if (contact && files.length) {
         const cols = Math.min(Number(flag('cols', 4)), files.length)
         const tile = Number(flag('tile', 640))
         const list = join(out, '.contact.txt')
@@ -397,7 +410,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) {
   await main().catch((e) => {
     console.error(`render: ${e.message}`)
     process.exit(1)
