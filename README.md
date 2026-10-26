@@ -1,7 +1,9 @@
 # agent-kit
 
 The CEO agent and its tools, shared by every repo that runs one (Maelstrom,
-Leverage). One source here; each repo carries a vendored copy.
+Leverage). One source here; each repo carries a vendored copy. The skills
+install is the prompt under [Install prompt](#install-prompt). Paste it to an
+agent in the repo.
 
 | Command | What it does |
 |---|---|
@@ -62,19 +64,39 @@ under `claude --agent`). A repo that gates every session wires it in its own
    decision rights, and
    `LINEAR_API_KEY` in the root `.env`. Then `agent-kit linear setup`.
 
-## Skills
+## Install prompt
 
-`skills/<name>/SKILL.md` holds agent skills any repo can install with the
-[skills CLI](https://github.com/vercel-labs/skills):
+This is the only way to install the skills. Paste it to an agent in the repo:
 
-```bash
-npx skills add biering/agent-kit --skill dev-loop pr ci -a claude-code codex -y
-npx skills add biering/agent-kit --skill '*' -a claude-code codex -y   # all of them
-npx skills update   # later: pull new versions, a reviewed diff like any other
+```text
+Install the skills from https://github.com/biering/agent-kit into this repo.
+
+From the repo root, run:
+
+npx skills add biering/agent-kit --skill '*' -a claude-code codex -y
+
+Then make the layout match:
+
+- The skill files live in .agents/skills/<name>/. That is the copy you commit.
+- .claude/skills/<name> and .codex/skills/<name> are relative symlinks to ../../.agents/skills/<name>. If the installer wrote a real directory, replace it with the symlink. Never copy skill files into a second directory.
+- skills-lock.json must record source biering/agent-kit and sourceType github. A local path means the install used a checkout; reinstall from GitHub.
+- Do not edit an installed skill. A rule that differs in this repo goes in AGENTS.md, in docs/agent-kit/<skill>.md, or in agent-kit.config.json (the loop, carousel and ads blocks). Those files are not overwritten by a later npx skills update.
+- If this repo already says which skills stay out of .claude/skills, follow that and say which ones you left unlinked. Otherwise link all of them.
+- If this repo links a subset of skills from .cursor/skills, link the new ones the same way.
+- If a kit skill has the same name as a skill this repo wrote itself, stop and ask before replacing it.
+- Do not commit unless asked.
 ```
 
-| Skill | What it does |
-|-------|--------------|
+Later, `npx skills update` pulls new versions. That diff is reviewed like any other.
+
+The CEO tools are not part of this prompt. They are vendored with
+`agent-kit sync`, in [Adopting it in a repo](#adopting-it-in-a-repo).
+
+## Skills
+
+`skills/<name>/SKILL.md` holds the skills the prompt installs, via the
+[skills CLI](https://github.com/vercel-labs/skills).
+
 | Area | Skills |
 |------|--------|
 | Shipping | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix`, `review-code`, `review-api` |
@@ -83,11 +105,12 @@ npx skills update   # later: pull new versions, a reviewed diff like any other
 | Copy | `unslop` (AI-sounding prose, German and English), `copywriting`, `product-changelog`, `legal-review` (DE/EU, not legal advice) |
 | Growth | `aso`, `app-screenshots`, `launch-video` (with X player cards), `carousel`, `ads-landingpage`, `value-loop` |
 
-Install only the ones a repo uses: every listed description costs room in the
-harness's skill listing.
+Every listed description costs room in the harness's skill listing. A repo
+that caps that listing says so in its own docs; the prompt follows that and
+leaves the extra skills unlinked from `.claude/skills`.
 
-The CLI copies each skill into the repo and records its hash in
-`skills-lock.json`. Never edit an installed copy: change it here and update.
+The installer records each skill's hash in `skills-lock.json`. Never edit an
+installed copy: change it here and update.
 A repo's own rules stay in that repo: `AGENTS.md`, the `loop` block in
 `agent-kit.config.json`, and `docs/agent-kit/<skill>.md`, which every skill
 reads before it acts (a repo's PR scope, its copy carve-outs, its launch
