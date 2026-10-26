@@ -1,0 +1,11 @@
+{
+  "name": "Example",
+  "apps": ["apps/example"],
+  "handle": "example.com",
+  "lang": "en",
+  "fonts": [],
+  "mascot": {
+    "name": "Cloud",
+    "poses": {}
+  }
+}

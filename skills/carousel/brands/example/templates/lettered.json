@@ -1,0 +1,27 @@
+{
+  "title": "[carousel slug]",
+  "brand": "example",
+  "lang": "en",
+  "formats": ["1080x1350", "1080x1920"],
+  "slides": [
+    {
+      "type": "lettered",
+      "lines": ["[some days are]", "[just *a lot*]"],
+      "pose": "[pose name]",
+      "alt": "[What the mascot does. Text: the slide's lines.]"
+    },
+    {
+      "type": "lettered",
+      "lines": ["[one thought]", "[per *slide*]"],
+      "pose": "[pose name]",
+      "alt": "[What the mascot does. Text: the slide's lines.]"
+    },
+    {
+      "type": "lettered",
+      "lines": ["[a gentle invitation,]", "[*never* a hard sell]"],
+      "pose": "[pose name]",
+      "url": "[domain]",
+      "alt": "[What the mascot does. Text: the slide's lines. The domain.]"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "skill_name": "unslop",
+  "evals": [
+    {
+      "id": 0,
+      "name": "german-rewrite-marketing",
+      "prompt": "Das hier ist ein Entwurf für unsere Landingpage-Sektion. Klingt mir zu KI-generiert — bitte entschlacken, aber die Aussagen müssen bleiben:\n\nIn der heutigen digitalen Welt spielt die Immobilien-Analyse eine entscheidende Rolle für erfolgreiche Investoren. Unsere innovative Lösung revolutioniert den Prozess — nahtlos, intuitiv und blitzschnell — und hebt deine Kalkulation auf ein neues Level. Es ist wichtig zu beachten, dass du nicht nur Zeit sparst, sondern auch bessere Entscheidungen triffst. Zusammenfassend lässt sich sagen: Die Zukunft der Immobilien-Analyse bleibt spannend.",
+      "expected_output": "A German rewrite in Du-form that removes the slop phrases (in der heutigen digitalen Welt, entscheidende Rolle, revolutioniert, nahtlos, auf ein neues Level, nicht nur/sondern auch, zusammenfassend, Zukunft bleibt spannend) while keeping the claims (saves time, better decisions, fast calculation) and staying promotional-copy appropriate, plus a short note on what changed."
+    },
+    {
+      "id": 1,
+      "name": "english-audit-only",
+      "prompt": "Review this blog intro before I publish it. Just flag anything that reads as AI-written — do NOT change the text:\n\nHere's the thing: in today's fast-paced real estate landscape, data serves as a cornerstone of smart investing. Our engine boasts state-of-the-art models, highlighting the interplay of speed and accuracy — seamlessly, effortlessly — while paving the way for better decisions. It's not just about numbers, but also about insight. Experts argue this approach works. The bottom line? Exciting times lie ahead.",
+      "expected_output": "An audit report that quotes the specific tells (throat-clearing opener, 'serves as a cornerstone', 'boasts', 'state-of-the-art', superficial -ing chain, em-dash pair, negative parallelism, 'Experts argue', generic optimism ending) with categories and suggested fixes, and does NOT rewrite the text."
+    },
+    {
+      "id": 2,
+      "name": "german-fact-preservation",
+      "prompt": "Unslop diesen Absatz für unseren Wissensbereich, er klingt generisch. Zahlen und Fakten dürfen sich auf keinen Fall ändern:\n\nEs ist allgemein bekannt, dass die Grunderwerbsteuer eine entscheidende Rolle beim Immobilienkauf spielt. Sie beträgt je nach Bundesland zwischen 3,5 % (Bayern) und 6,5 % (z. B. NRW, Schleswig-Holstein). Bei einem Kaufpreis von 400.000 € sind das in der Regel zwischen 14.000 € und 26.000 €. Darüber hinaus bietet unser Grunderwerbsteuer-Rechner unter leverage.immo/tools/grunderwerbsteuer-rechner eine nahtlose Möglichkeit, das volle Potenzial deiner Kalkulation auszuschöpfen. Hinweis: Dies stellt keine Steuerberatung dar.",
+      "expected_output": "A rewrite that removes the slop (es ist allgemein bekannt, entscheidende Rolle, darüber hinaus bietet, nahtlos, volle Potenzial ausschöpfen) but preserves EXACTLY: 3,5 %, 6,5 %, Bayern, NRW, Schleswig-Holstein, 400.000 €, 14.000 €, 26.000 €, the URL, the hedge 'in der Regel', and the legal disclaimer 'keine Steuerberatung'."
+    }
+  ]
+}
