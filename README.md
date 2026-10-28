@@ -134,6 +134,14 @@ beside it) because the design router needs it as a reference, not a skill.
 whole, it claims every web UI task and sets fonts, icons and invented proof that
 the repos' design systems and the taste kit rule out.
 
+## Rules
+
+Rules that apply to every app of a kind, vendored with the kit. Read the one that
+matches the work.
+
+- [`rules/mobile-apps.md`](rules/mobile-apps.md): analytics consent (not ATT),
+  the review prompt, onboarding.
+
 ## Why vendored
 
 A committed copy keeps each repo self-contained: CI installs never reach out to
