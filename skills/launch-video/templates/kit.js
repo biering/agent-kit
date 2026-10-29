@@ -28,6 +28,14 @@ function kit(W, H) {
     const wd = w * Math.sqrt(1 - damp * damp)
     return 1 - Math.exp(-damp * w * x) * (Math.cos(wd * x) + (damp * w / wd) * Math.sin(wd * x))
   }
+  // Named feels, passed as the options of spring/springTo/pop: spring(t, t0, springs.heavy).
+  // Overshoot at landing: snappy ~1%, default ~4%, heavy none, playful ~25%.
+  const springs = {
+    snappy: { freq: 2.8, damp: 0.85 },  // UI: buttons, toggles, the leading edge of a tab indicator
+    default: { freq: 1.8, damp: 0.72 }, // cards, containers, the camera
+    heavy: { freq: 1.2, damp: 1 },      // big type, the logo lockup: mass, no bounce
+    playful: { freq: 2.2, damp: 0.4 },  // a mascot, stickers: overshoot you can see
+  }
   // A value that changes target several times: one spring per change, summed.
   const springTo = (t, v0, steps, o) => steps.reduce((v, [at, to], i) => v + (to - (i ? steps[i - 1][1] : v0)) * spring(t, at, o), v0)
   // Keyframes [[t, value(s), easing?], ...]; the easing on a key shapes the segment that ends there.
@@ -189,5 +197,5 @@ function kit(W, H) {
     film.ready.then(() => go(t0))
   }
 
-  return { W, H, clamp, lerp, prog, bezier, ease, spring, springTo, keys, camera, camCss, project, $, show, words, riseWords, pop, bump, count, typed, draw, along, route, ring, wipe, edges, score, hud }
+  return { W, H, clamp, lerp, prog, bezier, ease, spring, springs, springTo, keys, camera, camCss, project, $, show, words, riseWords, pop, bump, count, typed, draw, along, route, ring, wipe, edges, score, hud }
 }
