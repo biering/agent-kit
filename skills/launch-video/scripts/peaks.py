@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Where each sound effect peaks, so it can be placed by its hit, not its file start.
 
-    python3 peaks.py sfx/*.mp3        # prints JSON {file: {peak, onset, duration}}
+    python3 peaks.py sfx/*.mp3        # prints JSON {file: {peak, onset, duration, level_db}}
 
-`peak` is the loudest 5 ms window; `onset` is the first moment the envelope
+`level_db` is the loudest sample in dBFS (a recorded effect's level varies by 20 dB from file to
+file; mix.py can normalise to it). `peak` is the loudest 5 ms window; `onset` is the first moment the envelope
 reaches 30 % of that peak, which is the better anchor for soft attacks (a chime
 blooms after its strike). Place a cue with delay = event_time - onset.
 """
@@ -21,7 +22,8 @@ def analyse(path):
     env = np.convolve(y, np.ones(win) / win, 'same')
     peak = int(np.argmax(env))
     onset = int(np.argmax(env >= 0.3 * env[peak]))
-    return {'peak': round(peak / SR, 3), 'onset': round(onset / SR, 3), 'duration': round(len(y) / SR, 3)}
+    level = float(20 * np.log10(max(float(y.max()), 1e-6)))
+    return {'peak': round(peak / SR, 3), 'onset': round(onset / SR, 3), 'duration': round(len(y) / SR, 3), 'level_db': round(level, 1)}
 
 
 if __name__ == '__main__':

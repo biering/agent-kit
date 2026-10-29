@@ -187,9 +187,9 @@ function kit(W, H) {
       if (e.key === 'ArrowLeft') go(t - step)
       if (e.key === ' ') {
         e.preventDefault()
-        if (playing) { cancelAnimationFrame(playing); playing = null; return }
-        const start = performance.now() - (t >= film.duration ? 0 : t) * 1000
-        const tick = () => { go((performance.now() - start) / 1000); playing = t < film.duration ? requestAnimationFrame(tick) : null }
+        if (playing) { cancelAnimationFrame(playing); playing = null; return } // viewer-only
+        const start = performance.now() - (t >= film.duration ? 0 : t) * 1000 // viewer-only
+        const tick = () => { go((performance.now() - start) / 1000); playing = t < film.duration ? requestAnimationFrame(tick) : null } // viewer-only
         tick()
       }
     })
