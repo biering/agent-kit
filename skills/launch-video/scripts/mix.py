@@ -12,13 +12,17 @@ cues.json:
   "cues": [
     {"beat": 2.75, "file": "sfx/2354.mp3", "gain_db": -10},
     {"beat": 16, "file": "sfx/1489.mp3", "anchor": "peak"},
-    {"t": 20.0, "file": "sfx/3109.mp3", "gain_db": -4, "pitch": 0.75}
+    {"t": 20.0, "file": "sfx/3109.mp3", "gain_db": -4, "pitch": 0.75},
+    {"beat": 5, "file": "sfx/1386.mp3", "duration": 1.2}
   ]
 }
 
 A cue is placed by `beat` (with a top-level `bpm`, the same number the film's
 score uses) or by `t` in seconds; `duration_beats` or `duration` likewise. Keep
 the film in beats and the cue sheet follows a tempo change with one edit.
+
+A cue's `duration` (seconds) plays only that much of the effect from its anchor, with a 20 ms fade-out: a
+typing loop for the length of the line that is typed, a riser that stops on the cut.
 
 Each cue is shifted so its `anchor` ("onset", the default, or "peak", as
 measured by peaks.py) lands on `t`: a chime is placed by its strike, not by the
@@ -111,11 +115,15 @@ def main():
         anchor = cache[path][cue.get('anchor', 'onset')] / pitch
         delay = cue['t'] - anchor
         trim = ''
+        head = max(0.0, -delay)
         if delay < 0:  # the anchor sits before zero: cut the head instead of delaying
-            trim, delay = f'atrim=start={-delay},asetpts=PTS-STARTPTS,', 0
+            trim, delay = f'atrim=start={head},asetpts=PTS-STARTPTS,', 0
         inputs += ['-i', path]
         rate = f'asetrate=44100*{pitch},aresample=48000,' if pitch != 1 else 'aresample=48000,'
         ms = int(delay * 1000)
+        if 'duration' in cue:   # play only this much of the effect, faded out so the cut does not click
+            end = anchor + cue['duration'] - head   # counted from the anchor, on the head-trimmed timeline
+            trim += f"atrim=end={end},afade=t=out:st={max(0, end - 0.02)}:d=0.02,asetpts=PTS-STARTPTS,"
         chains.append(f"[{i + 2}:a]aformat=channel_layouts=stereo,aresample=44100,{rate}{trim}"
                       f"volume={cue.get('gain_db', 0) + level}dB,adelay={ms}|{ms}[c{i}]")
         labels.append(f'[c{i}]')

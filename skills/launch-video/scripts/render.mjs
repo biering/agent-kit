@@ -14,7 +14,7 @@
 //   node render.mjs film.html --out film.mp4 --qa kinetic             # measure the file against a style's QA
 //                                                                    # profile after the encode; a miss fails the run
 //
-// --crf sets the x264 quality: 14 (the default) is a master, 24 to 28 a deliverable for flat,
+// --fps defaults to the film's own fps. --crf sets the x264 quality: 14 (the default) is a master, 24 to 28 a deliverable for flat,
 // slow footage. --scale 2 renders a 1920x1080 page as 3840x2160 (device scale factor). --workers
 // defaults to what the machine's memory carries at the output size, and the file is written the way
 // players expect: H.264 High, yuv420p, BT.709 limited range, a level the Mac hardware decoder plays.
@@ -362,7 +362,9 @@ async function main() {
   const film = realpathSync(resolve(filmPath)) // git's toplevel is a real path; a symlinked film path would sit outside it
   const stillsMode = flag('stills') && !has('purity')
   const out = resolve(flag('out', stillsMode ? 'stills' : 'film.mp4'))
-  const fps = Number(flag('fps', 60))
+  // --fps defaults to the film's own `fps` (a 30 fps film renders at 30), else 60
+  const fpsGiven = flag('fps') !== undefined
+  let fps = Number(flag('fps', 60))
   const subframes = Number(flag('subframes', 4))
   const asked = flag('workers') === undefined ? null : Number(flag('workers'))
   const shutter = Number(flag('shutter', 0.5))
@@ -424,13 +426,14 @@ async function main() {
     const meta = await page.evaluate(async () => {
       await window.film.ready
       await document.fonts.ready
-      const { width, height, duration, beat, cuts, hardCuts } = window.film
-      return { width, height, duration, beat, cuts, hardCuts }
+      const { width, height, duration, beat, cuts, hardCuts, fps } = window.film
+      return { width, height, duration, beat, cuts, hardCuts, filmFps: fps }
     })
     if (problems.length && !has('lenient')) {
       await page.close()
       throw new Error(`${problems.length} load problem(s) above; fix them, or pass --lenient for a sketch`)
     }
+    if (!fpsGiven && meta.filmFps > 0) fps = meta.filmFps
     meta.fps = fps
     await page.setViewportSize({ width: meta.width, height: meta.height })
     return { page, meta }

@@ -112,7 +112,8 @@ const quantile = (a, q) => (a.length ? [...a].sort((x, y) => x - y)[Math.min(a.l
  */
 export function measureSteps(steps, fps, { stillShare = 0.015, endCardSeconds = 0 } = {}) {
   const seconds = (steps.length + 1) / fps
-  const inSpan = Math.max(0, Math.min(steps.length, Math.floor((seconds - endCardSeconds) * fps)))
+  // the 1e-6 keeps a card of exactly N frames at N frames: the cut into the card is the card's own, not the film's
+  const inSpan = Math.max(0, Math.min(steps.length, Math.floor((seconds - endCardSeconds) * fps + 1e-6)))
   const span = steps.slice(0, inSpan)
   const still = span.map((s) => s.area < stillShare)
   let longest = 0

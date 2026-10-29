@@ -32,6 +32,9 @@ Scenario's kinetic skill documented, and what was found in our own runs.
   (`qa.md`). `pickLevel` states the limit and the largest sizes that fit.
 - **Faststart.** The final mp4 gets `+faststart` so a player can start before the download ends.
 
+- **The film's own frame rate.** `--fps` now defaults to the film's `fps` (a 30 fps film renders at 30
+  and `--stills cuts` steps a 30 fps frame either side of a cut), where it was 60 whatever the film said.
+
 ## What the renderer does not do
 
 No bloom or grain pass (a film draws its own grain: it is the expensive part of a frame, so it is

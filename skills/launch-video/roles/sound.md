@@ -76,6 +76,8 @@ Write every cue in beats and the cue sheet follows a tempo change with one edit:
 - `normalise_sfx` sets each effect's loudest sample to -1 dBFS before its `gain_db`, so a gain
   says where it sits against the others (recorded levels differ by 20 dB from file to file).
 - `music.stop_beat` cuts the music dead on a beat with a 30 ms fade: the end card's first hit.
+- A cue's `duration` (seconds) plays only that much of the effect from its anchor, with a 20 ms
+  fade-out: a typing loop for as long as the line takes to type.
 - `mix.py` downloads what `sources` lists and is missing, limits, measures the file and lowers its
   ceiling until the true peak holds at -1 dBFS, and cuts picture and sound at the picture's length
   (no `-shortest`: it dropped the last frames when the audio was a few milliseconds short).

@@ -309,6 +309,33 @@ describe('launch-video sound tools', { skip: !(haveFfmpeg && python) && 'needs f
     assert.deepEqual(fit.window.map(Math.round), [5, 35])
   })
 
+  it('plays only the duration a cue asks for, and stops the music on a beat', () => {
+    const dir = tmp()
+    const sr = 22050
+    const tone = Buffer.alloc(44 + sr * 2)
+    tone.write('RIFF', 0); tone.writeUInt32LE(36 + sr * 2, 4); tone.write('WAVEfmt ', 8); tone.writeUInt32LE(16, 16); tone.writeUInt16LE(1, 20); tone.writeUInt16LE(1, 22)
+    tone.writeUInt32LE(sr, 24); tone.writeUInt32LE(sr * 2, 28); tone.writeUInt16LE(2, 32); tone.writeUInt16LE(16, 34); tone.write('data', 36); tone.writeUInt32LE(sr * 2, 40)
+    for (let i = 0; i < sr; i++) tone.writeInt16LE(Math.round(12000 * Math.sin((2 * Math.PI * 440 * i) / sr)), 44 + i * 2)
+    writeFileSync(path.join(dir, 'tone.wav'), tone)
+    writeFileSync(path.join(dir, 'bed.wav'), tone)
+    const video = path.join(dir, 'silent.mp4')
+    spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=160x90:r=30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-t', '3', video])
+    // a 1 s tone bed that the music stops at beat 2 (1 s at 120 BPM)... and a cue that plays 0.2 s of a 1 s tone at beat 4 (2 s)
+    writeFileSync(path.join(dir, 'cues.json'), JSON.stringify({ bpm: 120, duration_beats: 6, music: { file: 'bed.wav', start: 0, stop_beat: 1 }, cues: [{ beat: 4, file: 'tone.wav', duration: 0.2 }] }))
+    const out = path.join(dir, 'final.mp4')
+    const r = spawnSync(python, [path.join(SKILL, 'scripts/mix.py'), path.join(dir, 'cues.json'), video, out], { encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr)
+    const maxVolume = (from, len) => {
+      const v = spawnSync('ffmpeg', ['-hide_banner', '-ss', String(from), '-t', String(len), '-i', out, '-vn', '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' })
+      const m = v.stderr.match(/max_volume: (-?[\d.]+|-inf) dB/)
+      return m ? (m[1] === '-inf' ? -200 : Number(m[1])) : Number.NaN
+    }
+    assert.ok(maxVolume(2.02, 0.15) > -40, 'the cue sounds at its beat')
+    assert.ok(maxVolume(2.3, 0.6) < -60, 'and is silent after its duration')
+    assert.ok(maxVolume(0.1, 0.3) > -40, 'the music plays until its stop beat')
+    assert.ok(maxVolume(0.6, 0.35) < -60, 'and is gone after it')
+  })
+
   it('keeps the last frames when the audio is shorter than the picture', () => {
     const dir = tmp()
     // a 2 s picture at 30 fps, and a music bed of only 1.5 s: -shortest would cut the picture to 45 frames

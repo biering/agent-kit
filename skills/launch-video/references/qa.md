@@ -39,6 +39,13 @@ QuickTime and the stores read its colours wrong), a full decode on the macOS har
 size against the `<video>.json` manifest `render.mjs` wrote (frames lost when worker segments were
 joined, a capture at the wrong scale), the audio stream, and integrated loudness and true peak.
 
+**What a cut is, and what it is not.** A hard cut here is a step where most of the frame changes at
+once. A cut between two shots of similar tone and layout (a word swapped on the same ground) changes
+little of the frame and reads as motion, not as a cut: the style's profile counts what the pixels
+show, so a style that cuts on light-to-light needs its cut range set from a measured starter, and a
+director who wants the cut to count alternates the grounds. The cut into an end card is the card's,
+not the film's, when `endCardSeconds` is the card's length.
+
 **The metric is per style.** The same real film reads very differently on the two scales: the
 Tinybreath motion loop (one breathing shape, never cut, called perfect) measures 59% still frames and
 a 1.9 s hold at the kinetic metric (`stillDelta 24`), and 25% still with a 0.83 s longest hold at the
