@@ -83,20 +83,22 @@ data point, a card growing from its own content).
 
 ## Where the moves come from
 
-Eight public films on prompt-motion.com, picked on 2026-10-07, watched frame by
-frame and written up in our own words. No prompt and no code was taken; each
-film belongs to the person who posted it.
+Eight public films on [prompt-motion.com](https://prompt-motion.com), picked on
+2026-10-07, watched frame by frame and written up in our own words. No prompt and
+no code was taken; each film belongs to the person who posted it, and the link
+credits them.
+
 
 | Film | What it does well | Taken from it |
 |---|---|---|
-| Bento.surf product video, 40 s | Chapters: a cost adds up, collapses into the product, then one feature per chapter with the headline left and the screen right | `tally`, `gather`, `marker`, `wipe`, `chain`, `chart`, `checklist`, brief E |
-| An API key promo, 15 s | A counter that runs away, then one object replaces it | `stamp`, the runaway `count` |
-| A product intro synced to music, 15 s | One serif accent, a device that fills, very few elements | The restraint; its particle dissolves are left out |
-| A browser automation skill launch, 23 s | A pointer that scans a page, finds the target and clicks it | `pointer`, `scan`, `typed`, `stamp` |
-| An engineering showreel, 24 s | Two runs side by side on one clock; a row of cards the camera travels | `race`, `strip` |
-| A motion design showreel, 15 s | A dashboard assembling tile by tile | `bento` |
-| A pricing promo, 15 s | A price argument: a question, a bill that grows, one flat price, what is in the plan | `strike`, `tally`, brief F |
-| Shape morphing through UI states, 14 s | One shape, never cut | `edges`; the rest is brief C |
+| [Bento.surf product video](https://prompt-motion.com/bizibeast-10f264), 40 s | Chapters: a cost adds up, collapses into the product, then one feature per chapter with the headline left and the screen right | `tally`, `gather`, `marker`, `wipe`, `chain`, `chart`, `checklist`, brief E |
+| [An API key promo](https://prompt-motion.com/0xfemyn-e114d3), 15 s | A counter that runs away, then one object replaces it | `stamp`, the runaway `count` |
+| [A product intro synced to music](https://prompt-motion.com/bogdandragomir-35e024), 15 s | One serif accent, a device that fills, very few elements | The restraint; its particle dissolves are left out |
+| [A browser automation skill launch](https://prompt-motion.com/hqmank-7c61f1), 23 s | A pointer that scans a page, finds the target and clicks it | `pointer`, `scan`, `typed`, `stamp` |
+| [An engineering showreel](https://prompt-motion.com/polydao-7a572b), 24 s | Two runs side by side on one clock; a row of cards the camera travels | `race`, `strip` |
+| [A motion design showreel](https://prompt-motion.com/sudo-kiran-49176d), 15 s | A dashboard assembling tile by tile | `bento` |
+| [A pricing promo](https://prompt-motion.com/thayto-dev-44b911), 15 s | A price argument: a question, a bill that grows, one flat price, what is in the plan | `strike`, `tally`, brief F |
+| [Shape morphing through UI states](https://prompt-motion.com/twoclipping-5cba86), 14 s | One shape, never cut | `edges`; the rest is brief C |
 
 ## Seen and left out
 

@@ -125,7 +125,8 @@ npm init -y && npm i playwright && npx playwright install chromium
 ```
 
 No Homebrew: `npm i ffmpeg-static` and link its binary onto `PATH`. Only `popscan.py` needs
-`ffprobe`.
+`ffprobe`. `ffprobe-static` ships an x86 binary for Apple silicon: get `ffprobe` from Homebrew or
+a static build for the right architecture.
 
 `K=<repo>/.agents/skills/launch-video/scripts` in every command below, run from the studio.
 Prove the pipeline before writing the film: copy `templates/film.html` into the film's folder,
@@ -262,11 +263,14 @@ node $K/render.mjs <film>/film.html --matrix 'format=wide,reel' --purity
 For 9:16:
 
 - Re-lay the page out, do not shrink it. Rebuild it the way the app reflows on a narrow
-  screen, about 680 world units wide, framed at 1.4x.
-- Keep what must be read between y 220 and 1580, clear of the platforms' own interface. Aim
-  the camera a little below its subject (`cy + 120 / z`); the caption pill sits near y 1470.
+  screen (key figures in two columns, a label above its bar, a table row's label above its
+  cells), about 680 world units wide, framed at 1.4x.
+- Keep what must be read between y 220 and 1580: Instagram and TikTok cover the top and the
+  bottom with their own interface. Aim the camera a little below its subject (`cy + 120 / z`);
+  the caption pill sits near y 1470.
+
 - Give each section the frame to itself, a screen apart in the world.
-- Break the lines again. A two-line hook becomes three. Same words.
+- Break the lines again. A two-line hook becomes three, a one-line end card two. Same words.
 - Run every check per format (`--matrix` takes `--purity` and `--stills` too). The reel's purity
   check finds what the wide cut's did not.
 
