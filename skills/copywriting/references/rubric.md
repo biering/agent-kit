@@ -8,7 +8,8 @@ total.
 | 1 | **Clarity** (gate) | Ten readers picture the same product | Could describe three different products |
 | 2 | **Excitement** | Provokes curiosity, recognition or *wait, what?* | Accurate, inert, forgettable |
 | 3 | **Truth** (gate) | Believing it and then seeing the product feels informed | Reader feels tricked; number invented |
-| 4 | **Concreteness** | Nouns and verbs you can point at; a number if one exists | Shape words: platform, solution, layer, system, approach |
+| 4 | **Concreteness** | Nouns and verbs you can point at; a number if one exists | Shape words: platform, solution, layer, system, approach (Plattform, Lösung, Ebene, System, Ansatz) |
+
 | 5 | **Budget** | At or under the surface's word or character budget | Over budget, or padded to fill it |
 | 6 | **Voice** | The repo's voice and address form, plain, the way a person talks | Corporate-neutral, formalised, translated-sounding |
 

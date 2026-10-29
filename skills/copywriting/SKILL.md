@@ -1,6 +1,7 @@
 ---
 name: copywriting
-description: Write and sharpen short copy (one-liners, headlines, subheads, CTAs, meta descriptions) in DE and EN as scored variants, proposed before editing. Use for tagline, headline, CTA, Slogan, Claim, "make it punchier".
+description: Write and sharpen short copy (one-liners, headlines, subheads, CTAs, meta descriptions) in DE and EN as scored variants, proposed before editing. Use for tagline, headline, CTA, Slogan, Claim, Überschrift, Formulierung, "make it punchier".
+
 ---
 
 # Copywriting
