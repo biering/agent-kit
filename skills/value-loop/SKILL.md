@@ -1,7 +1,8 @@
 ---
 name: value-loop
 description: >-
-  Scout for product problems, let a sceptical gate keep only what moves customers or revenue, fix the few under a PR cap; or judge open PRs. Use for /value-loop, 'is this PR worth merging', 'which PRs to merge'.
+  Scout for product problems, let a sceptical gate keep only what moves customers or revenue, fix the few under a PR cap; or judge open PRs. Use for /value-loop, 'find what matters', 'is this PR worth merging', 'which PRs to merge', 'lohnt sich das'.
+
 ---
 
 # Value loop
