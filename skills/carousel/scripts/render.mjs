@@ -552,6 +552,20 @@ ${brand.layout}
 <body class="brand-${brand.id} ratio-${ratio.replace(':', 'x')}">${slides.join('\n')}</body></html>`
 }
 
+/**
+ * Tokens the shared layout reads with a neutral fallback (`var(--tint, 113 113 122)`) that the
+ * brand sets in neither its theme nor its own slides.css. The fallback is the kit's grey, not the
+ * brand's colour, so a brand that leaves one out renders grey glows, chips and shadows without
+ * an error. A fallback to another token (`var(--x, var(--y))`) is not counted.
+ */
+export function unsetTokens(brand) {
+  const shared = readFileSync(path.join(SKILL_DIR, 'scripts/slides.css'), 'utf8')
+  const own = `${brand.theme}\n${brand.layout}`
+  return [...new Set([...shared.matchAll(/var\((--[a-z0-9-]+),\s*\d/g)].map((m) => m[1]))].filter(
+    (token) => !new RegExp(`${token}\\s*:`).test(own),
+  )
+}
+
 /** A print document whose pages are exactly the rendered PNGs. */
 export function pdfDocument(pngFiles, { width, height }) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -701,6 +715,9 @@ async function main(argv) {
   const warnings = [...findPlaceholders(doc), ...cropWarnings, ...missing, ...lettered]
   const missingFonts = fontFaces(brand).missing
   if (missingFonts.length) warnings.push(`brand fonts not found (install the app's dependencies?): ${[...new Set(missingFonts.map((f) => f.family))].join(', ')}, rendered with the fallback`)
+  const unset = unsetTokens(brand)
+  if (unset.length) warnings.push(`brand theme leaves ${unset.join(', ')} to the layout's grey fallback: set them from the brand's colours`)
+
 
   const formats = doc.formats ?? DEFAULT_FORMATS
   const browser = await launchChromium()

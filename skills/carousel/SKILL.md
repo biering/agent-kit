@@ -176,7 +176,8 @@ so. A feature that spans two products is posted once per product, each in its ow
 every format and never show a customer's document. A finding's severity reads as a word, four
 gauge dots and a chip at once, so it works without colour. Everything in them is example data and
 says so. `chat`: `user` is the prompt as a user would type it, `tool` the real tool name the agent
-calls, `agent` the answer with one fact per line; say in `note` where the example came from.
+calls, `agent` the answer with one fact per line and the object in bold. Example data comes from
+somewhere real (the app's own example, a changelog, an anonymised real run); say which in `note`.
 
 Inline markup in any product slide text: `*word*` is the brand's accent, `**word**` bold, `\n` a
 line break. In a `lettered` line, `*word*` is the one highlighted word (a marker swipe behind it):
@@ -223,9 +224,12 @@ file beside it.
 
 1. Copy `brands/example/` into the repo's brands folder. Set `name`, `apps`, `lang`, `logo`,
    `handle`.
-2. Rewrite `theme.css` from the app's design doc: every token, the tints as RGB triplets, the font
-   variables. If the look differs in more than colour and type (no shadows, another chrome), add a
-   `slides.css` whose rules start with `.brand-<id> .slide` so they outrank the shared ones.
+2. Rewrite `theme.css` from the app's design doc: every token, the tints as RGB triplets
+   (`--tint`, `--tint-light`, `--shadow-tint`: left unset, they fall back to grey, and the render
+   warns), the font variables. If the look differs in more than colour and type (no shadows,
+   another chrome), add a `slides.css` whose rules start with `.brand-<id> .slide` so they outrank
+   the shared ones.
+
 3. For lettered carousels: generate the mascot once (8 to 12 named poses as standalone images),
    host the poses, list them under `mascot.poses`. Never redraw the character per carousel:
    consistency is what makes a mascot. A missing pose renders a grey placeholder, so specs can be
