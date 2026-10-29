@@ -1,0 +1,31 @@
+{
+  "style": "kinetic",
+  "description": "The Sound role's profile for fast kinetic type: music at a known tempo with one drop, a recorded effect on every hit, the music stopped dead on the end card.",
+  "tempo": {
+    "bpm": [128, 175],
+    "teaser": "15 to 25 s at 160 to 175 BPM (drum and bass, phonk, breakbeat): a beat is 0.35 s, the shot length the style runs at",
+    "launch": "40 to 55 s at 165 to 175 BPM",
+    "calmer": "30 to 45 s at 120 to 135 BPM: about 8 cuts per 10 s then means a cut every 2 beats"
+  },
+  "structure": "a tense intro, one drop on a bar line where the film turns (the first colour flip or the first picture), body at a steady level, the music stops dead on the end card's first beat",
+  "fit": "beats.py <track> --bpm <intended> --start <s> --window <s> --drop-beat <n>: the fitted tempo, the downbeat offset, the drops, and the music.start that puts the drop on film beat n",
+  "music": {
+    "recorded": { "id": 726, "title": "Uplifting Bass", "source": "https://assets.mixkit.co/music/726/726.mp3", "measured": "134.0 BPM, grid strength 1.0, drop at 14.39 s (8.3 dB rise); start 7.226 puts the drop on beat 16" },
+    "generated": "Optional. Higgsfield MCP generate_audio when its catalog lists a music model (models_explore type audio): get_cost first, show the price, wait for a yes, then one run. Its prompt takes a tempo as words, not a number field, so the tempo is a claim: fit it with beats.py and trust the fit, never the prompt."
+  },
+  "gain_db": -6,
+  "kit": {
+    "impact": { "mixkit": 2908, "gain_db": -6, "note": "Movie trailer epic impact: every punch shot, every strike" },
+    "impact_big": { "mixkit": 788, "gain_db": -4, "note": "Big cinematic impact: the hero landing" },
+    "hit": { "mixkit": 2047, "gain_db": -10, "note": "Martial arts fast punch: a lighter hit, the second part of a shot" },
+    "tick": { "mixkit": 2364, "gain_db": -16, "note": "Hard pop click: a run of cuts on the beat" },
+    "pop": { "mixkit": 2357, "gain_db": -13, "note": "Bubble pop: a counter landing" },
+    "whoosh": { "mixkit": 1492, "gain_db": -11, "anchor": "peak", "note": "Cinematic whoosh fast transition: a whip" },
+    "whoosh_big": { "mixkit": 1486, "gain_db": -9, "anchor": "peak", "note": "Cinematic tunnel reverb woosh: the zoom through a letter" },
+    "riser": { "mixkit": 790, "gain_db": -12, "anchor": "peak", "note": "Cinematic trailer riser: the charge before the first word" },
+    "glitch": { "mixkit": 2595, "gain_db": -15, "note": "Small electric glitch: a struck thing dying" },
+    "logo_hit": { "mixkit": 2900, "gain_db": -4, "note": "Movie logo intro impact: the end card, with the music stopped" }
+  },
+  "levels": { "lufs": -14, "true_peak_dbtp": -1, "sfx": "each effect is normalised to -1 dBFS before its gain, so a gain says where it sits against the others" },
+  "gate": "earshot critique on the encoded file; fix every [critical] and [major], or write down why a line stays"
+}
