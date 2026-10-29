@@ -1,9 +1,73 @@
-# Briefs: six structures that work
+# Briefs: the director's brief, then seven structures
 
-Each is a starting skeleton. Swap in the product, its palette and its one story,
-then re-time it to the measured beat grid of the chosen song. Every brief ends
-the same way: show the beat map and four stills before writing the full film.
-Moves in `code` are from [moves.md](moves.md).
+A film starts from a brief, not a vibe. The template below is what to fill in (or hand to the
+user to fill in) before the beat map. The structures after it are starting skeletons for the
+beat sheet.
+
+## The director's brief
+
+Copy this into the film's folder as `BRIEF.md`. A line you cannot fill is a question for
+the user, or a gap SKILL.md § Intake closes first.
+
+```markdown
+# Brief: <film name>
+
+## Film in one line
+The logline and the one idea. Every decision is checked against it.
+
+## References
+- <frame / video / library>: what to keep (pace, palette, transition), what to push (what we do
+  harder or differently). Never the subject. See "Naming a look" below.
+
+## Tools and keys
+- Skills and scripts: launch-video (render, mix, earshot).
+- Keys by name, in `.env`, never pasted: `ELEVENLABS_API_KEY`, `HIGGSFIELD_...`. Budget: <n>.
+
+## Brand or character bible
+- Brand: the repo's `brand.css`, the mark's SVG, the voice. Or, for a character: proportions,
+  palette sampled from a sheet, expressions, an identity lock that holds across every shot.
+
+## Beat sheet
+- b0 to b4 (0:00 to 0:02): the hook. Within 2 s.
+- b4 to b12: <move>, <what the viewer sees>. A visual payoff every 3 to 5 s.
+- ... end card.
+Tempo, song, where the drop lands.
+
+## On-screen text
+When lines are huge (the hook, the verdict), when they sit like captions, the longest line, the
+language. The composition leaves room for them. Each line is a claim with a source.
+
+## Workflow gates
+plan (beat map) → stills → animatic (rough timing, no polish) → full pass → polish → audio →
+render. No gate is skipped; the user's yes is needed at: <which>.
+
+## Critique loop
+Stills and contact sheet at each gate, scored 1 to 10 on the rubric, the 3 worst problems fixed,
+repeat until every score is 8 or higher (critique.md). Scores go in the README.
+
+## Deliverables
+- final mp4 per format, the poster frame (png), the contact sheet, the loop check (first frame
+  against last, for a loop), the source with a README (beat map, sources, rounds, scores).
+```
+
+Effort: write and fill the brief at xhigh for a new film. Fixes and re-renders run at medium.
+
+## Naming a look
+
+Without a reference a film falls back to centred text on a gradient with everything fading in.
+Name a look instead of describing it, on one of three rungs:
+
+1. **One frame.** A screenshot of a frame you love. Say what to take (palette, type, grain,
+   composition) and what not to take (the subject, the logo).
+2. **A video.** The file or link. Extract frames first (`ffmpeg -i ref.mp4 -vf
+   "fps=2,scale=480:-1,tile=6x4" contact-%02d.png`) and describe the pacing shot by shot before
+   writing any code: what happens, how each shot turns into the next, the camera, the cut rhythm.
+3. **A library.** A folder of your own images or past films. Write `style_guide.md` from it
+   first (palette, type, texture, motion habits), then build against that guide. A library of
+   your own work is a reference no one else can copy.
+
+Give the look and the constraints, not the library: "paper cut-out, 24 fps feel, three colours"
+and not "use p5.js". The model picks the technique, unless the film must reuse a specific one.
 
 ## A. The product story (16:9, 15 to 30 s)
 
@@ -141,6 +205,27 @@ figure on screen is one of theirs.
   sentence about what waiting costs, and only with a number the user gave.
 - **End card**: the price, how it is billed, the address. The end card does
   not contradict the plan (SKILL.md § Hard rules).
+
+## G. The state-list spec (the way to write C or any one-take film)
+
+Write the spec as a state list, not a vibe. One shape, never cut: the element morphs through
+UI states, a cursor drives each change with real clicks, drags and long-presses, and the last
+frame equals the first so the film loops. Also the structure of the App Store 21:9 header loop
+(formats.md).
+
+```text
+state 0  pill "Start", 120x48, accent          (= the last state)
+state 1  b2:   cursor arrives, press, pill grows to 560x56, a text field, caret blinks
+state 2  b6:   field types the request; the pill becomes a loader ring
+state 3  b10:  the ring opens into the result card (rows draw in, one per half beat)
+state 4  b16:  card shrinks back to the pill "Start", label swaps in: loop point
+```
+
+- Each state names its beat, size, radius, colour, label and what the cursor does. The film is
+  the in-betweens: one value per property, one spring per change (`springTo`).
+- Every change has a cause on screen: the cursor moved to it and pressed. Nothing moves on its own.
+- Check the loop with `--stills 0,<duration>`: the two stills must match, cursor included.
+- Build notes: the shape in a world layer, the cursor a screen-space layer, real data in every row.
 
 ## The copy
 

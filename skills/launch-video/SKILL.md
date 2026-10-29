@@ -24,7 +24,9 @@ launch-video/
 ├── references/
 │   ├── craft.md          # the look, the motion and sound rules, the gotchas: read first
 │   ├── moves.md          # the catalog: 16 moves, when to reach for each
-│   ├── briefs.md         # six proven film structures to adapt
+│   ├── briefs.md         # the director's brief template, naming a look, seven structures to adapt
+│   ├── critique.md       # the scored visual critique loop (the twin of earshot)
+│   ├── formats.md        # layout(w, h), 16:9 1:1 9:16 and the 21:9 App Store loop, spring presets, generate-then-trace
 │   └── x-player-card.md  # shipping the film inside a post on X
 ├── templates/
 │   ├── kit.js            # motion kit: easing, springs, camera, project, masks, the moves, the viewer
@@ -112,7 +114,11 @@ Write down per beat: what happens, how each scene turns into the next, the camer
 and type. Then write the same structure for this feature in moves from
 [references/moves.md](references/moves.md): the reference gives structure and rhythm, the brand
 gives the look, and what the reference does that the brand bans is translated by that file's
-"Seen and left out" table. With no reference, pick from [references/briefs.md](references/briefs.md).
+"Seen and left out" table. With no reference, pick from [references/briefs.md](references/briefs.md). A new film starts from
+its director's brief (same file): fill it in, then the beat map. Name a look rather than describing
+one: a frame (what to take, what not), a video (frames extracted, pacing described shot by shot
+before code), or a library (a `style_guide.md` first). Give the look and the constraints, never
+the library.
 
 ### 1. Set up the studio (once per machine)
 
@@ -167,8 +173,8 @@ the product's own sounds.
 
 Before the full film exists, write the beat map (every scene, what happens on which beat, the
 move it uses, the camera move, the sound) and build just enough of `film.html` to render four
-stills: the open, the turn, the product moment and the end card. Show both and wait, unless the
-user chose to build through. Changing a plan costs a sentence; changing a finished film costs an
+stills: the open, the turn, the product moment and the end card. Score the stills ([critique](references/critique.md)), show both and wait,
+unless the user chose to build through. Changing a plan costs a sentence; changing a finished film costs an
 hour.
 
 Every beat block names its move (`b8 to b12: tally, five cost items, total 196`), chosen by what
@@ -202,7 +208,8 @@ stills of a regular sheet. `--tile 360` is the film at the width a phone feed pl
 there, not at 1080p. Every still also lists text drawn under 20 px per 1080 px of the frame's short
 side (`small text: 14 px "Fixed rate"`); a label caught mid-pop shows up too, so open that still
 before resizing anything. Overlaps and cropped labels only show at full size: open two or three
-stills themselves.
+stills themselves. Then score the beats on the rubric in [references/critique.md](references/critique.md),
+fix the 3 worst problems and re-render until every score is 8 or higher.
 
 ### 5. Render, check, mix
 
@@ -241,6 +248,10 @@ pops: turn those cues down (a click at -10 dB, a pop at -8) rather than the musi
 `beat` with a top-level `bpm`, or `t` in seconds.
 
 ### 6. Formats and variants: one film, one source
+
+Scenes are written against `layout(w, h)`, never fixed pixels, and every format (16:9, 1:1, 9:16,
+the 21:9 App Store header loop) is reframed from the one timeline, never cropped:
+[references/formats.md](references/formats.md).
 
 A reel is not a second film. `film.html` reads `?format=reel` and the renderer passes it through,
 so score, data, copy and beats exist once and a note lands in every cut. A format owns only where
@@ -287,9 +298,14 @@ $K/earshot.sh sheet final.mp4 -o sheet.png           # annotated PNG: open it an
 Fix every `[critical]` and `[major]` line and re-run, or write in the README why a flagged line
 stays (a film that deliberately breathes against the references' flat loudness arc is a reason;
 an unread line is not). Record the final scorecard summary in the README. earshot's synthesized
-effects are a fallback for when no recorded effect fits.
+effects are a fallback for when no recorded effect fits. A popular write-up of the Opus 5.5
+reels says synthesized sound carries a film. This skill disagrees: earshot measured recorded
+effects ahead of synthesized ones on 7 professional films (`realness`), so recorded stays the rule.
 
 ### 8. Director's notes
+
+The final cut gets the scored pass first ([critique](references/critique.md), on the encoded mp4),
+and its scores go in the README next to earshot's.
 
 Hand over the film as a link (the repo's media store) or a path, and take notes the way a
 director gives them ("too slow", "that fade looks cheap", "land the zoom on the drop"). Collect a
@@ -312,6 +328,11 @@ The repo's notes name the uploader, the store for rendered files and the schedul
 player card turns the film into something that plays inside the post:
 [references/x-player-card.md](references/x-player-card.md), checked live with
 `node $K/player-card.mjs <url>`.
+
+## Effort
+
+`medium` for fixes and re-renders (a director's note, a retimed cue). `xhigh` for a new film: the
+brief, the beat map and the build. The first three seconds of a launch earn `max`.
 
 ## Hard rules
 
