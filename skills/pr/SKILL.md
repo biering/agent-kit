@@ -67,6 +67,15 @@ Write it from `references/description.md`. Write to a temp file and pass `--body
 file afterwards. A `.github/` PR template gets filled in, not replaced. If the harness appends a
 trailer (a "Generated with" line, a session link), keep it.
 
+**Screenshots**, only when the branch changes what a user sees (a component, page, layout, styles,
+a UI string): 1 to 4 PNGs of the changed screens, branch state only, desktop width plus one phone
+width shot when layout changed, each with a one-line caption. `gh` cannot upload images, so
+`scripts/pr-screenshots.sh <png>...` commits them to `refs/pr-assets/<branch>` (outside every
+branch), pushes that ref and prints the markdown lines to paste. Use a test account, never real
+customer data: a pushed image stays reachable by its commit URL until the ref is deleted and
+garbage-collected. If the app will not start, skip them and say so in the test plan.
+
+
 ## 5. Create or update
 
 **PR exists for this head:** re-read `git log <base>..HEAD` and the full diff, then replace title
