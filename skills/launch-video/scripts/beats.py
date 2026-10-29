@@ -27,6 +27,8 @@ bar_loudness_db, beats) and adds the fit:
                     is the smaller of the two). A soft intro is not a drop:
                     a rise out of near-silence (under -35 dB before) is the song starting.
   grid_strength     0 to 1: how much more onset energy sits on the grid than between it
+  downbeat_confidence  0 to 1: how much harder the downbeat is struck than the next-best beat of the bar.
+                    Four on the floor reads near 0: the downbeat is then a guess, listen to the first bar
   intended, drift_pct, drift_ms_per_min    with --bpm
   start             with --drop-beat N: the music offset at which the strongest drop lands on film beat N
                     (the film's cue sheet field music.start), and whether N is a multiple of 4 so the
@@ -93,6 +95,29 @@ def refine_phase(y, beats_s, period_s):
             continue
         found.append((int(np.argmax(rise[c - half:c + half])) - half) / SR)
     return float(np.median(found)) if len(found) >= 4 else 0.0
+
+
+def kick_envelope(y):
+    """The low band (under 150 Hz) smoothed over 30 ms: how hard each beat is struck, in amplitude.
+    The onset curve is log-compressed, so a strong downbeat and a weak beat look alike there."""
+    spec = np.fft.rfft(y)
+    spec[int(KICK_HZ / (SR / len(y))):] = 0
+    low = np.fft.irfft(spec, len(y))
+    k = int(0.03 * SR)
+    return np.convolve(np.abs(low), np.ones(k) / k, 'same')
+
+
+def downbeat_class(env, beat_s):
+    """Which of the four beats in a bar carries the most kick, and how clearly (0 to 1)."""
+    half = int(0.05 * SR)
+    hits = []
+    for t in beat_s:
+        c = int(t * SR)
+        hits.append(env[max(0, c - half):c + half].max() if c + half < len(env) else 0.0)
+    totals = np.array([sum(hits[i::4]) for i in range(4)])
+    order = np.argsort(totals)[::-1]
+    best, second = totals[order[0]], totals[order[1]]
+    return int(order[0]), float((best - second) / best) if best > 0 else 0.0
 
 
 def autocorr_tempo(e, fps, hint):
@@ -170,10 +195,12 @@ def main():
     strength = float(min(1.0, sample(mix, in_window - centre).mean() / (mix[k0:k1].mean() + 1e-9) / 4))
 
     # the downbeat: of the four beats in a bar, the one that carries the most kick, over the window
-    kick_on = np.array([sample(e_kick, in_window[i::4] - centre).sum() for i in range(4)])
-    d0 = int(np.argmax(kick_on))
+    env = kick_envelope(y)
+    d0, confidence = downbeat_class(env, in_window / fps)
     down = in_window[d0::4] / fps
-    all_down = beats[(np.argmax([sample(e_kick, beats[i::4] - centre).sum() for i in range(4)])):][::4] / fps
+    # the same class across the whole track: the beats are one grid
+    first_in_window = int(np.argmax(beats >= in_window[0]))
+    all_down = beats[(first_in_window + d0) % 4:][::4] / fps
     beat_s = 60 / bpm
 
     # loudness per bar, and drops: two bars after a downbeat against the bar before it. Level is the
@@ -215,7 +242,7 @@ def main():
         'drops': drops,
         'drop': best['music_s'] if best else None, 'drop_beat': int(round((best['music_s'] - offset) / beat_s)) if best else None,
         'drop_rise_db': best['rise_db'] if best else None,
-        'phase_shift_ms': round(shift * 1000, 1), 'grid_strength': round(strength, 2), 'window': [round(k0 / fps, 2), round(k1 / fps, 2)],
+        'downbeat_confidence': round(confidence, 2), 'phase_shift_ms': round(shift * 1000, 1), 'grid_strength': round(strength, 2), 'window': [round(k0 / fps, 2), round(k1 / fps, 2)],
         'bar_loudness_db': bars,
         'beats': [round(float(b / fps), 3) for b in beats],
     }

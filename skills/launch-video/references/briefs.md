@@ -7,7 +7,7 @@ beat sheet.
 ## The director's brief
 
 Copy this into the film's folder as `BRIEF.md`. A line you cannot fill is a question for
-the user, or a gap SKILL.md § Intake closes first.
+the user, or a gap roles/producer.md § Intake closes first.
 
 ```markdown
 # Brief: <film name>
@@ -15,13 +15,21 @@ the user, or a gap SKILL.md § Intake closes first.
 ## Film in one line
 The logline and the one idea. Every decision is checked against it.
 
+## Style
+kinetic | one-shape | product-ui | story | ambient-loop, and the sentence that decided it
+(roles/director.md). Or the 2 or 3 proposed, recommendation first, until the user picks.
+
 ## References
 - <frame / video / library>: what to keep (pace, palette, transition), what to push (what we do
   harder or differently). Never the subject. See "Naming a look" below.
 
-## Tools and keys
-- Skills and scripts: launch-video (render, mix, earshot).
-- Keys by name, in `.env`, never pasted: `ELEVENLABS_API_KEY`, `HIGGSFIELD_...`. Budget: <n>.
+## Tools, keys and budget
+- Skills and scripts: launch-video (render, qa, mix, earshot).
+- Keys by name, in `.env`, never pasted. Paid steps (pictures, music, speech through the Higgsfield
+  MCP), each priced with `get_cost`, and the credits ceiling the user said yes to: <n>.
+
+## Claims
+Every sentence and number on screen, and the file or screen it comes from (roles/producer.md).
 
 ## Brand or character bible
 - Brand: the repo's `brand.css`, the mark's SVG, the voice. Or, for a character: proportions,
@@ -46,8 +54,9 @@ Stills and contact sheet at each gate, scored 1 to 10 on the rubric, the 3 worst
 repeat until every score is 8 or higher (critique.md). Scores go in the README.
 
 ## Deliverables
-- final mp4 per format, the poster frame (png), the contact sheet, the loop check (first frame
-  against last, for a loop), the source with a README (beat map, sources, rounds, scores).
+- final mp4 per format, each measured against the style's QA profile (`qa.mjs`), the poster frame
+  (png), the contact sheet, the loop check (`qa.mjs` seam, for a loop), the source with a README
+  (beat map, sources, rounds, scores).
 ```
 
 Effort: write and fill the brief at xhigh for a new film. Fixes and re-renders run at medium.
@@ -204,7 +213,7 @@ figure on screen is one of theirs.
 - **The other side** (4 beats, optional): one ink scene through a `wipe`, one
   sentence about what waiting costs, and only with a number the user gave.
 - **End card**: the price, how it is billed, the address. The end card does
-  not contradict the plan (SKILL.md § Hard rules).
+  not contradict the plan (SKILL.md, Hard rules).
 
 ## G. The state-list spec (the way to write C or any one-take film)
 

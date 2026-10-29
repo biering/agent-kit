@@ -11,6 +11,8 @@
 //   node render.mjs film.html --stills cuts --out seams/ --contact seams.png  # around every handoff
 //   node render.mjs film.html --stills every:4 --contact phone.png --tile 360  # at feed size
 //   node render.mjs film.html --matrix 'format=wide,reel;hook=a,b' --out film.mp4   # every variant
+//   node render.mjs film.html --out film.mp4 --qa kinetic             # measure the file against a style's QA
+//                                                                    # profile after the encode; a miss fails the run
 //
 // --crf sets the x264 quality: 14 (the default) is a master, 24 to 28 a deliverable for flat,
 // slow footage. --scale 2 renders a 1920x1080 page as 3840x2160 (device scale factor). --workers
@@ -585,6 +587,13 @@ async function main() {
         await ffmpeg(['-f', 'concat', '-safe', '0', '-i', join(tmp, 'list.txt'), '-c', 'copy', '-movflags', '+faststart', out]).done
         writeFileSync(`${out}.json`, `${JSON.stringify(manifest(root, film, query.query, meta, { fps, subframes, shutter, crf, scale, workers, level, from: from / fps, to: to / fps }), null, 2)}\n`)
         console.log(out)
+        // the Editor's measured checks, on the file just written: a target the style names and the film
+        // misses fails the render (a silent draft has no audio yet, so the audio targets wait for the mix)
+        if (flag('qa')) {
+          const qa = join(dirname(fileURLToPath(import.meta.url)), 'qa.mjs')
+          const r = spawnSync(process.execPath, [qa, out, '--style', flag('qa'), '--silent'], { stdio: 'inherit' })
+          if (r.status) process.exitCode = 1
+        }
       } finally {
         rmSync(tmp, { recursive: true, force: true })
       }

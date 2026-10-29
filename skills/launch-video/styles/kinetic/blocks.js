@@ -2,7 +2,7 @@
 // update(t) sets styles from t alone. `f` is the film context engine.js builds (palette, beat
 // conversion, text measuring, the hit and cut registers). Written for this kit, from the ideas in
 // references/blocks.md: a block per kind of phrase, a camera that never parks, a hit on every beat.
-import { E, clamp, el, hash, lerp, luminance, mix, place, rgba, set, show, tw, wrap } from './core.js'
+import { E, clamp, el, hash, lerp, mix, place, rgba, set, show, tw, wrap } from './core.js'
 
 const TAU = Math.PI * 2
 
@@ -45,7 +45,6 @@ class Base {
 export class Words extends Base {
   constructor(f, scene) {
     super(f, scene)
-    const { W, H } = f
     this.shots = scene.shots.map((shot) => this.makeShot(shot))
     this.charge = scene.charge ? this.makeCharge() : null
     this.exit = scene.exit
@@ -63,7 +62,6 @@ export class Words extends Base {
       else if (fx === 'beat') f.hit(at, { shake: 4, bump: 0.025, flash: 0 })
     })
     if (scene.exit?.type === 'flash') f.hit(f.b(scene.exit.at), { shake: 0, bump: 0, flash: 1 })
-    void W; void H
   }
 
   groundAt(t) {
@@ -382,8 +380,7 @@ export class Strike extends Base {
     } else {
       const tiles = (ui.tiles?.length ? ui.tiles : [['ONE', '◆', ''], ['TWO', '●', ''], ['THREE', '▲', ''], ['FOUR', '■', '']]).map(([name, glyph, tag], k) => {
         const tile = box(wrap, `left:${k * 25.5}%;top:18%;width:23%;height:64%;border:3px solid ${ink};border-radius:18px`)
-        const gl = label(tile, glyph, `left:50%;top:30%;font-size:${Math.round(f.H * 0.08)}px;transform:translateX(-50%)`)
-        void gl
+        label(tile, glyph, `left:50%;top:30%;font-size:${Math.round(f.H * 0.08)}px;transform:translateX(-50%)`)
         label(tile, name, 'left:8%;bottom:16%')
         label(tile, tag, 'left:8%;bottom:6%;opacity:.6')
         return tile
@@ -430,8 +427,8 @@ export class Hero extends Base {
       return e
     })
     this.ghosts = [1, 2, 3].map(() => word(f, this.el, f.text(s.title), size, 'transparent', `-webkit-text-stroke:${Math.max(2, size * 0.01)}px ${rgba(f.hex('accent'), 0.35)};`))
-    this.sub = el('div', this.el, `position:absolute;left:50%;top:50%;transform:translate(-50%,0);white-space:pre;font:700 ${Math.round(f.H * 0.05)}px/1 ${f.font.mono};color:${ink}`)
     this.subText = f.text(s.sub ?? '')
+    this.sub = el('div', this.el, `position:absolute;left:50%;top:50%;transform:translate(-50%,0);white-space:pre;font:700 ${Math.round(f.mono(this.subText + ' ', f.H * 0.05))}px/1 ${f.font.mono};color:${ink}`)
     f.hit(this.t0 + f.b(3), { shake: 20, bump: 0.06, flash: 0.45 })
     f.hit(this.t0 + f.b(1), { shake: 6, bump: 0.02, flash: 0 })
     f.pulses(this.t0 + f.b(3), this.t1)
@@ -524,7 +521,7 @@ export class Counters extends Base {
     const rowW = chars.reduce((w, ch) => w + (/\d/.test(ch) ? 0.67 * em : 0.33 * em), 0)
     const maxW = f.W * 0.92
     const k = Math.min(1, maxW / rowW)
-    const lab = word(f, g, label, f.H * 0.075, ink, `font-family:${f.font.mono};font-weight:700;letter-spacing:0.06em;`)
+    const lab = word(f, g, label, f.mono(label, f.H * 0.075), ink, `font-family:${f.font.mono};font-weight:700;letter-spacing:0.06em;`)
     const ring = el('div', g, `position:absolute;left:50%;top:50%;border:6px solid ${f.col('accent')};border-radius:50%`)
     return {
       g,
@@ -627,8 +624,10 @@ export class Logo extends Base {
     this.wmWrap = el('div', this.el, `position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden`)
     this.wm = word(f, this.wmWrap, scene.wordmark ?? f.spec.title ?? '', wmSize, ink)
     this.wmSize = wmSize
-    this.tag = word(f, this.el, f.text(scene.tagline ?? ''), f.H * 0.05, ink, `font-family:${f.font.mono};font-weight:700;`)
-    this.small = word(f, this.el, f.text(scene.small ?? ''), f.H * 0.028, ink, `font-family:${f.font.mono};font-weight:700;letter-spacing:0.2em;opacity:.7;`)
+    const tagline = f.text(scene.tagline ?? '')
+    const small = f.text(scene.small ?? '')
+    this.tag = word(f, this.el, tagline, f.mono(tagline, f.H * 0.05), ink, `font-family:${f.font.mono};font-weight:700;`)
+    this.small = word(f, this.el, small, f.mono(small, f.H * 0.028, 0.8), ink, `font-family:${f.font.mono};font-weight:700;letter-spacing:0.2em;opacity:.7;`)
     this.dots = Array.from({ length: 22 }, (_, i) => el('div', this.el, `position:absolute;left:0;top:0;width:${4 + Math.floor(hash(i) * 6)}px;height:${4 + Math.floor(hash(i) * 6)}px;border-radius:50%;background:${f.col('accent')}`))
     this.sweep = el('div', this.el, `position:absolute;top:-10%;height:120%;width:16%;background:linear-gradient(100deg,transparent,${rgba(f.hex('paper'), 0.22)},transparent);transform:skewX(-14deg)`)
     f.hit(this.t0 + f.b(1), { shake: 20, bump: 0.06, flash: 0.7 })
@@ -673,5 +672,3 @@ export class Logo extends Base {
 }
 
 export const BLOCK_CLASSES = { Words, Strike, Hero, Counters, Picture, Logo }
-
-void luminance

@@ -1,7 +1,7 @@
 # Every format from one timeline
 
 One `film.html`, one score, one data block, one beat map. A format changes only where things
-sit. SKILL.md § Formats and variants has the query string and `--matrix`; this is how the scenes
+sit. roles/animator.md § Formats and variants has the query string and `--matrix`; this is how the scenes
 are written so that holds for any size.
 
 ## Write against `layout(w, h)`, never fixed pixels
@@ -28,7 +28,7 @@ const L = layout(W, H)
 ```
 
 Reframe, never crop. A 16:9 render cut to 9:16 loses the sides of the screen and keeps a third
-of the type. Re-lay the page out (SKILL.md § Formats: 9:16), break the lines again, give each
+of the type. Re-lay the page out (roles/animator.md: 9:16), break the lines again, give each
 section the frame to itself, and write the camera keyframes per format. The words, numbers and
 timing are the same in every cut. Check every format with the same stills, `--purity` and the
 phone sheet (`--matrix` takes all three).
@@ -39,21 +39,28 @@ phone sheet (`--matrix` takes all three).
 | 1:1 | 1440x1440 | feed |
 | 9:16 | 1080x1920 | Reels, TikTok, Stories |
 | 21:9 | 3840x1646 | the App Store header loop |
+| 3:2 | 3600x2400 at most | the search-result tile |
 
 ## The App Store 21:9 header loop
 
 A silent loop above the fold of the product page.
 
 - **3840x1646**, **5 to 30 s**, seamless: the last frame equals the first, so it never jumps
-  when it wraps. Build it as a state-list film (briefs.md § G): one shape, never cut.
+  when it wraps. Build it with the `ambient-loop` style (periodic layers, whole cycles per loop) or
+  the `one-shape` style (a state list, one shape, never cut: briefs.md § G).
 - The frame is 2.33:1: lay it out in three columns or one wide scene with the focal point
   near the centre third; the store crops the edges on some devices.
 - No audio, no end card with a call to action (the page has the button). The mark may appear
   once, small.
-- Check the loop: render `--stills 0,<last frame>` and compare; the difference must be nothing
-  you can see. A loop with a visible seam shows it every 5 to 30 s for as long as the page is open.
-- Render at `--fps 30 --subframes 4` unless the motion is fast; the file is large, so check the
-  store's size limit before choosing a CRF.
+- Check the loop: `qa.mjs <loop.mp4> --style ambient-loop` compares the step from the last frame
+  back to the first with the film's own steps (references/qa.md); render `--stills 0,<last frame>`
+  and look at both. A loop with a visible seam shows it every 5 to 30 s for as long as the page is open.
+- Render at `--fps 30 --subframes 1` for slow motion (4 unless it is fast). The file is large: the
+  profile's size budget fails a loop over it, so choose the CRF with that number in view.
+- **The 3:2 tile is 3600x2400 at most.** 3840x2560 is 38,400 H.264 macroblocks against the 36,864
+  level 5.2 holds: x264 writes level 6.0, the file plays in ffmpeg and the Mac's hardware decoder
+  refuses it. `render.mjs` refuses the size before the first frame. 21:9 at 3840x1646 is 24,720
+  and fine.
 
 ## Spring presets
 

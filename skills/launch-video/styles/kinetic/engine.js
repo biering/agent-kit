@@ -9,7 +9,7 @@
 //     window.film = await build(spec)
 //   </script>
 import { BLOCK_CLASSES } from './blocks.js'
-import { E, clamp, el, luminance, rgba, set, show, tw } from './core.js'
+import { E, clamp, el, luminance, set, show, tw } from './core.js'
 import { cueSheet, fill, validateSpec } from './spec.js'
 
 const DEFAULT_PALETTE = { bg: '#0B1020', paper: '#F3EEE3', accent: '#FFC21A', hot: '#FF8A1F', ink: '#14120E' }
@@ -77,6 +77,11 @@ class Film {
   /** The font size at which `text` is exactly maxW wide. */
   fit(text, maxW) {
     return (100 * maxW) / Math.max(1, this.width(text, 100))
+  }
+
+  /** A size for monospace text that keeps `text` inside `frac` of the frame width (a mono advance is about 0.6 em). */
+  mono(text, maxPx, frac = 0.9) {
+    return Math.min(maxPx, (this.W * frac) / (0.6 * Math.max(1, text.length)))
   }
 
   hit(t, o) {
@@ -214,6 +219,5 @@ export async function build(spec, mount = document.getElementById('stage')) {
   f.scenes = spec.scenes.map((sc) => new BLOCK_CLASSES[sc.block](f, sc))
   await Promise.all(f.scenes.filter((s) => s.decoded).map((s) => s.decoded()))
   f.seek(0)
-  void rgba
   return f.api()
 }

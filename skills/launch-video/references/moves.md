@@ -102,7 +102,7 @@ film belongs to the person who posted it.
 
 | In the references | Why not here | Instead |
 |---|---|---|
-| Hard cuts on the beat between colour grounds | craft.md rule 2: no cuts | `wipe`, `stamp`, a flood |
+| Hard cuts on the beat between colour grounds | craft.md rule 2: no cuts | `wipe`, `stamp`, a flood; or the `kinetic` style, which is made of them |
 | Content swapping with a short blur | blur-ins are banned, and blurred text fails the purity check | a mask per label, own enter and exit times |
 | Particle dissolves, dither wipes, spark bursts | read as a showreel, not as a tool | a flood, or the shape itself changing |
 | A tilted 3D wall of cards, 3D carousels, floor reflections | breaks "2D, light, one accent"; strict brands ban 3D | `strip`, or a pull-back over a flat grid |

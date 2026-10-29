@@ -25,7 +25,9 @@ export function buildCues(spec, audio) {
     if (!k) throw new Error(`no sound in the kit for the cue "${c.name}" (kit: ${Object.keys(audio.kit).join(', ')})`)
     const file = `sfx/${k.mixkit}.mp3`
     sources[file] = sfxUrl(k.mixkit)
-    return { beat: Math.round(c.beat * 1000) / 1000, file, gain_db: c.gain_db ?? k.gain_db, ...(k.anchor ? { anchor: k.anchor } : {}) }
+    const beat = Math.round(c.beat * 1000) / 1000
+    // `t` is for earshot, which reads seconds only; mix.py prefers `beat`, so the two never disagree
+    return { beat, t: Math.round(((beat * 60) / spec.bpm) * 1000) / 1000, file, gain_db: c.gain_db ?? k.gain_db, ...(k.anchor ? { anchor: k.anchor } : {}) }
   })
   const out = { bpm: spec.bpm, duration_beats: spec.beats, normalise_sfx: true }
   if (spec.music) {
