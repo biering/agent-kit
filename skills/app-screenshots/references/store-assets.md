@@ -25,6 +25,14 @@ Smaller classes fall back to scaled versions of larger ones, but the page lists
 (Xcode 27.1 simulator). Submitting one puts an "optimized for iPhone Duo" badge
 on the product page.
 
+## iPad
+
+Only if the app supports iPad (`ios.supportsTablet` in the app config). The required class is
+13" at **2064x2752** or 2048x2732 portrait (2752x2064 or 2732x2048 landscape); 12.9" and 11"
+fall back to scaled 13" screenshots. The compositors render iPhone sizes only, so an iPad set
+needs its own captures and a size added to `SIZES` in `compose.mjs` before it can be composed.
+
+
 Up to 10 screenshots per class, `.png`/`.jpg`, no alpha. Up to 3 app previews,
 15 to 30 s; Duo previews upload at 886x1920 portrait
 ([app preview specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/app-preview-specifications)).
