@@ -54,6 +54,15 @@ describe('launch-video measured QA', () => {
     assert.ok(whole.longestHold >= 1.2 && whole.stillShare > m.stillShare, 'with no end card the resting stretch counts')
   })
 
+  it('joins a rest that spans the wrap of a loop into one hold', () => {
+    const still = { area: 0, cutArea: 0, mad: 0, dLuma: 0 }
+    const move = { area: 0.2, cutArea: 0.1, mad: 5, dLuma: 1 }
+    // 10 fps: 5 still steps, 10 moving, 5 still: a 0.5 s rest at each end is a 1.0 s hold when the loop plays on
+    const steps = [...Array(5).fill(still), ...Array(10).fill(move), ...Array(5).fill(still)]
+    assert.equal(measureSteps(steps, 10, { loop: false }).longestHold, 0.5)
+    assert.equal(measureSteps(steps, 10, { loop: true }).longestHold, 1)
+  })
+
   it('compares the wrap of a loop with the film\'s own steps', () => {
     assert.equal(loopSeam(0.8, 5.45, 1.5).ok, true)
     assert.equal(loopSeam(12, 5.45, 1.5).ok, false)

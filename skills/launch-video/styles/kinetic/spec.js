@@ -122,6 +122,11 @@ export function validateSpec(spec) {
         if (!colour(shot.ground) || !colour(shot.color)) bad(`${w}: ground and color are palette names or hex colours`)
       })
     }
+    if (s.block === 'Words' && s.exit?.type === 'zoom') {
+      const last = s.shots.at(-1)
+      if (!['slam', 'cut'].includes(last.style)) bad(`${where}: a zoom exit flies into the last shot's word, so the last shot is a slam or a cut (not ${last.style})`)
+      if (!Number.isInteger(s.exit.char) || s.exit.char < 0 || s.exit.char >= last.text.length) bad(`${where}: exit.char is the index of a letter of "${last.text}"`)
+    }
     if (s.block === 'Strike' && !(Array.isArray(s.items) && s.items.length)) bad(`${where}: items is a list of { at, word, ui }`)
     if (s.block === 'Counters') {
       if (!(Array.isArray(s.counters) && s.counters.length)) bad(`${where}: counters is a list of [value, label]`)

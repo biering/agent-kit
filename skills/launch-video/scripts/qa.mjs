@@ -110,7 +110,7 @@ const quantile = (a, q) => (a.length ? [...a].sort((x, y) => x - y)[Math.min(a.l
  * The film's measured numbers from its per-step stats (steps[i] is the step from frame i to i+1).
  * The end card, when the profile names one, is left out of the still, hold and cut counts: it may rest.
  */
-export function measureSteps(steps, fps, { stillShare = 0.015, endCardSeconds = 0 } = {}) {
+export function measureSteps(steps, fps, { stillShare = 0.015, endCardSeconds = 0, loop = false } = {}) {
   const seconds = (steps.length + 1) / fps
   // the 1e-6 keeps a card of exactly N frames at N frames: the cut into the card is the card's own, not the film's
   const inSpan = Math.max(0, Math.min(steps.length, Math.floor((seconds - endCardSeconds) * fps + 1e-6)))
@@ -124,6 +124,13 @@ export function measureSteps(steps, fps, { stillShare = 0.015, endCardSeconds = 
     if (run > longest) longest = run
     if (v && (i === still.length - 1 || !still[i + 1])) holds.push({ at: (i - run + 1) / fps, seconds: run / fps })
   })
+  // a loop plays on from its last frame into its first: a rest that spans the wrap is one hold
+  if (loop && still.length && still[0] && still.at(-1) && !still.every(Boolean)) {
+    const head = still.indexOf(false)
+    const tail = still.length - 1 - still.lastIndexOf(false)
+    longest = Math.max(longest, head + tail)
+    holds.push({ at: (still.length - tail) / fps, seconds: (head + tail) / fps })
+  }
   const cuts = span.reduce((n, s) => n + (isCut(s) ? 1 : 0), 0)
   const spanSeconds = inSpan / fps
   return {
@@ -281,7 +288,7 @@ async function main() {
   if (flag('end-card') != null) measure.endCardSeconds = Number(flag('end-card'))
   const facts = probe(file)
   const { steps, wrapMad } = await readSteps(file, facts, measure.stillDelta ?? 24)
-  const m = measureSteps(steps, facts.fps, measure)
+  const m = measureSteps(steps, facts.fps, { ...measure, loop: measure.loop === true })
   const t = { ...profile.targets }
   if (has('silent')) { t.audio = 'any'; delete t.loudness }
   const manifest = readManifest(file)

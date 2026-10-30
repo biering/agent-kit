@@ -98,20 +98,31 @@ export class Words extends Base {
     set(charge.dot, 'boxShadow', `0 0 ${20 + 90 * u}px ${10 + 30 * u}px ${rgba(f.col('accent'), 0.55)}`)
   }
 
-  /** Where the hole of a letter sits in the last shot, so the camera can fly through it. */
+  /**
+   * Where a letter sits in the last shot, from the word's own centre: measured once, with the scene
+   * on screen and the word at rest (a hidden element measures 0, and a zero here divides to a NaN
+   * camera that the browser silently ignores). The camera adds the word's pose at t (drift, tilt).
+   */
   measureZoom(scene) {
     const last = this.shots[this.shots.length - 1]
-    const text = last.main
-    if (!text) return null
+    if (!last.pose) throw new Error('spec: a zoom exit needs a slam or cut shot last')
     const idx = scene.exit.char ?? 0
-    const node = text.firstChild
+    const text = last.main.firstChild
+    this.el.style.display = 'block'
+    last.g.style.display = 'block'
+    last.main.style.transform = place(0, 0, 0, 1)
+    const word = last.main.getBoundingClientRect()
     const range = document.createRange()
-    range.setStart(node, idx)
-    range.setEnd(node, idx + 1)
+    range.setStart(text, idx)
+    range.setEnd(text, idx + 1)
     const r = range.getBoundingClientRect()
-    const base = this.el.getBoundingClientRect()
-    const k = base.width / this.f.W
-    return { x: (r.left + r.width / 2 - base.left) / k, y: (r.top + r.height / 2 - base.top) / k, size: last.size }
+    this.el.style.display = 'none'
+    last.g.style.display = 'none'
+    last.main.style.transform = ''
+    const dx = r.left + r.width / 2 - (word.left + word.width / 2)
+    const dy = r.top + r.height / 2 - (word.top + word.height / 2)
+    if (!Number.isFinite(dx) || !Number.isFinite(dy) || word.width === 0) throw new Error('the zoom exit could not measure its letter')
+    return { dx, dy, size: last.size, shot: last }
   }
 
   cam(t) {
@@ -122,11 +133,17 @@ export class Words extends Base {
     const dur = f.b(this.exit.dur ?? 1)
     const p = tw(t, at, at + dur, E.lin)
     if (p <= 0) return base
-    const S = Math.max(12, 8000 / this.zoom.size)
+    // the letter's place now: the word's centre plus its pose (drift, tilt, growth) times the letter's offset
+    const { dx, dy, size, shot } = this.zoom
+    const pose = shot.pose(t - shot.t)
+    const a = (pose.rot * Math.PI) / 180
+    const lx = f.W / 2 + pose.x + pose.s * (dx * Math.cos(a) - dy * Math.sin(a))
+    const ly = f.H / 2 + pose.y + pose.s * (dx * Math.sin(a) + dy * Math.cos(a))
+    const S = Math.max(12, 8000 / (size * pose.s))
     const focus = E.outCubic(p)
     return {
-      cx: lerp(f.W / 2, this.zoom.x, focus),
-      cy: lerp(f.H / 2, this.zoom.y, focus),
+      cx: lerp(f.W / 2, lx, focus),
+      cy: lerp(f.H / 2, ly, focus),
       s: base.s * Math.exp(Math.log(S) * E.inExpo(p)),
       r: base.r * (1 - p),
     }
@@ -163,10 +180,15 @@ export class Words extends Base {
       const rows = ghosts(text, size, colourHex)
       shot.main = word(f, g, text, size, color)
       const rot = def.rot ?? (def.style === 'cut' ? 0 : -2.5 * dir)
-      shot.draw = (ts) => {
+      // where the word stands ts seconds after it lands: also what a zoom exit flies into
+      shot.pose = (ts) => {
         const land = def.style === 'cut' ? tw(ts, 0, 0.07, E.outCubic) : tw(ts, 0, 0.16, E.outExpo)
-        const s = lerp(def.from ?? (def.style === 'cut' ? 1.14 : 1.9), 1, land) * slow(ts)
-        set(shot.main, 'transform', place(dir * ts * 46 + whip(ts).x, (def.y ?? 0) + whip(ts).y, rot * (1 - 0.7 * land), s))
+        const w = whip(ts)
+        return { x: dir * ts * 46 + w.x, y: (def.y ?? 0) + w.y, rot: rot * (1 - 0.7 * land), s: lerp(def.from ?? (def.style === 'cut' ? 1.14 : 1.9), 1, land) * slow(ts) }
+      }
+      shot.draw = (ts) => {
+        const p = shot.pose(ts)
+        set(shot.main, 'transform', place(p.x, p.y, p.rot, p.s))
         rows(ts)
       }
     } else if (def.style === 'stack') {
@@ -373,8 +395,9 @@ export class Strike extends Base {
         rows.forEach(({ row, leds }, r) => {
           const power = tw(ts, f.b(2) + r * 0.12, f.b(2) + r * 0.12 + 0.2, E.inCubic)
           leds.forEach((l, k) => set(l, 'background', power > 0.5 ? rgba(f.hex(ink), 0.25) : Math.sin(ts * 14 + k * 1.7 + r) > -0.2 ? f.col('accent') : rgba(f.hex(ink), 0.25)))
-          set(row, 'transform', `scaleY(${1 - power * 0.12})`)
-          set(row, 'opacity', String(1 - power * 0.55))
+          // an identity transform is no transform: a bordered box with one draws its edges differently
+          set(row, 'transform', power > 0 ? `scaleY(${1 - power * 0.12})` : 'none')
+          set(row, 'opacity', power > 0 ? String(1 - power * 0.55) : '1')
         })
       })
     } else {

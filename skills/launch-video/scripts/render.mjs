@@ -4,7 +4,7 @@
 //   node render.mjs film.html --out film.mp4 [--fps 60] [--subframes 8] [--workers 6] [--from 0 --to 12]
 //   node render.mjs film.html --stills 1.2,b16,b27.5 --out stills/    # seconds, or b<n> for beats
 //   node render.mjs film.html --stills every:2 --out stills/ --contact contact.png   # one per 2 beats, tiled
-//   node render.mjs film.html --purity                                # is seek(t) a pure function of t?
+//   node render.mjs film.html --purity                                # is seek(t) a pure function of t? (two frames a beat)
 //   node render.mjs film.html --serve                                 # open the film in your own browser
 //   node render.mjs 'film.html?format=reel' --out reel.mp4            # a query string reaches the page
 //   node render.mjs film.html --query 'pattern=box&minutes=5' --out box.mp4   # the same, as a flag
@@ -97,7 +97,7 @@ export function parseStills(spec, { beat, duration, cuts, fps = 60 }) {
   const times = []
   for (const part of spec.split(',').map((s) => s.trim()).filter(Boolean)) {
     if (part === 'cuts') {
-      if (!cuts?.length) throw new Error('cuts needs window.film.cuts')
+      if (!cuts?.length) throw new Error('cuts needs window.film.cuts (a one-take film lists its soft handoffs there and its true hard cuts, none, in window.film.hardCuts; or draw it with --stills every:1)')
       for (const c of cuts) for (const d of [-1, 0, 1]) times.push(Math.min(duration, Math.max(0, c + d / fps)))
     } else if (part.startsWith('every:')) {
       const step = Number(part.slice(6))
@@ -512,7 +512,9 @@ async function main() {
       // seek(t) must draw the same frame whatever was drawn before it: the workers render out of
       // order, and motion blur seeks backwards between frames. Draw each sample, wander off, come back.
       const { page, meta } = await openPage(url)
-      const dflt = [meta.beat ? 'every:2' : '0', meta.cuts?.length ? 'cuts' : ''].filter(Boolean).join(',')
+      // two samples a beat: a draw that depends on history (a display toggle, a scaled pointer) hid between
+      // the samples of every:2 and showed at every:0.5
+      const dflt = [meta.beat ? 'every:0.5' : '0', meta.cuts?.length ? 'cuts' : ''].filter(Boolean).join(',')
       const samples = parseStills(flag('stills', dflt), meta)
       const impure = []
       // the pairs are evidence, not output: a temp folder unless --out names one
