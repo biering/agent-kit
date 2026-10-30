@@ -333,7 +333,7 @@ export class Strike extends Base {
         set(outline, 'transform', place(0, f.H * 0.27 + ts * 14, 0, 1 + 0.02 * ts))
         set(filled, 'transform', place(0, f.H * 0.27 + ts * 14, 0, 1 + 0.02 * ts))
         const fillP = tw(ts, b(1.5), b(1.5) + 0.2, E.outCubic)
-        set(fillWrap, 'clipPath', `inset(0 ${(1 - fillP) * 100}% 0 0)`)
+        set(fillWrap, 'clipPath', fillP >= 1 ? 'none' : `inset(0 ${(1 - fillP) * 100}% 0 0)`)
         set(outline, 'display', ts >= b(1) ? 'block' : 'none')
         set(fillWrap, 'display', ts >= b(1.5) ? 'block' : 'none')
         // the last item ends in a TV switch-off: squash to a line, then a point
@@ -381,7 +381,7 @@ export class Strike extends Base {
           set(h, 'display', die > 0 ? 'block' : 'none')
           set(h, 'transform', `translate(${(i ? 1 : -1) * die * f.W * 0.35}px,${die * die * f.H * 0.5}px) rotate(${(i ? 1 : -1) * die * 14}deg)`)
         })
-        set(wrap, 'transform', `translateX(${(1 - enter) * f.W * 0.5}px) scale(${lerp(0.9, 1, enter)})`)
+        set(wrap, 'transform', enter >= 1 ? 'none' : `translateX(${(1 - enter) * f.W * 0.5}px) scale(${lerp(0.9, 1, enter)})`)
       })
     } else if (ui.type === 'rack') {
       const rows = (ui.rows ?? ['NODE 01', 'NODE 02', 'NODE 03']).map((text, r) => {
@@ -391,7 +391,7 @@ export class Strike extends Base {
         return { row, leds }
       })
       draw.push((ts, enter) => {
-        set(wrap, 'transform', `translateX(${(1 - enter) * f.W * 0.5}px) scale(${lerp(0.9, 1, enter)})`)
+        set(wrap, 'transform', enter >= 1 ? 'none' : `translateX(${(1 - enter) * f.W * 0.5}px) scale(${lerp(0.9, 1, enter)})`)
         rows.forEach(({ row, leds }, r) => {
           const power = tw(ts, f.b(2) + r * 0.12, f.b(2) + r * 0.12 + 0.2, E.inCubic)
           leds.forEach((l, k) => set(l, 'background', power > 0.5 ? rgba(f.hex(ink), 0.25) : Math.sin(ts * 14 + k * 1.7 + r) > -0.2 ? f.col('accent') : rgba(f.hex(ink), 0.25)))
@@ -509,7 +509,8 @@ export class Counters extends Base {
     this.pages.forEach((p, i) => {
       f.cut(this.t0 + f.b(i * 3))
       f.hit(this.t0 + f.b(i * 3 + 0.9), { shake: 10, bump: 0.03, flash: 0.25 })
-      f.pulses(this.t0 + f.b(i * 3 + 1), this.t0 + f.b(Math.min(this.s.at[1] - this.s.at[0], i * 3 + 3)))
+      // the last page keeps pulsing to the end of the scene: nothing parks
+      f.pulses(this.t0 + f.b(i * 3 + 1), i === this.pages.length - 1 ? this.t1 : this.t0 + f.b(i * 3 + 3))
     })
   }
 
@@ -670,7 +671,7 @@ export class Logo extends Base {
     const wmIn = tw(ts, b(1.5), b(1.5) + 0.35, E.outCubic)
     set(this.wm, 'display', ts >= b(1.5) ? 'block' : 'none')
     set(this.wm, 'transform', place(0, hasMark ? f.H * 0.12 : 0, 0, 1, 1))
-    set(this.wmWrap, 'clipPath', `inset(0 ${(1 - wmIn) * 100}% 0 0)`)
+    set(this.wmWrap, 'clipPath', wmIn >= 1 ? 'none' : `inset(0 ${(1 - wmIn) * 100}% 0 0)`)
     const tagIn = tw(ts, b(3), b(3) + 0.3, E.outCubic)
     set(this.tag, 'display', ts >= b(3) ? 'block' : 'none')
     set(this.tag, 'transform', place(0, f.H * (hasMark ? 0.3 : 0.2) + (1 - tagIn) * 50))

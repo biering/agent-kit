@@ -69,7 +69,7 @@ does not silently turn a check off. `loopSeamRatio` needs `measure.loop: true`.
 
 | Profile | Where its numbers come from |
 |---|---|
-| kinetic | Scenario's measurements of viral kinetic reels and of a film built with its skill: under a quarter of the frames still in the fastest reference, no shot held past 0.4 to 0.7 s, 9.1 hard cuts per 10 s in the fastest reference and 12.5 in its worked teaser, 40% still at most as the failing line. Ours measured on the starter: 36%, 0.45 s, 12.5 |
+| kinetic | Scenario's measurements of viral kinetic reels and of a film built with its skill: under a quarter of the frames still in the fastest reference, no shot held past 0.4 to 0.7 s, 9.1 hard cuts per 10 s in the fastest reference and 12.5 in its worked teaser, 40% still at most as the failing line. Ours measured on the starter: 33%, 0.45 s, 10.4 |
 | one-shape, ambient-loop | measured on the real Tinybreath films at `stillDelta 4`: 16:9 cut 25.0% still, longest hold 0.83 s, 0 hard cuts, wrap step 0.86 against its own p95 of 4.73; header loop 26.8%, 0.83 s, 0 cuts, wrap 0.80 against 5.45. Targets sit about 40% outside those |
 | product-ui, story | the style's own starter, measured, with 25 to 40% headroom (each `qa.json` says so) |
 

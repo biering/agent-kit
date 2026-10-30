@@ -18,6 +18,10 @@ node $K/qa.mjs <film>/<slug>.mp4 --style <style> --json     # the final: every t
 python3 $K/popscan.py silent.mp4
 ```
 
+`--draft` renders a fast look (one sample per frame, no motion blur, crf 26) in a fraction of the time:
+use it while the film changes, and `--qa <style>` on a draft is a smoke test (the profiles are calibrated on a
+real render, and a draft can read a little differently), never the gate. The gate is the final's.
+
 `render.mjs` sizes the workers to the machine's memory, writes H.264 High, yuv420p, BT.709 limited
 range at a level the Mac hardware decoder plays, and a `<out>.json` beside the video (the film, its
 query, the commit, whether the film's folder had uncommitted edits, the settings). A

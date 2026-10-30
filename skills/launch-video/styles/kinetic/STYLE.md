@@ -100,7 +100,8 @@ normalised before their gain, music stopped on a beat). Fit the track first:
 | File | under 1 GB, H.264 level 5.2 or lower, plays on the macOS hardware decoder | above 5.2 QuickTime and phones refuse it |
 | Audio | present, -16 to -12 LUFS, true peak -1 | `mix.py` masters to -14 LUFS |
 
-The starter measures 36% still, a 0.45 s longest hold and 12.5 cuts per 10 s. A film that misses a
+The starter measures 33% still, a 0.45 s longest hold and 10.4 cuts per 10 s (a draft render reads the
+same). It is kept off the band's edge on purpose: at 12.5 it read 13.1 on another render and failed. A film that misses a
 target does not ship: fix it and render again (`references/qa.md`).
 
 ## Formats

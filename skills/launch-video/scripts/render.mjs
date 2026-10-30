@@ -11,6 +11,7 @@
 //   node render.mjs film.html --stills cuts --out seams/ --contact seams.png  # around every handoff
 //   node render.mjs film.html --stills every:4 --contact phone.png --tile 360  # at feed size
 //   node render.mjs film.html --matrix 'format=wide,reel;hook=a,b' --out film.mp4   # every variant
+//   node render.mjs film.html --out draft.mp4 --draft --qa kinetic    # a fast look: no motion blur, crf 26 (a few times faster)
 //   node render.mjs film.html --out film.mp4 --qa kinetic             # measure the file against a style's QA
 //                                                                    # profile after the encode; a miss fails the run
 //
@@ -365,11 +366,13 @@ async function main() {
   // --fps defaults to the film's own `fps` (a 30 fps film renders at 30), else 60
   const fpsGiven = flag('fps') !== undefined
   let fps = Number(flag('fps', 60))
-  const subframes = Number(flag('subframes', 4))
+  // --draft: a fast look, one sample per frame (no motion blur) at a low quality; a final is never a draft
+  const draft = has('draft')
+  const subframes = Number(flag('subframes', draft ? 1 : 4))
   const asked = flag('workers') === undefined ? null : Number(flag('workers'))
   const shutter = Number(flag('shutter', 0.5))
   const stills = flag('stills')
-  const crf = flag('crf', '14')
+  const crf = flag('crf', draft ? '26' : '14')
   // device scale factor: a 1920x1080 page at --scale 2 is a 3840x2160 frame
   const scale = Number(flag('scale', 1))
   if (!(scale > 0)) throw new Error(`bad --scale "${flag('scale')}"`)

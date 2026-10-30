@@ -27,10 +27,8 @@ export default {
     // the drop: a run of cuts on the beat, the ground flipping on each
     { block: 'Words', at: [16, 24], shots: [
       { at: 16, style: 'cut', text: 'FAST.', ground: 'accent', size: 520, rot: -3, fx: 'punch' },
-      { at: 17, style: 'cut', text: 'SIMPLE.', ground: 'paper', size: 440, rot: 3, fx: 'beat' },
-      { at: 18, style: 'slam', text: 'ON THE BEAT.', ground: 'accent', fx: 'hit', in: 'whipX' },
-      { at: 20, style: 'pair', text: ['EVERY', 'CUT.'], ground: 'paper', fx: 'hit' },
-      { at: 22, style: 'cut', text: 'NOW.', ground: 'bg', color: 'accent', size: 600, fx: 'punch' },
+      { at: 18, style: 'slam', text: 'ON THE BEAT.', ground: 'paper', fx: 'hit', in: 'whipX' },
+      { at: 21, style: 'cut', text: 'NOW.', ground: 'bg', color: 'accent', size: 600, fx: 'punch' },
     ], exit: { type: 'zoom', at: 23, char: 1, dur: 1 } },
     // the name, in 3D
     { block: 'Hero', at: [24, 32], kicker: 'WRITTEN IN', title: 'CODE', sub: 'one web page' },
@@ -38,7 +36,6 @@ export default {
     { block: 'Counters', at: [32, 41], counters: [
       ['{frames}', 'FRAMES. ALL CODE.'],
       ['{seconds}', 'SECONDS OF FILM.'],
-      ['{beats}', 'BEATS ON THE GRID.'],
     ] },
     // the end card; the music stops dead on its first beat
     { block: 'Logo', at: [41, 51], wordmark: 'PRODUCT', tagline: 'One line that says what it does.', small: 'AVAILABLE NOW' },
