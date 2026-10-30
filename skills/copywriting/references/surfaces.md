@@ -8,8 +8,8 @@ out or the layout breaks, not a style preference.
 | **One-liner / tagline / claim** | 5 words max | The reader can picture the product | Abstract nouns, adjective stacks, ten readers ten pictures (`one-liner.md`) |
 | **Hero headline** | 8 words max, no full stop | The reader knows what the page is about | It names a category ("The platform for ...") instead of a thing |
 | **Hero subhead** | 1 sentence, 25 words max | Name the mechanism and the outcome | It repeats the headline in longer words, or lists three benefits |
-| **Section headline** | 8 words max, no full stop | Say what changes in this section | It is a noun label ("Features") where a claim would fit |
-| **Feature bullet** | 1 to 2 sentences | One capability, concretely, with the number if there is one | Adjectives instead of behaviour ("lightning fast" vs "in seconds") |
+| **Section headline** | 8 words max, no full stop | Say what changes in this section | It is a noun label ("Features", "Vorteile") where a claim would fit |
+| **Feature bullet** | 1 to 2 sentences | One capability, concretely, with the number if there is one | Adjectives instead of behaviour ("lightning fast" vs "in seconds", "blitzschnell" vs "in Sekunden") |
 | **Step label** in a numbered flow | 4 words max, verb first | The verb the user performs | It describes the system's action, not the user's |
 | **CTA button** | 4 words max, contains a verb | Name what happens on click | "Learn more" / "Mehr erfahren": generic, promises nothing |
 | **Meta description** | 155 characters max | Win the click from the results page | No query terms, or a truncated sentence |
@@ -22,16 +22,17 @@ for bullets and paragraphs.
 
 ## Anti-patterns that pass every spell-check
 
-- **Adjective-led headline.** "Smart, transparent and simple": three moods, zero information.
-  Replace each adjective with the behaviour that produces it.
-- **Category self-description.** "The platform for data-driven workflows." Nobody wakes up
-  wanting a platform.
-- **Benefit without mechanism.** "Save time and make better decisions." True of every product
-  ever shipped. Name *what* saves the time.
-- **Number-free comparison.** "significantly faster", "far less effort". Produce the number or
-  drop the comparison.
-- **Stacked hedge.** "can help you potentially ...". Say what it does. Required legal hedges stay
-  (see `unslop`, preservation); decorative ones go.
+- **Adjective-led headline.** "Smart, transparent and simple" ("Smart, transparent und einfach"):
+  three moods, zero information. Replace each adjective with the behaviour that produces it.
+- **Category self-description.** "The platform for data-driven workflows." ("Die Plattform für
+  datengetriebene Workflows.") Nobody wakes up wanting a platform.
+- **Benefit without mechanism.** "Save time and make better decisions." ("Spare Zeit und triff
+  bessere Entscheidungen.") True of every product ever shipped. Name *what* saves the time.
+- **Number-free comparison.** "significantly faster", "far less effort" ("deutlich schneller",
+  "erheblich weniger Aufwand"). Produce the number or drop the comparison.
+- **Stacked hedge.** "can help you potentially ..." ("kann dir dabei helfen, potenziell ...").
+  Say what it does. Required legal hedges stay (see `unslop`, preservation); decorative ones go.
+
 - **Headline/subhead duplication.** The subhead's first job is to add something. If it can be
   deleted without loss, delete it.
 

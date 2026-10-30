@@ -12,7 +12,7 @@ names (see App UI).
 
 | Job | Read |
 |---|---|
-| A landing page, marketing site, product page, portfolio, one-pager, hero | `references/landing-page.md` (the offer and what the page must answer), then `references/taste/GUIDE.md`, the full run |
+| A landing page, marketing site, product page, portfolio, one-pager, hero | `references/landing-page.md` (the offer), then `references/landing-anatomy.md` (the sections, in order, with their ids), then `references/taste/GUIDE.md`, the full run |
 | Redesign or review of a page that already exists | `references/redesign.md`, then the taste run from its step 2 |
 | App screens: dashboards, settings, forms, lists, onboarding | `references/app-ui.md` |
 | A single section or component inside an existing design | match what is there, apply the house rules in `references/taste/GUIDE.md`, and look |

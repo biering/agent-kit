@@ -74,7 +74,7 @@ sections this shape needs.
 Write these down and show them with the taste run's argument (its step 2) and copy deck (step 5):
 
 1. the shape from section 2 and why;
-2. the outline: sections in order, each one a claim and its proof;
+2. the outline from `landing-anatomy.md`: those sections in that order, each one a claim and its proof. A section that file marks honesty-gated is omitted when the proof does not exist, and the omission is named;
 3. the first screen: headline, supporting sentence, action, proof signal;
 4. the benefits, the steps (if the product has a how), the FAQ;
 5. index or noindex, and the title and description if indexed.

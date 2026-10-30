@@ -111,6 +111,8 @@ in the repo's public changelog image path and reference it from every locale's e
 | Redesign | Before and after |
 | New workflow | Step screenshots or a short video |
 | Performance | A chart of the improvement |
+| Complex feature | An animated GIF or a short video demo |
+
 
 ## Versioning and channels
 

@@ -1,7 +1,7 @@
 ---
 name: unslop
 description: >-
-  Find and remove AI-slop patterns (stock phrases, em dashes, rule of three, promo gloss) in German and English prose, keeping facts and voice. Use for unslop, humanize, 'sounds like ChatGPT', 'klingt generisch'.
+  Find and remove AI-slop patterns (stock phrases, em dashes, rule of three, promo gloss) in German and English prose, keeping facts and voice. Use for unslop, humanize, 'sounds like ChatGPT', 'klingt generisch', and unasked on prose you drafted.
 ---
 
 # Unslop
@@ -62,7 +62,15 @@ date, URL, claim, hedge, and negation. Rewrite paragraph by paragraph against
 Show the rewrite with a short list of what changed and why. If the original
 was fine, say so: "no changes needed" is a valid, good outcome.
 
+## Boundary with `copywriting`
+
+This skill removes machine fingerprints from prose that already says the right thing. Deciding
+what a line should say (a one-liner, a hero headline, a CTA, which of five candidates ships)
+belongs to `copywriting`, which runs this skill as its prose pass. When the user asks for a new
+line rather than a cleaner one, hand over.
+
 ## Carve-outs
+
 
 Every repo has its own in `docs/agent-kit/unslop.md` (and its `AGENTS.md`). Read them before an
 audit. These hold everywhere:

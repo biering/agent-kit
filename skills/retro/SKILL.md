@@ -46,6 +46,15 @@ entire search --json "query" --branch "$(git branch --show-current)" --date week
 Never run `entire search` without `--json`: it opens an interactive TUI. Entire disabled or not
 authenticated: say so and continue on git alone. Never invent session evidence.
 
+- Pass the checkpoint id exactly as `checkpoint list` prints it; a short prefix can fail after a
+  long wait. Full `explain` (without `--short`) can take over 100 seconds: one checkpoint at most.
+- `entire dispatch --local --all-branches --since 7d` (no login, about 30 s) narrates recent work
+  across branches: context, not evidence.
+
+- Search queries that pay: "user corrected", "again", "typecheck failed", "CI failed", plus topic
+  terms from the branch. Two to four, not a dozen.
+- Never start `entire login` or any prompt that blocks on the user; note the missing auth instead.
+
 Output: three to eight **session patterns**, each with a checkpoint id or commit SHA.
 
 ## 3. Candidates
@@ -61,6 +70,10 @@ Output: three to eight **session patterns**, each with a checkpoint id or commit
 Rank by `impact on future errors × how often it would help / effort`. Keep three, merge related
 items. Read the existing `AGENTS.md` first and extend a section instead of duplicating it. If a
 rule exists and agents ignored it, propose stronger placement or a check, not the same text again.
+
+Every proposal cites evidence from step 1 or 2. A broad refactor qualifies only when the evidence
+shows the same pain more than once.
+
 
 ## 4. Deliverable
 

@@ -88,9 +88,13 @@ node $K/render.mjs <film>/film.html --matrix 'format=wide,reel;hook=problem,resu
 node $K/render.mjs <film>/film.html --matrix 'format=wide,reel' --purity
 ```
 
-For 9:16: re-lay the page out, do not shrink it (about 680 world units wide, framed at 1.4x); keep
-what must be read between y 220 and 1580; aim the camera a little below its subject; give each
-section the frame to itself; break the lines again. Run every check per format.
+For 9:16: re-lay the page out, do not shrink it. Rebuild it the way the app reflows on a narrow
+screen (key figures in two columns, a label above its bar, a table row's label above its cells),
+about 680 world units wide, framed at 1.4x. Keep what must be read between y 220 and 1580:
+Instagram and TikTok cover the top and the bottom with their own interface. Aim the camera a
+little below its subject (`cy + 120 / z`); the caption pill sits near y 1470. Give each section the
+frame to itself, a screen apart in the world. Break the lines again: a two-line hook becomes three,
+a one-line end card two, same words. Run every check per format.
 
 ## Effort
 

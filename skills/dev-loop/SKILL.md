@@ -74,7 +74,16 @@ review for the REST or MCP surface, a database review for migrations, `unslop` f
 copy. Run each on the code as it stands, not before writing it. Fix what holds up, push back with
 evidence on the rest.
 
-**Done when** every review has a verdict, or a written reason it could not run.
+A review stays valid while you fix its own findings, tests included. It needs a second pass when
+the code in its scope is rewritten (more than max(30 lines, 20 %) is a workable line) or a file it
+never saw enters that scope.
+
+Fixing review findings changes the code step 3 verified. Re-run `loop.verify` after the last edit:
+it is the last local step, and a green run from before a fix proves nothing about the PR.
+
+**Done when** every review has a verdict, or a written reason it could not run, and `loop.verify`
+passed after the last edit.
+
 
 ## 5. PR
 

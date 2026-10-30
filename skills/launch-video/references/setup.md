@@ -10,7 +10,8 @@ npm init -y && npm i playwright && npx playwright install chromium
 
 No Homebrew: `npm i ffmpeg-static` and link its binary onto `PATH`. `popscan.py` and `qa.mjs`
 need `ffprobe`. `qa.mjs`, `render.mjs` and `cues.mjs` need only Node 22 and ffmpeg; `beats.py`,
-`mix.py`, `peaks.py` and `popscan.py` need numpy.
+`mix.py`, `peaks.py` and `popscan.py` need numpy. `ffprobe-static` ships an x86 binary for Apple
+silicon: get `ffprobe` from Homebrew or a static build for the right architecture.
 
 `K=<repo>/.agents/skills/launch-video/scripts` in every command, run from the studio folder (where
 `playwright` resolves). Prove the pipeline before writing a film: copy a style's
