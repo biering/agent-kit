@@ -25,7 +25,9 @@ bar_loudness_db, beats) and adds the fit:
   drops             up to three: { music_s, film_beat (from offset), rise_db } - the downbeat after which
                     each of the next two bars is louder than the bar before it, by the most (the rise
                     is the smaller of the two). A soft intro is not a drop:
-                    a rise out of near-silence (under -35 dB before) is the song starting.
+                    a rise out of near-silence (under -35 dB before) is the song starting. A rise under
+                    3 dB is level wobble, not a drop: a track of even loudness reports none, and
+                    --drop-beat then prints no start rather than aligning a non-event.
   grid_strength     0 to 1: how much more onset energy sits on the grid than between it
   downbeat_confidence  0 to 1: how much harder the downbeat is struck than the next-best beat of the bar.
                     Four on the floor reads near 0: the downbeat is then a guess, listen to the first bar
@@ -44,6 +46,8 @@ import numpy as np
 
 SR, HOP, WIN = 22050, 256, 2048
 KICK_HZ = 150
+DROP_MIN_DB = 3.0   # a bar at least this much louder than the one before, for two bars: a doubling of power
+
 
 
 def load(path):
@@ -216,7 +220,7 @@ def main():
         f = t * fps
         before = mean_db(f - bar_frames, f)
         after = min(mean_db(f, f + bar_frames), mean_db(f + bar_frames, f + 2 * bar_frames))   # both bars must hold it
-        if before > -35 and f - bar_frames > 0 and f + 2 * bar_frames < len(power):
+        if before > -35 and f - bar_frames > 0 and f + 2 * bar_frames < len(power) and after - before >= DROP_MIN_DB:
             rises.append((after - before, float(t)))
     rises.sort(reverse=True)
     picked = []   # the biggest rises, at least eight bars apart: the next bar of one drop is not another drop
@@ -250,6 +254,8 @@ def main():
         out['intended'] = a.bpm
         out['drift_pct'] = round((bpm / a.bpm - 1) * 100, 3)
         out['drift_ms_per_min'] = round(60 * (a.bpm / bpm - 1) * 1000, 1)
+    if a.drop_beat is not None and not best:
+        out['start_note'] = f'no drop in this track (no bar is {DROP_MIN_DB:g} dB louder than the one before it, held for two bars): set music.start by ear instead'
     if a.drop_beat is not None and best:
         start = best['music_s'] - a.drop_beat * beat_s
         out['start'] = round(start, 3)

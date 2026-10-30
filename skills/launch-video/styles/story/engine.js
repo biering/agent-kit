@@ -12,7 +12,7 @@ import { BLOCK_CLASSES, Lines } from './blocks.js'
 import { clamp, el, loadSvg, set } from './core.js'
 import { EXIT_SECONDS, cueSheet, cutBeats, validateSpec } from './spec.js'
 
-const DEFAULT_PALETTE = { bg: '#0B1020', paper: '#F4EEE2', accent: '#F2A65A', ink: '#16130F' }
+const DEFAULT_PALETTE = { bg: '#0D1822', paper: '#F4EEE2', accent: '#F2A65A', ink: '#16130F' }
 const DEFAULT_FONT = { serif: "Georgia, 'Times New Roman', serif", sans: "'Helvetica Neue', Helvetica, Arial, sans-serif" }
 
 class Film {

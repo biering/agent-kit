@@ -54,6 +54,16 @@ describe('launch-video measured QA', () => {
     assert.ok(whole.longestHold >= 1.2 && whole.stillShare > m.stillShare, 'with no end card the resting stretch counts')
   })
 
+  it('refuses an end card that leaves little or nothing to measure', () => {
+    const move = { area: 0.2, cutArea: 0.1, mad: 5, dLuma: 1 }
+    const steps = Array(29).fill(move)   // 3 s at 10 fps
+    assert.doesNotThrow(() => measureSteps(steps, 10, { endCardSeconds: 1.5 }), 'half of the film is the most a card may be')
+    assert.throws(() => measureSteps(steps, 10, { endCardSeconds: 99 }), /leaves 0\.0 s of a 3\.0 s film to measure/)
+    assert.throws(() => measureSteps(steps, 10, { endCardSeconds: 2 }), /at most half of it/)
+    assert.throws(() => measureSteps(steps, 10, { endCardSeconds: Number('x') }), /not a number of seconds/)
+    assert.throws(() => measureSteps(steps, 10, { endCardSeconds: -1 }), /not a number of seconds/)
+  })
+
   it('joins a rest that spans the wrap of a loop into one hold', () => {
     const still = { area: 0, cutArea: 0, mad: 0, dLuma: 0 }
     const move = { area: 0.2, cutArea: 0.1, mad: 5, dLuma: 1 }
@@ -134,6 +144,9 @@ describe('launch-video styles', () => {
       const profile = loadProfile(path.join(SKILL, 'styles', name, 'qa.json'))
       assert.equal(profile.style, name)
       assert.ok(Object.keys(profile.targets).length >= 3, `${name}: a profile with fewer than three targets measures nothing`)
+      // the brief asks for every render to be measured on the same few things; the 1 GB ceiling is one of them
+      for (const k of ['stillShareMax', 'holdMax', 'bytesMax', 'levelMax', 'hardwareDecode']) assert.ok(profile.targets[k] != null, `${name}: targets.${k} is named`)
+      assert.ok(profile.targets.bytesMax <= 1e9, `${name}: bytesMax is at most 1 GB`)
       const audio = JSON.parse(read('styles', name, 'audio.json'))
       assert.equal(audio.style, name)
       assert.ok(audio.description, `${name}: audio.json says what it is for`)
@@ -191,6 +204,11 @@ describe('launch-video kinetic spec', () => {
     assert.throws(() => validateSpec(mutate((s) => { s.beats = 60 })), /scenes end at beat 51 but beats is 60/)
     assert.throws(() => validateSpec(mutate((s) => { s.scenes[0].block = 'Slideshow' })), /block is one of/)
     assert.throws(() => validateSpec(mutate((s) => { s.scenes[0].shots[1].at = 99 })), /inside the scene/)
+  })
+
+  it('refuses a shot with no word in it', () => {
+    assert.throws(() => validateSpec(mutate((s) => { s.scenes[0].shots[0].text = '' })), /text is not empty/)
+    assert.throws(() => validateSpec(mutate((s) => { s.scenes[0].shots[2].text = ['NO', '  '] })), /text is not empty/)
   })
 
   it('refuses a number on screen that has no source', () => {
@@ -313,6 +331,20 @@ describe('launch-video sound tools', { skip: !(haveFfmpeg && python) && 'needs f
     assert.equal(fit.drop_beat, 24)
     assert.ok(Math.abs(fit.start - (fit.drop - 16 * (60 / 123.4))) < 0.01, 'start puts the drop on film beat 16')
     assert.equal(fit.start_note, 'ok')
+  })
+
+  it('reports no drop on a track of even loudness and places nothing by it', () => {
+    const dir = tmp()
+    const file = path.join(dir, 'flat.wav')
+    clickTrack(file, { bpm: 128, offset: 0.2, seconds: 40, dropBar: 0 })   // loud from the first bar to the last
+    const r = spawnSync(python, [path.join(SKILL, 'scripts/beats.py'), file, '--bpm', '128', '--drop-beat', '16'], { encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr)
+    const fit = JSON.parse(r.stdout)
+    assert.ok(Math.abs(fit.bpm - 128) < 0.2, `fitted ${fit.bpm}`)
+    assert.deepEqual(fit.drops, [])
+    assert.equal(fit.drop, null)
+    assert.equal(fit.start, undefined, 'no start is offered for a drop that is not there')
+    assert.match(fit.start_note, /no drop in this track/)
   })
 
   it('pins the tempo and fits a window that does not start at zero', () => {

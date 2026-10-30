@@ -26,7 +26,7 @@ The video is decoded once with ffmpeg at 320 px wide, in grey. For every step be
 
 From those: the **still share** and the **longest hold** (the longest run of still frames, with
 the time it starts at; the profile's `endCardSeconds` at the end are left out, because an end card
-may rest), **hard cuts** (total, and per 10 s over the same stretch), and the **loop seam**: the
+may rest; a card longer than half the film is refused, since it would leave nothing to measure), **hard cuts** (total, and per 10 s over the same stretch), and the **loop seam**: the
 step from the last frame back to the first, compared with the 95th percentile of the film's own
 steps. A seam is a wrap bigger than `loopSeamRatio` times that (with a small floor, so a quiet loop
 does not fail on noise). A last frame identical to the first is reported but fine; the wrap is one

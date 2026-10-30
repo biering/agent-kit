@@ -107,11 +107,21 @@ const median = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.leng
 const quantile = (a, q) => (a.length ? [...a].sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * q))] : 0)
 
 /**
+ * The end card is the film's last stretch and is left out of the motion checks, so a length that
+ * leaves little to measure would pass any film: it is refused above half of the film.
+ */
+export function checkEndCard(endCardSeconds, filmSeconds) {
+  if (!(Number.isFinite(endCardSeconds) && endCardSeconds >= 0)) throw new Error(`end card length "${endCardSeconds}" is not a number of seconds`)
+  if (endCardSeconds > filmSeconds / 2) throw new Error(`an end card of ${endCardSeconds} s leaves ${Math.max(0, filmSeconds - endCardSeconds).toFixed(1)} s of a ${filmSeconds.toFixed(1)} s film to measure; the card is the last part of a film, at most half of it`)
+}
+
+/**
  * The film's measured numbers from its per-step stats (steps[i] is the step from frame i to i+1).
  * The end card, when the profile names one, is left out of the still, hold and cut counts: it may rest.
  */
 export function measureSteps(steps, fps, { stillShare = 0.015, endCardSeconds = 0, loop = false } = {}) {
   const seconds = (steps.length + 1) / fps
+  checkEndCard(endCardSeconds, seconds)
   // the 1e-6 keeps a card of exactly N frames at N frames: the cut into the card is the card's own, not the film's
   const inSpan = Math.max(0, Math.min(steps.length, Math.floor((seconds - endCardSeconds) * fps + 1e-6)))
   const span = steps.slice(0, inSpan)

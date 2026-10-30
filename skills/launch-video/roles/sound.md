@@ -32,10 +32,12 @@ curl -sfL -o music/726.mp3 https://assets.mixkit.co/music/726/726.mp3
   its own stretch to be exact: a 0.15% error puts the last hits of a 50 s film 70 ms late.
 - It reports `offset` (the first downbeat in the window, the film's beat 0), `downbeats`, the
   `drops` (the downbeat after which each of the next two bars is louder than the bar before, by
-  the most; a rise out of near silence is the song starting, not a drop), `grid_strength` (0 to 1;
+  the most; a rise out of near silence is the song starting, and a rise under 3 dB is level wobble:
+  neither is a drop, and a track of even loudness reports none), `grid_strength` (0 to 1;
   under about 0.3 means it did not find a grid: do not trust the rest) and `bar_loudness_db`.
 - `--drop-beat N` prints `start`: where to start the song (`music.start` in `cues.json`) so its
-  strongest drop lands on film beat N, and warns when N is not a bar line (a multiple of 4).
+  strongest drop lands on film beat N, and warns when N is not a bar line (a multiple of 4). With no
+  drop in the track it prints no `start`: set `music.start` by ear.
 
 Read `bar_loudness_db` yourself: the drop is the bar where the level steps up and stays up.
 Assumes 4/4. Check the fit by ear on the first render: the first hit on a downbeat.

@@ -590,6 +590,8 @@ async function main() {
       await page.close()
       const from = Math.round(Number(flag('from', 0)) * fps)
       const to = Math.round(Number(flag('to', meta.duration)) * fps)
+      // a card length that leaves nothing to measure is found now, not after the render
+      if (qaArgs.includes('--end-card')) (await import('./qa.mjs')).checkEndCard(Number(flag('end-card')), (to - from) / fps)
       const px = [Math.round(meta.width * scale), Math.round(meta.height * scale)]
       if (px.some((v) => v % 2)) throw new Error(`${px[0]}x${px[1]} has an odd side: yuv420p needs both even`)
       const level = pickLevel(px[0], px[1], fps)

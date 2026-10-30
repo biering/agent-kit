@@ -12,7 +12,7 @@ import { BLOCK_CLASSES } from './blocks.js'
 import { E, clamp, el, luminance, set, show, tw } from './core.js'
 import { cueSheet, fill, validateSpec } from './spec.js'
 
-const DEFAULT_PALETTE = { bg: '#0B1020', paper: '#F3EEE3', accent: '#FFC21A', hot: '#FF8A1F', ink: '#14120E' }
+const DEFAULT_PALETTE = { bg: '#0A1A16', paper: '#ECEFE4', accent: '#7DF5C8', hot: '#FF4D8D', ink: '#0C1411' }
 const DEFAULT_FONT = {
   family: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
   weight: 900,

@@ -70,7 +70,7 @@ export default {
   bpm: 100,
   beats: 40,
   fps: 30,
-  palette: { bg: '#0B1020', paper: '#F4EEE2', accent: '#F2A65A', ink: '#16130F' },
+  palette: { bg: '#0D1822', paper: '#F4EEE2', accent: '#F2A65A', ink: '#16130F' },
   music: { file: 'music/606.mp3', source: 'https://assets.mixkit.co/music/606/606.mp3', start: 0.422, gain_db: -6, fade_out: 0.5 },
   sources: {},
   plates: [

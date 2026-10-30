@@ -119,6 +119,7 @@ export function validateSpec(spec) {
         if (shot.fx != null && !FX.includes(shot.fx)) bad(`${w}: fx is one of ${FX.join(', ')}`)
         const two = ['stack', 'split', 'pair'].includes(shot.style)
         if (two ? !(Array.isArray(shot.text) && shot.text.length === 2) : typeof shot.text !== 'string') bad(`${w}: text is ${two ? '[first, second]' : 'a string'}`)
+        if ([shot.text].flat().some((t) => !String(t).trim())) bad(`${w}: text is not empty (a shot with no word is a blank frame)`)
         if (!colour(shot.ground) || !colour(shot.color)) bad(`${w}: ground and color are palette names or hex colours`)
       })
     }
