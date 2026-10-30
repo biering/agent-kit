@@ -1,0 +1,5 @@
+{
+  "style": "ambient-loop",
+  "audio": "none",
+  "description": "No sound. The App Store header and the search-result tile play muted on a loop, and a store listing has no audio track to carry: render without one, qa.mjs fails a file that has an audio stream, and neither mix.py nor earshot has anything to do. If the same film is also cut for a feed, that cut is another style's and has its own profile."
+}

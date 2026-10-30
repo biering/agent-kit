@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One-shape film</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow: hidden; background: #F4EFE6; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<!-- the kit gives the browser viewer (space plays, arrows step a beat); the engine does the film.
+     The frame comes from the query: film.html?format=wide|reel|header|search|square -->
+<script src="/.agents/skills/launch-video/templates/kit.js"></script>
+<script type="module">
+import { build } from '/.agents/skills/launch-video/styles/one-shape/engine.js'
+import spec from './spec.js'
+
+const film = await build(spec)
+window.film = film
+kit(film.width, film.height).hud(film)
+</script>
+</body>
+</html>
