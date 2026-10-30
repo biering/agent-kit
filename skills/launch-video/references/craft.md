@@ -160,6 +160,9 @@ other:
   button sat 20 px lower and touched the chip. Lay them out as the app does
   (`display: flex; align-items: center; justify-content: space-between; gap`),
   and size the type so the gap survives the longest string.
+- **Rotated text is drawn differently on each pass.** A tile that topples rotates its empty box and lets
+  its words fall upright: a label inside a rotating element failed `--purity` at 36 dB (the kinetic starter's
+  falling tiles).
 - **A press scales the ground, not the label.** Put the button's colour on a
   child that takes the scale and leave the text unscaled; a label inside a
   pressed button fails the purity check at 51 dB.

@@ -14,6 +14,7 @@
 //   node render.mjs film.html --out draft.mp4 --draft --qa kinetic    # a fast look: no motion blur, crf 26 (a few times faster)
 //   node render.mjs film.html --out film.mp4 --qa kinetic             # measure the file against a style's QA
 //                                                                    # profile after the encode; a miss fails the run
+//   ... --qa ./qa.json --end-card 3.2                                  # a profile file, and this film's end card length
 //
 // --fps defaults to the film's own fps. --crf sets the x264 quality: 14 (the default) is a master, 24 to 28 a deliverable for flat,
 // slow footage. --scale 2 renders a 1920x1080 page as 3840x2160 (device scale factor). --workers
@@ -360,6 +361,19 @@ async function main() {
   // film.html?format=reel: the query reaches the page, so one film can carry several formats
   const [filmPath, inline = ''] = argv[0].split('?')
   const query = [inline, flag('query', '')].filter(Boolean).join('&')
+  // --qa <style | profile.json>: found now, not after the whole render
+  const qaSpec = flag('qa')
+  let qaArgs = []
+  if (qaSpec) {
+    const { loadProfile, styleProfilePath } = await import('./qa.mjs')
+    const isFile = qaSpec.endsWith('.json')
+    try {
+      loadProfile(isFile ? resolve(qaSpec) : styleProfilePath(qaSpec))
+    } catch (e) {
+      throw new Error(`--qa ${qaSpec}: ${e.code === 'ENOENT' ? 'no such style or profile' : e.message}`)
+    }
+    qaArgs = [isFile ? '--profile' : '--style', isFile ? resolve(qaSpec) : qaSpec, ...(flag('end-card') ? ['--end-card', flag('end-card')] : [])]
+  }
   const film = realpathSync(resolve(filmPath)) // git's toplevel is a real path; a symlinked film path would sit outside it
   const stillsMode = flag('stills') && !has('purity')
   const out = resolve(flag('out', stillsMode ? 'stills' : 'film.mp4'))
@@ -597,9 +611,9 @@ async function main() {
         console.log(out)
         // the Editor's measured checks, on the file just written: a target the style names and the film
         // misses fails the render (a silent draft has no audio yet, so the audio targets wait for the mix)
-        if (flag('qa')) {
+        if (qaSpec) {
           const qa = join(dirname(fileURLToPath(import.meta.url)), 'qa.mjs')
-          const r = spawnSync(process.execPath, [qa, out, '--style', flag('qa'), '--silent'], { stdio: 'inherit' })
+          const r = spawnSync(process.execPath, [qa, out, ...qaArgs, '--silent'], { stdio: 'inherit' })
           if (r.status) process.exitCode = 1
         }
       } finally {

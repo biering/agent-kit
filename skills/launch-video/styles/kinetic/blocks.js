@@ -402,17 +402,20 @@ export class Strike extends Base {
       })
     } else {
       const tiles = (ui.tiles?.length ? ui.tiles : [['ONE', '◆', ''], ['TWO', '●', ''], ['THREE', '▲', ''], ['FOUR', '■', '']]).map(([name, glyph, tag], k) => {
-        const tile = box(wrap, `left:${k * 25.5}%;top:18%;width:23%;height:64%;border:3px solid ${ink};border-radius:18px`)
+        // the box topples, its words fall upright: rotated text is drawn differently on each pass (--purity)
+        const tile = box(wrap, `left:${k * 25.5}%;top:18%;width:23%;height:64%`)
+        const shell = box(tile, `inset:0;border:3px solid ${ink};border-radius:18px`)
         label(tile, glyph, `left:50%;top:30%;font-size:${Math.round(f.H * 0.08)}px;transform:translateX(-50%)`)
         label(tile, name, 'left:8%;bottom:16%')
         label(tile, tag, 'left:8%;bottom:6%;opacity:.6')
-        return tile
+        return { tile, shell }
       })
       draw.push((ts, enter) => {
-        tiles.forEach((tile, k) => {
+        tiles.forEach(({ tile, shell }, k) => {
           const die = Math.max(0, ts - (f.b(2) + k * 0.06))
           const fall = die * die * f.H * 5.5
-          set(tile, 'transform', `translate(${(1 - enter) * f.W * 0.4}px,${Math.sin(ts * 3 + k) * 5 + fall}px) rotate(${die * (k % 2 ? 90 : -70)}deg)`)
+          set(tile, 'transform', `translate(${(1 - enter) * f.W * 0.4}px,${Math.sin(ts * 3 + k) * 5 + fall}px)`)
+          set(shell, 'transform', die > 0 ? `rotate(${Math.min(die * 100, 30) * (k % 2 ? 1 : -1)}deg)` : 'none')
         })
       })
     }

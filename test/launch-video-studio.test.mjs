@@ -88,6 +88,17 @@ describe('launch-video measured QA', () => {
     assert.throws(() => validateProfile({ style: 'x', targets: { audio: 'loud' } }), /required, none or any/)
   })
 
+  it('refuses an unknown --qa before it renders anything', () => {
+    const render = path.join(SKILL, 'scripts/render.mjs')
+    const started = Date.now()
+    for (const spec of ['kinetik', './no-such-profile.json']) {
+      const r = spawnSync('node', [render, path.join(SKILL, 'SKILL.md'), '--qa', spec], { encoding: 'utf8' })
+      assert.equal(r.status, 1)
+      assert.match(r.stderr, new RegExp(`--qa ${spec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: no such style or profile`))
+    }
+    assert.ok(Date.now() - started < 8000, 'found before a browser starts')
+  })
+
   it('passes a moving film and fails a parked one, end to end', { skip: !haveFfmpeg && 'no ffmpeg' }, () => {
     const dir = tmp()
     const profile = path.join(dir, 'qa.json')

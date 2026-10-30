@@ -39,6 +39,12 @@ QuickTime and the stores read its colours wrong), a full decode on the macOS har
 size against the `<video>.json` manifest `render.mjs` wrote (frames lost when worker segments were
 joined, a capture at the wrong scale), the audio stream, and integrated loudness and true peak.
 
+**The loop seam is relative.** The wrap is compared with the film's own 95th percentile step, so a loop
+with lively motion tolerates a bigger jump than a quiet one (a quiet starter at a wrap of 0.8 against a
+limit of 5.4 would still pass a seam several times larger). It catches a gross seam (a loop cut to a
+different length failed at 112 against 4.9). It does not replace looking: draw the first and the last
+frame (`render.mjs --stills 0,<last>`) and compare them by eye.
+
 **What a cut is, and what it is not.** A hard cut here is a step where most of the frame changes at
 once. A cut between two shots of similar tone and layout (a word swapped on the same ground) changes
 little of the frame and reads as motion, not as a cut: the style's profile counts what the pixels

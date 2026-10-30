@@ -113,6 +113,8 @@ into more shots. Check each format with the same stills, `--purity` and `qa.mjs`
 
 ## Gotchas
 
+- Never rotate or scale an element that holds text while it is on screen: `--purity` flags it (a toppling
+  `Strike` tile rotates its box only). An identity transform or clip-path is set to `none`.
 - Measure text once, while visible: a hidden element measures 0. The engine does this in `build`.
 - A letter with a hole for the zoom exit: the hole is not always the glyph's centre (D); the
   camera lands on the box's centre, so check the last frame of the zoom.

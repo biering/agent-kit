@@ -18,6 +18,9 @@ node $K/qa.mjs <film>/<slug>.mp4 --style <style> --json     # the final: every t
 python3 $K/popscan.py silent.mp4
 ```
 
+`--qa` takes a style or a profile file (`--qa ./qa.json`), is checked before the render starts, and
+`--end-card <s>` gives it this film's end card length (a profile's `endCardSeconds` is the style's).
+
 `--draft` renders a fast look (one sample per frame, no motion blur, crf 26) in a fraction of the time:
 use it while the film changes, and `--qa <style>` on a draft is a smoke test (the profiles are calibrated on a
 real render, and a draft can read a little differently), never the gate. The gate is the final's.
