@@ -1,13 +1,14 @@
 # The scored critique loop
 
-The visual twin of earshot (SKILL.md § The listening gate). earshot scores what you cannot
+The visual twin of earshot (roles/sound.md § The listening gate), run by the Editor (roles/editor.md)
+next to the measured checks of `qa.mjs` (qa.md). earshot scores what you cannot
 hear; this scores what you would otherwise only claim to have seen. A model that reads images
 can look at its own frames, and a film that went through three scored rounds is the difference
 between a first try and one worth posting.
 
 ## When
 
-At every gate: the four stills (step 3), the full pass (step 5, from the contact sheet and
+At every gate: the four stills (the Director's beat gate), the full pass (from the contact sheet and
 the phone sheet of the render), and the final (the encoded mp4, not the draft). A fix or a
 re-render that touches a beat re-scores that beat.
 
@@ -23,7 +24,7 @@ re-render that touches a beat re-scores that beat.
    Three, not a list: the worst three are the ones that move the score.
 5. Fix those, re-render the affected beats, score again.
 6. Stop when every score is 8 or higher. Two rounds that move nothing mean the problem is the
-   beat map, not the code: go back to step 3 with a new beat line and still.
+   beat map, not the code: go back to the Director's gate with a new beat line and still.
 
 ## The rubric
 

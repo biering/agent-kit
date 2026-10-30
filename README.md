@@ -107,7 +107,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design` |
 | Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog` |
-| Market | `aso`, `app-screenshots`, `launch-video` (with X player cards), `carousel`, `ads-landingpage` |
+| Market | `aso`, `app-screenshots`, `launch-video` (a video studio: seven roles, five styles, measured QA, X player cards), `carousel`, `ads-landingpage` |
 | Decide | `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |
 

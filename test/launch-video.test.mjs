@@ -7,10 +7,14 @@ import path from 'node:path'
 
 import {
   concatLine,
+  defaultWorkers,
+  imageSize,
   isBlocking,
   isLocalHost,
+  lintPure,
   parseMatrix,
   parseStills,
+  pickLevel,
   resolveRequest,
   subframeTimes,
   variantOut,
@@ -57,6 +61,58 @@ describe('launch-video render', () => {
     assert.deepEqual(subframeTimes(0, 1, 60, 0.5), [0])
     assert.deepEqual(subframeTimes(60, 3, 60, 0.5), [(60 - 0.25) / 60, 1, (60 + 0.25) / 60])
     assert.deepEqual(subframeTimes(0, 2, 60, 0.5), [0, 0.25 / 60])
+  })
+
+  it('keeps a motion-blur window on its own side of a hard cut', () => {
+    // 60 fps, 4 samples over half a frame. Frame 30's window is 29.75 to 30.25 frames.
+    const frames = (f, cut) => subframeTimes(f, 4, 60, 0.5, [cut / 60]).map((t) => t * 60)
+    const before = frames(30, 30.2) // the cut falls after the frame's own time: the frame belongs to the shot before it
+    assert.ok(Math.max(...before) < 30.2, 'the frame before the cut never samples the next shot')
+    assert.ok(30.2 - Math.max(...before) < 0.01, 'its shutter ends just short of the cut, so the fastest frame of a whip is still blurred')
+    assert.ok(Math.abs(before[3] - before[0] - 0.5) < 1e-3, 'the window keeps its width')
+    const on = frames(30, 29.9) // the cut falls before the frame's own time: the frame belongs to the shot after it
+    assert.ok(Math.min(...on) >= 29.9 - 1e-9 && Math.abs(on[3] - on[0] - 0.5) < 1e-9, 'the frame after the cut starts its shutter on it')
+    assert.deepEqual(subframeTimes(10, 4, 60, 0.5, [0.5]), subframeTimes(10, 4, 60, 0.5), 'a cut outside the window changes nothing')
+  })
+
+  it('sizes the workers to the machine, fewer at 4K', () => {
+    const hd = { width: 1920, height: 1080 }
+    assert.equal(defaultWorkers({ ramGB: 36, cpuCount: 12, ...hd }), 6)
+    assert.equal(defaultWorkers({ ramGB: 36, cpuCount: 12, ...hd, scale: 2 }), 2, 'about 11 GB a worker at 4K: 80% of 36 GB carries two')
+    assert.equal(defaultWorkers({ ramGB: 128, cpuCount: 32, ...hd, scale: 2 }), 3, 'capped at three at 4K')
+    assert.equal(defaultWorkers({ ramGB: 8, cpuCount: 4, ...hd }), 1)
+    assert.equal(defaultWorkers({ ramGB: 4, cpuCount: 2, width: 3840, height: 2160 }), 1, 'never fewer than one')
+  })
+
+  it('picks the lowest H.264 level a Mac decodes, and refuses a size above 5.2', () => {
+    assert.equal(pickLevel(1920, 1080, 60), '4.2')
+    assert.equal(pickLevel(3840, 1646, 30), '5.1')
+    assert.equal(pickLevel(3840, 2160, 30), '5.1')
+    assert.equal(pickLevel(3840, 2160, 60), '5.2')
+    assert.equal(pickLevel(3600, 2400, 30), '5.2', '33,750 macroblocks at 30 fps is over level 5.1\'s rate')
+    assert.throws(() => pickLevel(3840, 2560, 30), /38,400 macroblocks.*refuses level 6/)
+  })
+
+  it('finds what makes a frame depend on more than t', () => {
+    const lines = (src) => lintPure(src, 'film.html').map((p) => p.line)
+    assert.deepEqual(lines('const a = Math.random()\nconst b = Date.now()\nconst c = new Date()'), [1, 2, 3])
+    assert.deepEqual(lines('setTimeout(f, 1)\nrequestAnimationFrame(f)\nperformance.now()'), [1, 2, 3])
+    assert.deepEqual(lines('.a { transition: all 1s }\n.b { animation: x 1s }\n@keyframes x {}'), [1, 2, 3])
+    assert.deepEqual(lines('// Math.random is banned\n/* Date.now()\n setTimeout */\nconst r = hash(7)'), [], 'comments and a seeded hash are fine')
+    assert.deepEqual(lines('const t = performance.now() // viewer-only'), [], 'the kit\'s scrub bar is marked')
+    assert.deepEqual(lines('el.style.transition = "none"'), [], 'switching a transition off is not using one')
+  })
+
+  it('reads the size of a PNG or a JPEG, so a capture at the wrong scale stops the run', () => {
+    const png = Buffer.alloc(33)
+    png.writeUInt32BE(0x89504e47, 0)
+    png.writeUInt32BE(3840, 16)
+    png.writeUInt32BE(2160, 20)
+    assert.deepEqual(imageSize(png), [3840, 2160])
+    // SOI, an APP0 segment of 16 bytes, then a baseline SOF0 for 1080 x 1920
+    const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, ...Array(14).fill(0), 0xff, 0xc0, 0x00, 0x11, 0x08, 0x04, 0x38, 0x07, 0x80, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    assert.deepEqual(imageSize(jpg), [1920, 1080])
+    assert.throws(() => imageSize(Buffer.from('GIF89a......................')), /not a PNG or JPEG/)
   })
 
   it('serves files under the root, never secrets, git internals or an escape', () => {

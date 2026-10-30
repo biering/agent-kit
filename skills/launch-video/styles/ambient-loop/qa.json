@@ -1,0 +1,15 @@
+{
+  "style": "ambient-loop",
+  "description": "A silent, seamless loop for the App Store header and the search tile, measured at the sensitive metric (stillDelta 4, a frame is still under 0.2% of pixels moved) because slow motion on flat colour is motion. The seam is the point: the wrap may be at most 1.5x the loop's own p95 step. The starter's wrap is 0.73 against a limit of 1.60; a ribbon with a harmonic that was not a whole multiple measured 1.72 against 1.06 and failed. Still share and hold are loose on purpose, they catch a poster: the starter measures 0.0% and 0.00 s (a quarter of its drift: the same), a loop of soft orbs alone 85% and 0.97 s, so 50% and 1.0 s separate a loop whose edges move from one that does not. No cuts, no audio track. 150 MB is our budget for a loop, not a store rule. Level 5.2 is the highest a Mac plays in hardware: 3840x2560 (38,400 macroblocks) is level 6.0 and fails the decoder, 3600x2400 is not.",
+  "measure": { "stillDelta": 4, "stillShare": 0.002, "loop": true },
+  "targets": {
+    "stillShareMax": 0.5,
+    "holdMax": 1.0,
+    "hardCutsMax": 0,
+    "loopSeamRatio": 1.5,
+    "bytesMax": 150000000,
+    "levelMax": 5.2,
+    "hardwareDecode": true,
+    "audio": "none"
+  }
+}

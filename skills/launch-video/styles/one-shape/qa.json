@@ -1,0 +1,16 @@
+{
+  "style": "one-shape",
+  "description": "One element, never cut, wrapping to its first frame. Measured at the sensitive metric (stillDelta 4, a frame is still under 0.2% of pixels moved): slow motion on flat colour is motion, and at the kinetic metric the real Tinybreath film reads 59% still with a 1.9 s hold. Targets sit about 40% outside that film (25.0% still, longest hold 0.83 s, 0 hard cuts, wrap 0.86 against its own p95 of 4.73; header loop 26.8%, 0.83 s, 0, 0.80 against 5.45). The starter measures 14% to 4% still, 0.33 s at most, 0 cuts, wrap 0.46 to 0.70. Without the ambient drift the same starter measures 58% and 1.50 s and fails. 150 MB is our budget for a loop, not a store rule. Cuts that carry sound are held to the loudness range; a muted loop has none.",
+  "measure": { "stillDelta": 4, "stillShare": 0.002, "loop": true },
+  "targets": {
+    "stillShareMax": 0.4,
+    "holdMax": 1.2,
+    "hardCutsMax": 0,
+    "loopSeamRatio": 1.5,
+    "bytesMax": 150000000,
+    "levelMax": 5.2,
+    "hardwareDecode": true,
+    "audio": "any",
+    "loudness": { "min": -16, "max": -12, "truePeak": -1 }
+  }
+}
