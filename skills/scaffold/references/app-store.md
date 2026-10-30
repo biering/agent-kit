@@ -211,6 +211,13 @@ busy. `--submit` attaches the newest VALID build and then sends the submission.
 does not. One left in `READY_FOR_REVIEW` has items, looks finished, and is being
 reviewed by nobody.
 
+**The purchase goes to review with the app, or the send stops.** If App Store Connect refuses to
+add the in-app purchase to the review submission, the `--submit` step leaves the submission in
+`READY_FOR_REVIEW` and exits non-zero: sending anyway ships a Buy button with nothing behind it.
+Add the purchase in the console, then rerun with a `--skip-purchase` flag that sends that same
+submission without trying to attach it again.
+
+
 ## 9. What no tooling can do
 
 - **Creating the App record.** `POST /v1/apps` supports no CREATE at any key

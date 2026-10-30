@@ -65,6 +65,10 @@ that bundles, not in CI.
 - **Explain the failure in the guard.** Its message names the symptom, the cause and the fix.
 - **Verify the theory first.** A guard built on a wrong mental model flags working code and gets
   deleted by the next person who hits it.
+- **Describe the path.** Prefer a guide, skill or test that says how the work is done here (which
+  package, import, host). A gate that forbids something belongs only when its absence is a
+  load-bearing invariant of this design, never as a list of unused libraries.
+
 - **Wire it into an existing gate** (the repo's test, lint or docs check) so nobody has to
   remember it.
 
