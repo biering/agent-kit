@@ -25,6 +25,11 @@ styles starts from [templates/film.html](../templates/film.html) and the kit.
 | story | `spec.js`: scenes of plates, lines in beats, a turn, an end card | `styles/story/engine.js` |
 | ambient-loop | `spec.js`: periodic layers with whole cycles per loop | `styles/ambient-loop/engine.js` |
 
+A film over about 60 s is built from the Director's `ANIMATION_GUIDE.md` and `STORYBOARD.md`
+([director.md](director.md)): one subagent per chapter, in parallel, each holding the guide and its
+own block; then you join the chapters on the one clock and run `--purity` and the `cuts` stills at
+every boundary.
+
 Each style's `spec.js` exports `validateSpec`, which names the scene and the field that is wrong
 before a frame is drawn. The scenes tile the film; every time is a beat.
 

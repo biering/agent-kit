@@ -35,6 +35,23 @@ Then ask, in one round with your recommendation first, only what is left:
   finished film
 - **reference**: a video they want the structure of, or none (the Director breaks it into beats)
 
+## What code loses to a video model
+
+Read the brief for three things code draws badly and say so before the beat map, not after the
+first render:
+
+- **photoreal scenes**: a place, a person or a product as photographed
+- **complex characters**: faces, hands, bodies, animals
+- **organic movement**: cloth, hair, water, smoke, a crowd
+
+Code wins on type, interfaces, shapes, charts, camera moves and anything the brand has to own
+exactly. Offer the user the choices with the cost of each: supplied photos or footage; leave the
+beat out; or **generate, then trace** ([formats.md](../references/formats.md): a video model
+supplies the base motion, code draws the visible layer on top, so the brand and the type stay
+code's). The provider is Higgsfield through its MCP, priced first (`get_cost: true`), inside the
+credits ceiling below and run only with the user's yes; the base clips stay out of git. Write the
+decision in `BRIEF.md` (`Generated base: none`, or `generate then trace, 3 clips, 60 credits`).
+
 ## The claims ledger
 
 One table in `BRIEF.md`: every sentence and number that will be on screen, and the file or

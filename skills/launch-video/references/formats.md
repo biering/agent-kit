@@ -41,6 +41,25 @@ phone sheet (`--matrix` takes all three).
 | 21:9 | 3840x1646 | the App Store header loop |
 | 3:2 | 3600x2400 at most | the search-result tile |
 
+## What changes with the format
+
+The words, numbers and beats stay; how much is shown at once, and how long it rests, does not.
+
+- **Vertical (9:16): bigger type, fewer elements.** The phone is held close and the platform's
+  interface covers the top and the bottom. Type about as large again as the wide cut's (the page
+  is framed at 1.4x), and what the wide cut shows side by side arrives one after another: one idea
+  per screen, a label above its bar, a figure beside nothing.
+- **Square (1:1): tighter holds.** A feed film is seen small and scrolls by. Keep the wide cut's
+  beats and elements, but let each one settle sooner and leave the screen sooner: the rest at the
+  end of a beat is what shortens, not the beat map.
+- **Wide (16:9): more spatial context.** The only format with room to show where a detail sits:
+  keep the whole page in view before the camera goes in, and let a pulled-back shot say how the
+  parts relate. This is what the vertical cut loses first.
+- **Header (21:9) and tile (3:2): one focal point**, per the loop notes below.
+
+Write these as differences in `layout(w, h)` and in the per-format camera keys, never as a second
+film.
+
 ## The App Store 21:9 header loop
 
 A silent loop above the fold of the product page.
@@ -79,13 +98,15 @@ presets, so it feels like one object.
 
 ## Advanced: generate, then trace
 
-Optional, and only when the motion is hard to hand-code (a character's body, physics, cloth). A
+Optional, and only when the motion is hard to hand-code (a character's body, physics, cloth). The
+Producer flags the need at intake ([producer.md](../roles/producer.md)). A
 video model renders the base shots; code then redraws the whole film on top, so the viewer sees
 only the code-drawn layer. The model supplies motion; the code supplies the look, the brand and
 a layer you own and can change.
 
-1. Generate the base clips with the video model (Higgsfield, through its MCP tools). Keep the
-   key in `.env`, set a budget before the first call, and generate one short clip first.
+1. Generate the base clips with the video model (Higgsfield, through its MCP tools). Price every
+   clip first (`get_cost: true`), keep the total inside the brief's ceiling, run only after the
+   user's yes, and generate one short clip first. Keys stay in `.env`.
 2. Extract frames or tracks from each clip (`ffmpeg`, then positions of the parts that matter).
 3. Draw the visible layer in `seek(t)` from those tracks: the same rules as any film, the base
    clip never shown.

@@ -68,7 +68,7 @@ ffmpeg -i silent.mp4 -vf "select='between(n\,1000\,1007)',scale=480:-1,tile=4x2"
 
 The visual twin of earshot ([critique.md](../references/critique.md)): render stills, a contact
 sheet, the phone sheet and the `cuts` sheet, open them, score every beat 1 to 10 on the rubric,
-fix the 3 worst problems, render again, stop when every score is 8 or higher. Run it at the
+run the fixed defect list on every beat, fix the 3 worst problems, render again, stop when every score is 8 or higher. Run it at the
 gates: the four stills, the full pass, and the final on the encoded file. The scores go in the
 README next to earshot's and `qa.mjs`'s.
 

@@ -70,7 +70,8 @@ launch-video/
 
 A film is source code and lives in the repo, one folder per film (the repo's notes say where):
 `BRIEF.md`, `LOOK.md`, `film.html` (and `spec.js`), `cues.json`, `caption.md`, `README.md`,
-`.gitignore` ([delivery.md](roles/delivery.md)). Commit the source the moment it exists.
+`.gitignore`, and over about 60 s `ANIMATION_GUIDE.md` and `STORYBOARD.md`
+([delivery.md](roles/delivery.md)). Commit the source the moment it exists.
 
 ## The order of work
 

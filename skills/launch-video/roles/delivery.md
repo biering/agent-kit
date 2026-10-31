@@ -50,6 +50,8 @@ A film is source code and lives in the repo, one folder per film (the repo's not
 <films>/<YYYY-MM-DD-slug>/
 ├── BRIEF.md      # committed: the Producer's brief, claims ledger, budget
 ├── LOOK.md       # committed: the Designer's look book
+├── ANIMATION_GUIDE.md, STORYBOARD.md   # committed, films over about 60 s only: the Director's
+│                 # shared rules and one block per chapter
 ├── film.html     # committed (and spec.js, for a style that has one)
 ├── cues.json     # committed: bpm, music start, every SFX cue, the URL each asset came from
 ├── caption.md    # committed: the post text per channel, when the film is posted

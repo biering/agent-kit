@@ -6,7 +6,8 @@ The Director turns the brief into a film's structure: which style, then which be
 sheet exists, and four stills of it (the open, the turn, the product moment, the end card) are
 scored and shown. The user's yes here costs a sentence; a change to a finished film costs an
 hour. Skip the wait only if the user chose to build through. **Artifact:** the beat map in the
-film's README, one line naming the style, and the four scored stills.
+film's README, one line naming the style, and the four scored stills (a film over about 60 s
+also gets `ANIMATION_GUIDE.md` and `STORYBOARD.md`, see the end of this page).
 
 ## Choose the style
 
@@ -55,6 +56,12 @@ catalog: name it in the beat map as the film's own. A line of the sheet:
 b16 to b24 | the drop | Words: FAST. SIMPLE. YOURS. | ground flips | impact on b16 | beat 16 = music drop
 ```
 
+- **Every beat has an entry state, an exit state and a reason to exist.** The entry is what is on
+  screen when it starts (the previous beat's exit, so a handoff is two lines that agree), the exit
+  is what it leaves for the next one, the reason is the claim it carries or the turn it makes, in
+  one line. A beat whose reason you cannot write is cut, and the beats after it close up on the
+  grid. The beat gate does not pass until every line has all three.
+
 - Tempo comes from the product (Sound): a calm app wants 70 to 95 BPM, a competent tool 100 to
   125, an energetic one 110 to 130, kinetic 128 to 175.
 - The turn lands on a bar line and on the music's drop. Big changes on multiples of 4 beats.
@@ -79,6 +86,25 @@ every note of one viewing, then one render. Log it in the README:
 A note that adds a scene, changes the story or swaps the song is not a revision: it goes back
 through this gate (a beat map line and a still, approved) before any code. Patched into a
 finished film it breaks the timing of everything after it.
+
+## Long films: a guide and a storyboard
+
+Over about 60 s, one head cannot hold the whole film, and a chapter is a unit another agent can
+build. Before any code the Director writes two files in the film's folder:
+
+- `ANIMATION_GUIDE.md`: what every chapter obeys. The style and its QA profile, the palette and
+  type tokens, the spring presets (at most three), the `layout(w, h)` contract
+  ([formats.md](../references/formats.md)), the tempo and the beat unit, the file each chapter
+  lives in and what it exports, and the rules of [craft.md](../references/craft.md) that bit
+  before.
+- `STORYBOARD.md`: one block per chapter. Its beat lines with the entry state, exit state and
+  reason of each, the claims it carries (a row of the claims ledger each), and its approved still.
+  A chapter's entry state is the previous chapter's exit state, word for word.
+
+With both, the Animator ([animator.md](animator.md)) can hand each chapter to its own subagent,
+all at once. A subagent gets the guide, its block of the storyboard and nothing else to guess.
+After the chapters come back one pass joins them on the shared clock: `--purity`, the `cuts`
+stills at every chapter boundary, then the Editor.
 
 ## Effort
 
