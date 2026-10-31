@@ -108,7 +108,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design` |
 | Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog` |
 | Market | `aso`, `app-screenshots`, `launch-video` (with X player cards), `carousel`, `ads-landingpage` |
-| Decide | `value-loop` (keep only what moves customers or revenue) |
+| Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |
 
 Every listed description costs room in the harness's skill listing. A repo
