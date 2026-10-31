@@ -1,0 +1,15 @@
+{
+  "style": "story",
+  "description": "A calm story short: pictures that never park, a few hard cuts on the beat. Measured on the encoded file at 30 fps. stillDelta 6: a pixel counts as moved when it changes by more than 6 of 255 grey levels between two frames at 320 px wide (at 4, compression noise and glow drift count as movement and a parked shot reads 0.2% still; at 6 the same shot reads 9.7%). stillShare 0.002: a frame is still when under 0.2% of its pixels moved, the sensitive reading a slow camera push needs. endCardSeconds 3.7: the end card (6 beats, 3.6 s at 100 BPM) plus 0.1 s, left out of the still, hold and cut counts so the cut into it is not counted; set it to the card's length plus 0.1. stillShareMax 0.04: at most 4% of the film's frames may be still (the starter measures 0.0%; its deliberately parked draft, a lamp shot with no edges, measured 9.7%). holdMax 0.8: no still run over 0.8 s, because a plate pushes the whole time (the starter's longest is 0.00 s; the parked draft held 1.23 s). cutsPer10s 2 to 6: hard cuts per 10 s the measurement sees, the style's rule; the starter measures 2.5 (5 cuts in 20.3 s: a cut is seen when about half the frame changes by more than 24 grey levels and the mean brightness jumps by 18, so its sixth cut, a cut-in between two bright morning shots, is not counted). bytesMax 1000000000: the file stays under 1 GB, the limit the media store and the X player card take (the starter is a few tens of MB). levelMax 5.2 and hardwareDecode: the H.264 level and a clean play on the Mac's decoder. audio required, loudness -16 to -12 LUFS and true peak -1 dBTP: the mix is mastered at -14 and -1.",
+  "measure": { "stillDelta": 6, "stillShare": 0.002, "endCardSeconds": 3.7 },
+  "targets": {
+    "stillShareMax": 0.04,
+    "holdMax": 0.8,
+    "cutsPer10s": [2, 6],
+    "bytesMax": 1000000000,
+    "levelMax": 5.2,
+    "hardwareDecode": true,
+    "audio": "required",
+    "loudness": { "min": -16, "max": -12, "truePeak": -1 }
+  }
+}

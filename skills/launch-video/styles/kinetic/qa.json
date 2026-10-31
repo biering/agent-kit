@@ -1,0 +1,15 @@
+{
+  "style": "kinetic",
+  "description": "Fast kinetic type: a new idea on nearly every beat, so the film never parks. Measured on the encoded file, with the end card left out of the still, hold and cut counts.",
+  "measure": { "stillDelta": 24, "stillShare": 0.015, "endCardSeconds": 4.5 },
+  "targets": {
+    "stillShareMax": 0.4,
+    "holdMax": 0.6,
+    "cutsPer10s": [6, 13],
+    "bytesMax": 1000000000,
+    "levelMax": 5.2,
+    "hardwareDecode": true,
+    "audio": "required",
+    "loudness": { "min": -16, "max": -12, "truePeak": -1 }
+  }
+}

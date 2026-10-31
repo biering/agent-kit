@@ -1,0 +1,25 @@
+{
+  "style": "one-shape",
+  "description": "The Sound role's profile for one shape, never cut. The 16:9 and 9:16 cuts carry sound; the store loops (21:9, 3:2) are muted and carry none. A steady, quiet bed at a known tempo with no drop (the film's own floods are its turns), a recorded effect on every press, flood and arrival, nothing synthesised. Floods get their whoosh at the middle, where the picture changes most.",
+  "tempo": {
+    "bpm": [100, 125],
+    "film": "a 14 to 30 s film at 110 to 125 BPM: at 120 a beat is 0.5 s, so a flood (0.9 s) is 1.8 beats and a press every 3 to 5 beats stays under the 1.2 s hold limit with room",
+    "loop": "no sound"
+  },
+  "structure": "music at body level from the first frame (a loop point has no intro), no drop, one steady bar; every change in the picture is a press or a flood, and each gets its own small accent; the music fades over the last 1.2 s into the wrap, so the film's end sits at the level its start does",
+  "fit": "beats.py <track> --bpm 120 --start 0 --window 30: the fitted tempo and the downbeat offset, which is music.start; a calm track has no true drop, so ignore the drops it prints",
+  "music": {
+    "recorded": { "id": 22, "title": "Piano Reflections", "source": "https://assets.mixkit.co/music/22/22.mp3", "measured": "120.01 BPM, grid strength 1.0, drift 0.008% (5 ms a minute), first downbeat at 0.413 s (music.start); bars within 5 dB of each other for the first 30 s; no drop (the 3.1 dB rise at 28.4 s is a louder bar)" },
+    "generated": "Optional. Higgsfield MCP generate_audio when its catalog lists a music model (models_explore type audio): get_cost first, show the price, wait for a yes, then one run. The tempo in a prompt is a claim: fit the result with beats.py and trust the fit."
+  },
+  "gain_db": -8,
+  "kit": {
+    "click": { "mixkit": 2568, "gain_db": -9, "note": "Cool interface click tone: the press, on the beat the ring starts" },
+    "whoosh": { "mixkit": 1489, "gain_db": -13, "anchor": "peak", "note": "Air woosh: a flood, its peak at the middle of the 0.9 s" },
+    "pop": { "mixkit": 2357, "gain_db": -14, "note": "Bubble pop up alert: the loader appears, a card row rises" },
+    "key": { "mixkit": 2533, "gain_db": -19, "note": "Single key type: one under every third typed character" },
+    "chime": { "mixkit": 2865, "gain_db": -12, "anchor": "peak", "note": "Success software tone: the check draws" }
+  },
+  "levels": { "lufs": -14, "true_peak_dbtp": -1, "sfx": "each effect is normalised to -1 dBFS before its gain, so a gain says where it sits against the others" },
+  "gate": "earshot critique on the encoded file of every cut that carries sound (16:9 and 9:16 read different flood events, so run both); fix every [critical] and [major], or write down why a line stays"
+}

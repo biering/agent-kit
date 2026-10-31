@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Story film</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0D1822; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<!-- the kit gives the browser viewer (space plays, arrows step a beat); the engine does the film -->
+<script src="/.agents/skills/launch-video/templates/kit.js"></script>
+<script type="module">
+import { build } from '/.agents/skills/launch-video/styles/story/engine.js'
+import spec from './spec.js'
+
+// ?format=reel for 9:16, square for 1:1: the engine sizes the page, the plates and lines re-lay out
+const SIZES = { wide: [1920, 1080], square: [1440, 1440], reel: [1080, 1920] }
+const size = SIZES[new URLSearchParams(location.search).get('format')] ?? spec.size
+
+const film = await build({ ...spec, size })
+window.film = film
+kit(film.width, film.height).hud(film)
+</script>
+</body>
+</html>
