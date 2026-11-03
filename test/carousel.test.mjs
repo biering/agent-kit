@@ -337,6 +337,19 @@ describe('carousel campaign', () => {
     assert.match(lintDeck({ ...doc, slides: [{ type: 'stat', value: '3', label: 'x' }] }).join(), /carries its source/)
   })
 
+  it('lets a lettered mascot deck pass the slide 2 and teaser lints', () => {
+    const lettered = Array.from({ length: 6 }, () => ({ type: 'lettered', lines: ['a', 'b'], alt: 'x' }))
+    assert.deepEqual(lintDeck({ brand: 'example', slides: lettered }), [])
+  })
+
+  it('keeps {platform} literal in batch links and syncs intake.audience', () => {
+    const batch = { name: 'launch', dimension: 'audience', fixed: { problem: 'p', hook: 'h', benefit: 'b' }, angles: [{ id: 'a', value: 'tenants' }, { id: 'b', value: 'owners' }], link: 'https://example.com/l' }
+    const { files } = scaffold(batch, { brand: 'example', intake: { audience: 'old' }, slides })
+    const doc = JSON.parse(files['launch-a/carousel.json'])
+    assert.match(doc.experiment.link, /utm_source={platform}/)
+    assert.equal(doc.intake.audience, 'tenants')
+  })
+
   it('requires an experiment slug that can be a utm_content, and a real angle', () => {
     assert.match(validateCarousel({ ...doc, experiment: { slug: 'Bad Slug', angle: { dimension: 'problem', value: 'x' } } }).join(), /slug/)
     assert.match(validateCarousel({ ...doc, experiment: { slug: 'ok', angle: { dimension: 'colour', value: 'x' } } }).join(), /angle/)

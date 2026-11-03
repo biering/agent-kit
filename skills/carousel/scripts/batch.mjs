@@ -21,6 +21,7 @@ export function scaffold(batch, template, { date } = {}) {
       title: row.slug,
       experiment: { slug: row.slug, angle: { dimension: row.dimension, value: row.value }, fixed: row.fixed, platforms: row.platforms, ...(row.link ? { link: row.link } : {}) },
     }
+    if (template.intake) doc.intake = { ...template.intake, ...(row.dimension === 'audience' ? { audience: row.value } : row.fixed.audience ? { audience: row.fixed.audience } : {}) }
     delete doc.score
     delete doc.cover
     files[`${row.folder}/carousel.json`] = JSON.stringify(doc, null, 2) + '\n'

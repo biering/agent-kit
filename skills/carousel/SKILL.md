@@ -263,6 +263,14 @@ hint.
   hashtags, one broad and the rest niche. The caption is searchable text: name the topic plainly.
 - No em dashes, in any language.
 
+## Moving an existing carousel to this version
+
+`--strict` now also asks for `intake`, `experiment`, `score`, `caption.md` and `replies.md` beside the
+carousel.json, and a slide 2 that is a second cover (`lettered` slides count). Carousels already
+posted need nothing; add the new fields (a few minutes, no change to the slides) before re-rendering
+one with `--strict`. Without `--strict` everything is a warning. Alt text: `photo` and `lettered`
+slides need their own `alt`; the others fall back to their on-slide copy in `out/alt.md`.
+
 ## Angle batches
 
 To find what works, make several carousels of one product that differ in **one** dimension

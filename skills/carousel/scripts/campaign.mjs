@@ -13,7 +13,7 @@ export const DIMENSIONS = ['problem', 'audience', 'hook', 'benefit']
 const INTAKE = { selling: 'what you are selling', audience: 'who it is for', action: 'the one action we want', result: 'the one real result we can show' }
 const COVER_TYPES = ['cover', 'photo']
 /** Slide types that can stand as a second cover: a headline-sized claim, not a detail. */
-const SECOND_COVER_TYPES = ['cover', 'photo', 'stat', 'listicle']
+const SECOND_COVER_TYPES = ['cover', 'photo', 'stat', 'listicle', 'lettered']
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 /** A template's `[placeholder]` stands for a value; the placeholder gate reports it, shape checks wait. */
 const isPlaceholder = (v) => typeof v === 'string' && /^\[[^\]\n]{2,}\]/.test(v.trim())
@@ -104,7 +104,7 @@ export function lintDeck(doc) {
   })
   const ctas = slides.filter((s) => s.type === 'cta' || (s.type === 'lettered' && s.url)).length
   if (ctas > 1) warnings.push(`${ctas} slides ask for something: exactly one call to action, then the closing slide says where`)
-  const carry = slides.slice(0, -1).filter((s) => s.loop || s.type === 'listicle' || (s.type === 'screen' && s.step)).length
+  const carry = slides.slice(0, -1).filter((s) => s.loop || s.type === 'listicle' || s.type === 'lettered' || (s.type === 'screen' && s.step)).length
   const need = Math.floor((slides.length - 1) / 2)
   if (slides.length >= 5 && carry < need) warnings.push(`only ${carry} of ${slides.length - 1} slides before the last tease the next one (a "loop", or numbering): at least ${need}, every slide earns the next swipe`)
   return warnings
@@ -169,7 +169,7 @@ export function buildMatrix(batch, { date } = {}) {
       value: a.value,
       fixed,
       platforms: batch.platforms ?? ['instagram', 'tiktok'],
-      link: batch.link ? utmUrl(batch.link, { source: '{platform}', slug, campaign: batch.name }) : null,
+      link: batch.link ? utmUrl(batch.link, { source: 'PLATFORM', slug, campaign: batch.name }).replace('utm_source=PLATFORM', 'utm_source={platform}') : null,
     }
   })
   return { errors, rows }

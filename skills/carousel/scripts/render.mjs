@@ -672,6 +672,14 @@ async function renderFormat(browser, doc, { baseDir, outDir, format }) {
         return el && el.scrollHeight > el.clientHeight + 1 ? [`slide ${i + 1}: content is ${el.scrollHeight - el.clientHeight}px taller than the slide, cut words (never shrink the type)`] : []
       }),
     )
+    // Panels and numbers clip their own overflow: measure them like the content.
+    overflowing.push(
+      ...(await page.evaluate(() =>
+        [...document.querySelectorAll('section.slide')].flatMap((slide, i) =>
+          [...slide.querySelectorAll('.side')].flatMap((el) => (el.scrollHeight > el.clientHeight + 1 ? [`slide ${i + 1}: a before/after panel is ${el.scrollHeight - el.clientHeight}px taller than its room, cut words`] : [])),
+        ),
+      )),
+    )
     // A lettered line never wraps: one that is wider than the slide is cut by it.
     const wide = await page.evaluate(() =>
       [...document.querySelectorAll('section.slide')].flatMap((slide, i) => {
@@ -731,6 +739,7 @@ async function sidecarProblems(doc, baseDir) {
       problems.push(`${name} is missing next to carousel.json (caption with hashtags, then the DM and reply script)`)
       continue
     }
+    problems.push(...(readFileSync(file, 'utf8').match(/\[[^\]\n]{2,}\](?!\()/g) ?? []).map((m) => `${name}: placeholder ${m}`))
     if (slug) problems.push(...checkLinks(readFileSync(file, 'utf8'), slug).map((p) => `${name}: ${p}`))
   }
   return problems
