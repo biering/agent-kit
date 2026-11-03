@@ -227,6 +227,34 @@ strong { font-weight: 600; color: var(--fg); }
 .dots i.on { background: var(--accent); }
 .lettered-footer { font-family: var(--hand, var(--sans)); font-weight: 500; font-size: 40px; color: var(--muted); margin-top: -30px; }
 
+/* ── photo (text on a full-bleed photo; the scrim keeps the words legible) ── */
+.slide.type-photo { background: #000; color: #fff; --fg: #fff; --body: rgba(255, 255, 255, 0.88); --muted: rgba(255, 255, 255, 0.72); }
+.photo-bg { position: absolute; inset: 0; z-index: 0; }
+.photo-bg img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.photo-bg.missing { display: grid; place-items: center; }
+.photo-scrim { position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgb(0 0 0 / calc(var(--dim) + 0.15)), rgb(0 0 0 / var(--dim)) 42%, rgb(0 0 0 / calc(var(--dim) + 0.3))); }
+.type-photo .chrome, .type-photo .content { position: relative; z-index: 1; }
+.slide.type-photo.has-image .content { justify-content: flex-end; padding: 48px 0; }
+.photo-text { display: grid; gap: 32px; text-shadow: 0 2px 24px rgb(0 0 0 / 0.35); }
+.type-photo .headline { max-width: 12ch; }
+
+/* ── listicle (a big number, one idea) ── */
+.list-num { font-size: 260px; line-height: 0.9; font-weight: 600; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+/* ── compare (before / after, two panels) ── */
+.compare { flex: 1; min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: 28px; }
+.side { border: 1px solid var(--line); border-radius: 28px; padding: 32px 36px; background: var(--card); display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow: hidden; }
+.side.after { border-color: var(--accent); box-shadow: 0 0 0 4px var(--chip); }
+.side-label { font-family: var(--mono); font-size: 24px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.side.after .side-label { color: var(--accent); }
+.side-text { font-size: 44px; line-height: 1.22; font-weight: 600; letter-spacing: -0.025em; text-wrap: balance; }
+.side-shot { flex: 1; min-height: 0; border-radius: 18px; overflow: hidden; background: var(--well); }
+.side-shot img { width: 100%; height: 100%; display: block; }
+
+/* ── screen (one step of an app walkthrough) ── */
+.screen-head { display: flex; align-items: center; gap: 28px; }
+.step-badge { flex: none; width: 88px; height: 88px; border-radius: 26px; background: var(--chip); color: var(--accent); display: grid; place-items: center; font-family: var(--mono); font-size: 44px; font-weight: 500; }
+
 /* ── preview sheet (render.mjs adds .sheet after the PNGs and PDF exist) ── */
 body.sheet { display: flex; align-items: flex-start; gap: 24px; padding: 24px; background: #e4e4e7; }
 body.sheet .slide { zoom: 0.3; flex: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08); }
@@ -262,6 +290,10 @@ body.solo .slide.on { display: flex; }
 .ratio-1x1 .lettered-lines { font-size: 80px; }
 .ratio-1x1 .type-lettered .content { gap: 40px; }
 .ratio-1x1 .mascot { height: 360px; }
+.ratio-1x1 .list-num { font-size: 190px; }
+.ratio-1x1 .side { padding: 24px 30px; }
+.ratio-1x1 .side-text { font-size: 36px; }
+.ratio-1x1 .step-badge { width: 72px; height: 72px; font-size: 36px; border-radius: 22px; }
 
 /* ── 9:16 (1080×1920): the 4:5 layout in the central 1350 px band. TikTok and Stories lay their
    caption, buttons and progress bar over the top and bottom; nothing that must be read goes there. */
