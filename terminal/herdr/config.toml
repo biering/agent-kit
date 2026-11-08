@@ -110,3 +110,11 @@ key = "prefix+shift+z"
 type = "plugin_action"
 command = "furkankly.zoetrope.open-split"
 description = "zoetrope: session graph (split)"
+
+# The work board as a side pane on the right of the current one, focus kept
+# (maelstrom repo, ops/herdr-panel/board.sh). prefix+a still opens its own tab.
+[[keys.command]]
+key = "prefix+shift+a"
+type = "plugin_action"
+command = "maelstrom.panel.board"
+description = "work board on the right"

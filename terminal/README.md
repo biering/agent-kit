@@ -7,7 +7,7 @@ herdr and the theme switch, installed from here so they stay the same.
 |---|---|
 | `install.sh [--new-cwd <folder>]` | Copies everything below into place and applies the current theme. A Mac mini passes its repo, where new panes start |
 | `ghostty/config.ghostty`, `ghostty/themes/` | Ghostty: padding, transparent title bar, Cmd+K for herdr-bar, the `maelstrom-hazard` and `maelstrom-mono` themes |
-| `herdr/config.toml` | herdr: sidebar rows and widths, system notifications, the plugin keys (prefix+f bar, d DAG, a board, m plugins, i Maelstrom panel, shift+z session graph) |
+| `herdr/config.toml` | herdr: sidebar rows and widths, system notifications, the plugin keys (prefix+f bar, d DAG, a board, m plugins, i Maelstrom panel, shift+a board on the right, shift+z session graph) |
 | `themes/switch hazard\|mono` | Switches Ghostty, herdr's theme block and the Claude mods together; installed to `~/.config/maelstrom-themes/` |
 | `bin/attach-mini <host> [user]` | Jumps to a mini's herdr session in Ghostty, or opens `herdr --remote` in a new window |
 | `raycast/` | Raycast commands **Lucy** and **Levi** that call `attach-mini` |
