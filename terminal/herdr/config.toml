@@ -102,3 +102,11 @@ key = "prefix+i"
 type = "plugin_action"
 command = "maelstrom.panel.open"
 description = "Maelstrom panel on the left"
+
+# zoetrope (furkankly/zoetrope): the focused agent pane's session as a live
+# flow graph, in a split beside it that stays open. The same key closes it.
+[[keys.command]]
+key = "prefix+shift+z"
+type = "plugin_action"
+command = "furkankly.zoetrope.open-split"
+description = "zoetrope: session graph (split)"
