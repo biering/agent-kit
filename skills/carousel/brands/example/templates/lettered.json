@@ -1,24 +1,56 @@
 {
   "title": "[carousel slug]",
   "brand": "example",
+  "intake": {
+    "selling": "[What you are selling, in one sentence.]",
+    "audience": "[Who it is for, one kind of person.]",
+    "action": "[The one action we want: the CTA.]",
+    "result": {
+      "text": "[One true number or a real screenshot.]",
+      "source": "[Where it comes from: analytics, changelog, a file in the repo.]"
+    }
+  },
+  "experiment": {
+    "slug": "[carousel-slug]",
+    "angle": {
+      "dimension": "[problem | audience | hook | benefit]",
+      "value": "[This carousel's variant of that dimension.]"
+    },
+    "platforms": [
+      "instagram",
+      "tiktok"
+    ]
+  },
   "lang": "en",
-  "formats": ["1080x1350", "1080x1920"],
+  "formats": [
+    "1080x1350",
+    "1080x1920"
+  ],
   "slides": [
     {
       "type": "lettered",
-      "lines": ["[some days are]", "[just *a lot*]"],
+      "lines": [
+        "[some days are]",
+        "[just *a lot*]"
+      ],
       "pose": "[pose name]",
       "alt": "[What the mascot does. Text: the slide's lines.]"
     },
     {
       "type": "lettered",
-      "lines": ["[one thought]", "[per *slide*]"],
+      "lines": [
+        "[one thought]",
+        "[per *slide*]"
+      ],
       "pose": "[pose name]",
       "alt": "[What the mascot does. Text: the slide's lines.]"
     },
     {
       "type": "lettered",
-      "lines": ["[a gentle invitation,]", "[*never* a hard sell]"],
+      "lines": [
+        "[a gentle invitation,]",
+        "[*never* a hard sell]"
+      ],
       "pose": "[pose name]",
       "url": "[domain]",
       "alt": "[What the mascot does. Text: the slide's lines. The domain.]"

@@ -1,0 +1,110 @@
+{
+  "title": "[Walkthrough]",
+  "brand": "example",
+  "intake": {
+    "selling": "[What you are selling, in one sentence.]",
+    "audience": "[Who it is for, one kind of person.]",
+    "action": "[The one action we want: the CTA.]",
+    "result": {
+      "text": "[One true number or a real screenshot.]",
+      "source": "[Where it comes from: analytics, changelog, a file in the repo.]"
+    }
+  },
+  "experiment": {
+    "slug": "[carousel-slug]",
+    "angle": {
+      "dimension": "[problem | audience | hook | benefit]",
+      "value": "[This carousel's variant of that dimension.]"
+    },
+    "platforms": [
+      "instagram",
+      "tiktok"
+    ]
+  },
+  "lang": "en",
+  "crops": [
+    {
+      "from": "[repo path to screen 1].png",
+      "to": "step-1.png",
+      "x": 0,
+      "y": 0,
+      "w": 1344,
+      "h": 900
+    },
+    {
+      "from": "[repo path to screen 2].png",
+      "to": "step-2.png",
+      "x": 0,
+      "y": 0,
+      "w": 1344,
+      "h": 900
+    },
+    {
+      "from": "[repo path to screen 3].png",
+      "to": "step-3.png",
+      "x": 0,
+      "y": 0,
+      "w": 1344,
+      "h": 900
+    }
+  ],
+  "covers": [
+    {
+      "id": "a",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "[N] taps",
+      "headline": "[The result] *[in three taps.]*",
+      "subline": "[Hook type: effort]"
+    },
+    {
+      "id": "b",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "Walkthrough",
+      "headline": "[The question] *[answered on screen.]*",
+      "subline": "[Hook type: question]"
+    },
+    {
+      "id": "c",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "Walkthrough",
+      "headline": "[Skip the manual:] *[this is all it takes.]*",
+      "subline": "[Hook type: contrarian]"
+    }
+  ],
+  "slides": [
+    {
+      "type": "screen",
+      "step": "1",
+      "title": "[What you do first.]",
+      "body": "[One sentence.]",
+      "image": "out/assets/step-1.png",
+      "loop": "[step 2]"
+    },
+    {
+      "type": "screen",
+      "step": "2",
+      "title": "[What you do next.]",
+      "body": "[One sentence.]",
+      "image": "out/assets/step-2.png",
+      "loop": "[the last one]"
+    },
+    {
+      "type": "screen",
+      "step": "3",
+      "title": "[What you get.]",
+      "body": "[One sentence, the real result.]",
+      "image": "out/assets/step-3.png"
+    },
+    {
+      "type": "cta",
+      "theme": "dark",
+      "kicker": "Try it",
+      "headline": "[The one action worth taking.]",
+      "button": "[The landing's CTA text]",
+      "url": "[domain]"
+    }
+  ]
+}
