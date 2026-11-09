@@ -1,0 +1,31 @@
+{
+  "style": "story",
+  "description": "The Sound role's profile for a story-led short: a calm track at a known tempo with a quiet intro and one lift on the turn, soft recorded effects under the cuts, a hit on the turn, a chime on the end card.",
+  "tempo": {
+    "bpm": [80, 110],
+    "short": "20 to 30 s at 95 to 105 BPM: a beat is 0.6 s, so a hook line lands inside the first beat or two and a cut every 3 to 6 beats is a shot of 2 to 4 s",
+    "longer": "35 to 45 s at 80 to 95 BPM: the same rule, more shots; keep the cut rate at 2 to 6 per 10 s"
+  },
+  "structure": "a quiet intro of 4 to 6 bars under the hook and the setup, one lift on a bar line where the turn lands (the music, the picture and the line all change there), the body at a steady level through the payoff, the end card on the last bar with the music still playing and a short fade",
+  "fit": "beats.py <track> --bpm <intended> --window 40 --drop-beat <n>: the fitted tempo, the downbeat offset, the drops, and the music.start that puts the lift on film beat n (a multiple of 4, so the turn is on a bar line)",
+  "music": {
+    "recorded": { "id": 606, "title": "Drawing the Sky", "source": "https://assets.mixkit.co/music/606/606.mp3", "measured": "99.95 BPM, grid strength 1.0, drift 30 ms per minute against 100; the first 6 bars sit at about -21 dB per bar, bar 7 steps to about -13.5 dB (a rise of 8.5 dB at 14.83 s) and holds; music.start 0.422 puts that lift on film beat 24" },
+    "generated": "Optional. Higgsfield MCP generate_audio when its catalog lists a music model (models_explore type audio): get_cost first, show the price, wait for a yes, then one run. Its prompt takes a tempo as words, not a number field, so the tempo is a claim: fit it with beats.py and trust the fit, never the prompt."
+  },
+  "voiceover": {
+    "note": "Optional. The lines on screen are the film's voice; a spoken version is a second voice and needs a yes. Speech comes from the Higgsfield MCP: generate_audio with a speech model, get_cost: true first, show the price, one dry run on the first line, then a go (never run it unasked). Time each spoken line to its line's first word in beats, keep the music under it (duck 6 dB while it speaks), and write the spoken text beside the lines in the README so a reviewer reads one script.",
+    "gain_db": -3
+  },
+  "gain_db": -6,
+  "fade_out": 0.5,
+  "kit": {
+    "room": { "mixkit": 3080, "gain_db": -22, "note": "Cinematic room tone: a bed under the whole film so the quiet intro is not dead air (the cue starts at beat 0 and runs to the end)" },
+    "whoosh": { "mixkit": 1489, "gain_db": -17, "anchor": "peak", "note": "Air woosh: a swell that peaks on each camera cut, soft, never a sweep" },
+    "swish": { "mixkit": 1461, "gain_db": -20, "anchor": "peak", "note": "Short wind swoosh: a cut-in on the same picture, quieter than a scene cut" },
+    "riser": { "mixkit": 790, "gain_db": -13, "anchor": "peak", "note": "Cinematic trailer riser, 2.6 s: it peaks on the turn, so it starts about 4 beats before it" },
+    "hit": { "mixkit": 498, "gain_db": -8, "note": "Deep heartbeat impact: the turn, soft and low, not an explosion" },
+    "chime": { "mixkit": 3109, "gain_db": -9, "note": "Relaxing bell chime: the end card, as the wordmark lands" }
+  },
+  "levels": { "lufs": -14, "true_peak_dbtp": -1, "sfx": "each effect is normalised to -1 dBFS before its gain, so a gain says where it sits against the others" },
+  "gate": "earshot critique on the encoded file; the quiet intro sits about 8 dB under the body on purpose (the story breathes before the turn), so a flagged opening level is a line to answer in the README, not to fix; fix every other [critical] and [major]"
+}

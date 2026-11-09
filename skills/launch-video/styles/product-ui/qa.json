@@ -1,0 +1,15 @@
+{
+  "style": "product-ui",
+  "description": "A one-take UI walkthrough: calmer than kinetic type, but the picture must keep changing. Measured on the encoded file at 320 px wide with the end card (the last 1.5 s) left out. A frame is still when under 0.4% of its area moved by more than 8 grey levels: the camera's creep (about 0.23% of the area) counts as still, so a hold is a stretch where nothing but the creep moves, and stillShareMax and holdMax bound exactly that. The starter measured 54% still and a longest hold of 0.63 s (typing, which is too small at 320 px to count, plus the creep); the targets are 30% and 35% above that. hardCutsMax 0: every change is made from the one before it, a cut means a scene was swapped.",
+  "measure": { "stillDelta": 8, "stillShare": 0.004, "endCardSeconds": 1.5 },
+  "targets": {
+    "stillShareMax": 0.7,
+    "holdMax": 0.85,
+    "hardCutsMax": 0,
+    "bytesMax": 1000000000,
+    "levelMax": 5.2,
+    "hardwareDecode": true,
+    "audio": "required",
+    "loudness": { "min": -16, "max": -12, "truePeak": -1 }
+  }
+}
