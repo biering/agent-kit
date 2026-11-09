@@ -104,12 +104,12 @@ command = "maelstrom.panel.open"
 description = "Maelstrom panel on the left"
 
 # zoetrope (furkankly/zoetrope): the focused agent pane's session as a live
-# flow graph, in a split beside it that stays open. The same key closes it.
+# flow graph, in its own full-screen tab. The same key closes it.
 [[keys.command]]
 key = "prefix+shift+z"
 type = "plugin_action"
-command = "furkankly.zoetrope.open-split"
-description = "zoetrope: session graph (split)"
+command = "furkankly.zoetrope.open-tab"
+description = "zoetrope: session graph (own tab, full screen)"
 
 # The work board as a side pane on the right of the current one, focus kept
 # (maelstrom repo, ops/herdr-panel/board.sh). prefix+a still opens its own tab.
