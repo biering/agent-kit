@@ -1,0 +1,31 @@
+{
+  "style": "product-ui",
+  "description": "The Sound role's profile for a product walkthrough: a steady, mid-tempo bed with no drop, and the product's own sounds on top: a click per press, a keystroke per typed character, a tick per checked row, one chime when the result lands, a soft whoosh per camera move. The effects are the point; the music keeps them company.",
+  "tempo": {
+    "bpm": [100, 120],
+    "walkthrough": "18 to 30 s at 105 to 115 BPM: a beat is about 0.55 s, the pace a pointer travels between two targets in 2 beats",
+    "calmer": "30 to 45 s at 90 to 100 BPM when the screen has long forms to type; type slower (cps 10 to 12) rather than lengthening the film"
+  },
+  "structure": "sound on frame 0 at body level (no silent cold open), a flat arc with no drop, the picture's events carry the energy; the music ends with a short fade (0.4 s) as the end card settles, never a long tail",
+  "fit": "beats.py <track> --bpm <intended> --start <s> --window <s> --drop-beat 0: the fitted tempo, the downbeat offset, and the music.start that puts a downbeat on film beat 0; pick the stretch whose bars stay within 2 dB of each other",
+  "music": {
+    "recorded": { "id": 568, "title": "Focus on Yourself", "source": "https://assets.mixkit.co/music/568/568.mp3", "measured": "114.0 BPM, grid strength 0.96 on the stretch from 19 s, drift 0 ms/min; from 20.927 s (a downbeat, +2.8 dB over what came before) the bars stay within 1.6 dB of -17 for 19 s, almost no energy above 4 kHz (no hi-hat clutter over the keystrokes); start 20.927 puts that downbeat on beat 0" },
+    "generated": "Optional. Higgsfield MCP generate_audio when its catalog lists a music model (models_explore type audio): get_cost first, show the price, wait for a yes, then one run. Its prompt takes a tempo as words, not a number field, so the tempo is a claim: fit it with beats.py and trust the fit, never the prompt."
+  },
+  "gain_db": -6,
+  "kit": {
+    "click": { "mixkit": 2577, "gain_db": -4, "note": "Interface device click: every press" },
+    "toggle": { "mixkit": 1109, "gain_db": -6, "note": "Select click: a switch flipping" },
+    "key": { "mixkit": 2542, "gain_db": -12, "note": "Hard single key press in a laptop: a typed character" },
+    "key_alt": { "mixkit": 2541, "gain_db": -11, "note": "Single key press in a laptop: a typed character, the other recording (quiet at the source; normalised like the rest)" },
+    "key_soft": { "mixkit": 2542, "gain_db": -16, "note": "The hard key, 4 dB down: spreads the typing's level" },
+    "key_alt_soft": { "mixkit": 2541, "gain_db": -15, "note": "The soft key, 4 dB down" },
+    "tick": { "mixkit": 3124, "gain_db": -10, "note": "Modern technology select: a row checked" },
+    "pop": { "mixkit": 2356, "gain_db": -9, "note": "Dry pop up notification alert: a list or a card appearing" },
+    "chime": { "mixkit": 2867, "gain_db": -7, "note": "Confirmation tone: the result landing, the toast" },
+    "whoosh": { "mixkit": 2627, "gain_db": -13, "anchor": "peak", "note": "Fast swipe zoom: a camera move, placed so its peak is mid-move" },
+    "page": { "mixkit": 1491, "gain_db": -10, "anchor": "peak", "note": "Arrow whoosh: the page changing under a tab" }
+  },
+  "levels": { "lufs": -14, "true_peak_dbtp": -1, "sfx": "each effect is normalised to -1 dBFS before its gain, so a gain says where it sits against the others" },
+  "gate": "earshot critique on the encoded file; fix every [critical] and [major], or write down why a line stays"
+}

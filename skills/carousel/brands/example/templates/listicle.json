@@ -1,0 +1,96 @@
+{
+  "title": "[Listicle title]",
+  "brand": "example",
+  "intake": {
+    "selling": "[What you are selling, in one sentence.]",
+    "audience": "[Who it is for, one kind of person.]",
+    "action": "[The one action we want: the CTA.]",
+    "result": {
+      "text": "[One true number or a real screenshot.]",
+      "source": "[Where it comes from: analytics, changelog, a file in the repo.]"
+    }
+  },
+  "experiment": {
+    "slug": "[carousel-slug]",
+    "angle": {
+      "dimension": "[problem | audience | hook | benefit]",
+      "value": "[This carousel's variant of that dimension.]"
+    },
+    "platforms": [
+      "instagram",
+      "tiktok"
+    ]
+  },
+  "lang": "en",
+  "covers": [
+    {
+      "id": "a",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "[N] [things]",
+      "headline": "[N things] *[the audience gets wrong.]*",
+      "subline": "[Hook type: number]"
+    },
+    {
+      "id": "b",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "[For the audience]",
+      "headline": "[The promise, with a time or effort] *[attached.]*",
+      "subline": "[Hook type: promise]"
+    },
+    {
+      "id": "c",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "[Mistake]",
+      "headline": "[The mistake] *[everyone makes first.]*",
+      "subline": "[Hook type: mistake]"
+    }
+  ],
+  "slides": [
+    {
+      "type": "listicle",
+      "number": "1",
+      "kicker": "[Start with the strongest]",
+      "title": "[The first item as a claim.]",
+      "body": "[One sentence of proof or example.]",
+      "loop": "[2 is the surprise]"
+    },
+    {
+      "type": "listicle",
+      "number": "2",
+      "title": "[The second item.]",
+      "body": "[One sentence.]",
+      "loop": "[3 changes the order]"
+    },
+    {
+      "type": "listicle",
+      "number": "3",
+      "title": "[The third item.]",
+      "body": "[One sentence.]",
+      "loop": "[4 is the one to save]"
+    },
+    {
+      "type": "listicle",
+      "number": "4",
+      "title": "[The fourth item.]",
+      "body": "[One sentence.]"
+    },
+    {
+      "type": "stat",
+      "kicker": "The proof",
+      "value": "[The true number]",
+      "label": "[What it measures.]",
+      "source": "[Where it comes from]"
+    },
+    {
+      "type": "cta",
+      "theme": "dark",
+      "kicker": "Try it",
+      "headline": "[The one action worth taking.]",
+      "button": "[The landing's CTA text]",
+      "url": "[domain]"
+    }
+  ]
+}

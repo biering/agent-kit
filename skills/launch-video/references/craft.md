@@ -1,7 +1,9 @@
 # Craft: what makes a code-built film look expensive
 
 Without these rules the result looks like a slide deck with easing. With them it
-looks like a studio film. The rules say how anything moves; what there is to
+looks like a studio film. These are the house rules of the calm styles (`one-shape`,
+`product-ui`, and the end cards of the others); `kinetic` and `story` override the ones their
+`STYLE.md` names (hard cuts on the beat, flashes, 3D, a dark ground). The rules say how anything moves; what there is to
 choose from is the catalog in [moves.md](moves.md). Where a brand's own motion
 rules differ (a designer's kit, the repo's `docs/agent-kit/launch-video.md`),
 the brand wins.
@@ -55,7 +57,7 @@ the brand wins.
 
 Rules 1 to 4 are what earshot measured on 7 professional launch films (its
 `docs/launch-video-sound.md`, the playbook behind `earshot critique`); the
-master levels are web-delivery practice. SKILL.md step 6 is the gate that checks
+master levels are web-delivery practice. roles/sound.md is the gate that checks
 them.
 
 1. **Sound starts with the film.** First sound within about 0.3 s (the
@@ -158,6 +160,9 @@ other:
   button sat 20 px lower and touched the chip. Lay them out as the app does
   (`display: flex; align-items: center; justify-content: space-between; gap`),
   and size the type so the gap survives the longest string.
+- **Rotated text is drawn differently on each pass.** A tile that topples rotates its empty box and lets
+  its words fall upright: a label inside a rotating element failed `--purity` at 36 dB (the kinetic starter's
+  falling tiles).
 - **A press scales the ground, not the label.** Put the button's colour on a
   child that takes the scale and leave the text unscaled; a label inside a
   pressed button fails the purity check at 51 dB.

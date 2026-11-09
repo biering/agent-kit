@@ -17,6 +17,8 @@ import {
   unsetTokens,
   validateCarousel,
 } from '../skills/carousel/scripts/render.mjs'
+import { buildMatrix, checkLinks, coverDecks, lintDeck, resolveDeck, specGate, utmUrl, validateIntake, validateScore } from '../skills/carousel/scripts/campaign.mjs'
+import { scaffold } from '../skills/carousel/scripts/batch.mjs'
 
 /**
  * The carousel renderer, minus the browser: validation, the placeholder gate, inline markup and the
@@ -280,5 +282,116 @@ describe('carousel', () => {
 
     const layout = acme({ theme: theme + ':root { --shadow-tint: 1 2 3; }', layout: '.brand-acme { --tint-light: 4 5 6; }' })
     assert.deepEqual(unsetTokens(loadBrand(layout.brand, layout.baseDir)), ['--tint'])
+  })
+})
+
+describe('carousel campaign', () => {
+  const intake = { selling: 'a rent tracker', audience: 'landlords', action: 'try it', result: { text: '3 hours a month', source: 'interviews' } }
+  const score = { hook: 3, slide2: 3, promise: 3, oneIdea: 2, legibility: 2, cta: 2, honesty: 2, platformFit: 2, total: 19 }
+  const covers = ['a', 'b', 'c'].map((id) => ({ id, type: 'cover', headline: `Cover ${id}` }))
+  const slides = [
+    { type: 'cover', headline: 'Second cover', loop: 'next' },
+    { type: 'feature', title: 'Detail', loop: 'more' },
+    { type: 'cta', headline: 'Go' },
+  ]
+  const doc = { brand: 'example', intake, covers, cover: 'b', score, experiment: { slug: 'x-late', angle: { dimension: 'problem', value: 'late' } }, slides }
+
+  it('needs all four intake answers, and a source for the result', () => {
+    assert.deepEqual(validateIntake(intake), [])
+    assert.equal(validateIntake({ ...intake, audience: '' }).length, 1)
+    assert.match(validateIntake({ ...intake, result: '3 hours' })[0], /without a source/)
+    assert.match(validateIntake({ ...intake, result: { text: '3 h' } }).join(), /source/)
+  })
+
+  it('wants three covers, a valid pick, and puts the pick first in the deck', () => {
+    assert.deepEqual(validateCarousel(doc), [])
+    assert.match(validateCarousel({ ...doc, covers: covers.slice(0, 2) })[0], /three cover variants/)
+    assert.match(validateCarousel({ ...doc, cover: 'z' }).join(), /not one of a, b, c/)
+    assert.equal(resolveDeck(doc).slides[0].headline, 'Cover b')
+    assert.equal(resolveDeck(doc).slides.length, 4)
+    assert.equal(coverDecks(doc).length, 3)
+  })
+
+  it('counts the picked cover against the 10 slide limit', () => {
+    assert.match(validateCarousel({ ...doc, slides: Array(10).fill(slides[2]) }).join(), /11 slides/)
+  })
+
+  it('checks the score adds up and gates on 16 and full honesty', () => {
+    assert.deepEqual(validateScore(score), [])
+    assert.match(validateScore({ ...score, total: 20 })[0], /add up to 19/)
+    assert.match(validateScore({ ...score, hook: 5, total: 19 })[0], /score.hook/)
+    assert.deepEqual(specGate(doc), [])
+    assert.match(specGate({ ...doc, score: { ...score, hook: 1, slide2: 1, promise: 1, total: 13 } })[0], /ships at 16/)
+    assert.match(specGate({ ...doc, score: { ...score, honesty: 1, total: 18 } }).join(), /honesty/)
+    assert.match(specGate({ ...doc, cover: undefined }).join(), /none is picked/)
+    assert.match(specGate({ ...doc, score: undefined }).join(), /no score/)
+    assert.match(specGate({ ...doc, intake: undefined }).join(), /intake must hold/)
+  })
+
+  it('lints a weak slide 2, a second CTA and missing teasers', () => {
+    assert.deepEqual(lintDeck(doc), [])
+    assert.match(lintDeck({ ...doc, slides: [slides[1], ...slides] }).join(), /slide 2 is a feature/)
+    assert.match(lintDeck({ ...doc, slides: [...slides, slides[2]] }).join(), /2 slides ask/)
+    const bare = { ...doc, slides: Array.from({ length: 5 }, () => ({ type: 'cover', headline: 'x' })) }
+    assert.match(lintDeck(bare).join(), /tease the next one/)
+    assert.match(lintDeck({ ...doc, slides: [{ type: 'stat', value: '3', label: 'x' }] }).join(), /carries its source/)
+  })
+
+  it('lets a lettered mascot deck pass the slide 2 and teaser lints', () => {
+    const lettered = Array.from({ length: 6 }, () => ({ type: 'lettered', lines: ['a', 'b'], alt: 'x' }))
+    assert.deepEqual(lintDeck({ brand: 'example', slides: lettered }), [])
+  })
+
+  it('keeps {platform} literal in batch links and syncs intake.audience', () => {
+    const batch = { name: 'launch', dimension: 'audience', fixed: { problem: 'p', hook: 'h', benefit: 'b' }, angles: [{ id: 'a', value: 'tenants' }, { id: 'b', value: 'owners' }], link: 'https://example.com/l' }
+    const { files } = scaffold(batch, { brand: 'example', intake: { audience: 'old' }, slides })
+    const doc = JSON.parse(files['launch-a/carousel.json'])
+    assert.match(doc.experiment.link, /utm_source={platform}/)
+    assert.equal(doc.intake.audience, 'tenants')
+  })
+
+  it('requires an experiment slug that can be a utm_content, and a real angle', () => {
+    assert.match(validateCarousel({ ...doc, experiment: { slug: 'Bad Slug', angle: { dimension: 'problem', value: 'x' } } }).join(), /slug/)
+    assert.match(validateCarousel({ ...doc, experiment: { slug: 'ok', angle: { dimension: 'colour', value: 'x' } } }).join(), /angle/)
+  })
+
+  it('flags caption links without tracking for this carousel', () => {
+    assert.deepEqual(checkLinks('See https://example.com/a?utm_source=instagram&utm_content=x-late.', 'x-late'), [])
+    assert.equal(checkLinks('https://example.com/a?utm_source=instagram', 'x-late').length, 1)
+    assert.equal(checkLinks('https://example.com/a?utm_content=other&utm_source=x', 'x-late').length, 1)
+    assert.equal(utmUrl('https://example.com/a', { source: 'tiktok', slug: 'x-late' }), 'https://example.com/a?utm_source=tiktok&utm_medium=social&utm_content=x-late')
+  })
+
+  it('builds an angle matrix that varies exactly one dimension', () => {
+    const batch = { name: 'launch', dimension: 'problem', fixed: { audience: 'a', hook: 'b', benefit: 'c' }, angles: [{ id: 'late', value: 'late rent' }, { id: 'sheet', value: 'old sheet' }], link: 'https://example.com/l' }
+    const { errors, rows } = buildMatrix(batch, { date: '2026-11-03' })
+    assert.deepEqual(errors, [])
+    assert.deepEqual(rows.map((r) => r.slug), ['launch-late', 'launch-sheet'])
+    assert.equal(rows[0].folder, '2026-11-03-launch-late')
+    assert.match(rows[0].link, /utm_content=launch-late/)
+    assert.match(buildMatrix({ ...batch, angles: [batch.angles[0]] }).errors[0], /two or more/)
+    assert.match(buildMatrix({ ...batch, fixed: { ...batch.fixed, problem: 'x' } }).errors.join(), /varying dimension/)
+    assert.match(buildMatrix({ ...batch, fixed: { audience: 'a' } }).errors.join(), /fixed.hook/)
+    const { files } = scaffold(batch, { brand: 'example', slides }, { date: '2026-11-03' })
+    assert.equal(JSON.parse(files['2026-11-03-launch-sheet/carousel.json']).experiment.angle.value, 'old sheet')
+    assert.match(files['matrix.md'], /launch-late \| late rent/)
+  })
+
+  it('validates and renders the new slide types', () => {
+    const v = (slide, extra = {}) => validateCarousel({ brand: 'example', ...extra, slides: [slide] })
+    assert.deepEqual(v({ type: 'photo', headline: 'h', image: 'p.jpg', dim: 0.4 }), [])
+    assert.match(v({ type: 'photo', headline: 'h' })[0], /missing "image"/)
+    assert.deepEqual(v({ type: 'photo', headline: 'h' }, { look: { image: 'p.jpg' } }), [])
+    assert.match(v({ type: 'photo', headline: 'h', image: 'p.jpg', dim: 0.95 })[0], /dim/)
+    assert.deepEqual(v({ type: 'listicle', number: '1', title: 't' }), [])
+    assert.deepEqual(v({ type: 'compare', before: { text: 'a' }, after: { text: 'b' } }), [])
+    assert.match(v({ type: 'compare', before: { text: 'a' }, after: {} }).join(), /after needs a text/)
+    assert.deepEqual(v({ type: 'screen', title: 't', image: 's.png', step: 2 }), [])
+    assert.match(v({ type: 'cta', headline: 'x', loop: 'x'.repeat(41) })[0], /loop/)
+    const html = renderDocument({ brand: 'example', slides: [{ type: 'compare', before: { text: 'Old' }, after: { text: 'New', label: 'Now' }, loop: 'next' }, { type: 'listicle', number: '7', title: 'T' }] }, { baseDir: process.cwd() })
+    assert.match(html, /side-label">Before/)
+    assert.match(html, /side-label">Now/)
+    assert.match(html, /list-num">7/)
+    assert.match(html, /class="swipe">next/)
   })
 })

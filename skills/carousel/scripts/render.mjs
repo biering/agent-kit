@@ -30,6 +30,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+import { checkLinks, coverDecks, lintDeck, resolveDeck, specGate, validateCovers, validateExperiment, validateIntake, validateScore } from './campaign.mjs'
 import { cropImage, launchCropBrowser, parseArgs as parseCropArgs } from './crop.mjs'
 import { REPO_BRANDS_DIR, REPO_ROOT, launchChromium } from './repo.mjs'
 
@@ -66,6 +67,10 @@ export const SLIDE_TYPES = {
   report: ['title', 'pages'],
   gaps: ['title', 'items'],
   lettered: ['lines'],
+  photo: ['headline'],
+  listicle: ['number', 'title'],
+  compare: ['before', 'after'],
+  screen: ['title', 'image'],
 }
 
 /** A finding's severity: how many of the four gauge dots are filled. The word is per language. */
@@ -81,8 +86,8 @@ const PAGE_STATES = ['done', 'active', 'open']
 const CHAT_ROLES = ['user', 'agent', 'tool']
 
 const LABELS = {
-  de: { swipe: 'Wischen', missing: 'Bild fehlt', gap: 'fehlt', of: 'von', agent: 'Dein Agent', severity: { critical: 'KRITISCH', high: 'HOCH', medium: 'MITTEL', low: 'NIEDRIG' } },
-  en: { swipe: 'Swipe', missing: 'Missing image', gap: 'missing', of: 'of', agent: 'Your agent', severity: { critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM', low: 'LOW' } },
+  de: { swipe: 'Wischen', before: 'Vorher', after: 'Nachher', missing: 'Bild fehlt', gap: 'fehlt', of: 'von', agent: 'Dein Agent', severity: { critical: 'KRITISCH', high: 'HOCH', medium: 'MITTEL', low: 'NIEDRIG' } },
+  en: { swipe: 'Swipe', before: 'Before', after: 'After', missing: 'Missing image', gap: 'missing', of: 'of', agent: 'Your agent', severity: { critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM', low: 'LOW' } },
 }
 
 const PLACEHOLDER = /\[[^\]\n]{2,}\]/g
@@ -172,16 +177,21 @@ export function validateCarousel(doc, { baseDir = process.cwd() } = {}) {
   if (doc.formats !== undefined && (!Array.isArray(doc.formats) || doc.formats.length === 0 || doc.formats.some((f) => !FORMATS[f])))
     errors.push(`formats must be a non-empty list of ${Object.keys(FORMATS).join(', ')}`)
   if (doc.crops !== undefined) errors.push(...validateCrops(doc.crops))
+  if (doc.intake !== undefined) errors.push(...validateIntake(doc.intake))
+  errors.push(...validateCovers(doc), ...validateScore(doc.score), ...validateExperiment(doc.experiment))
+  if (doc.look !== undefined && !doc.look?.image) errors.push('look needs an image: the reference photo or texture photo slides default to')
   if (!Array.isArray(doc.slides) || doc.slides.length === 0) return [...errors, 'slides must be a non-empty array']
   const brand = dir ? loadBrand(doc.brand, baseDir) : null
   const themes = brand?.themes ?? ['light', 'dark']
   if (doc.theme && !themes.includes(doc.theme)) errors.push(`theme must be one of ${themes.join(', ')}`)
   if (!LABELS[langOf(doc, brand)]) errors.push(`lang "${langOf(doc, brand)}" is not one of ${Object.keys(LABELS).join(', ')}`)
   const outro = brand?.outro(langOf(doc, brand)) ? 1 : 0
-  if (doc.slides.length + outro > 10)
-    errors.push(`${doc.slides.length} slides${outro ? ' plus the closing slide' : ''}: Instagram stops at 10, and so do we`)
-  doc.slides.forEach((slide, i) => {
-    const at = `slide ${i + 1}`
+  const count = doc.slides.length + (Array.isArray(doc.covers) ? 1 : 0)
+  if (count + outro > 10)
+    errors.push(`${count} slides${outro ? ' plus the closing slide' : ''}: Instagram stops at 10, and so do we`)
+  const checked = [...(Array.isArray(doc.covers) ? doc.covers : []), ...doc.slides]
+  checked.forEach((slide, i) => {
+    const at = i < (checked.length - doc.slides.length) ? `cover ${slide?.id ?? i + 1}` : `slide ${i + 1 - (checked.length - doc.slides.length)}`
     const required = SLIDE_TYPES[slide?.type]
     if (!required) {
       errors.push(`${at}: type "${slide?.type}" is not one of ${Object.keys(SLIDE_TYPES).join(', ')}`)
@@ -219,6 +229,11 @@ export function validateCarousel(doc, { baseDir = process.cwd() } = {}) {
       errors.push(`${at} (steps): 2 to 4 steps fit on a slide, got ${slide.steps.length}`)
     if (slide.type === 'lettered' && Array.isArray(slide.lines) && (slide.lines.length < 1 || slide.lines.length > 4 || slide.lines.some((l) => typeof l !== 'string')))
       errors.push(`${at} (lettered): 1 to 4 lines of text fit on a slide`)
+    if (slide.loop !== undefined && (typeof slide.loop !== 'string' || slide.loop.length > 40)) errors.push(`${at}: loop is a teaser of 40 characters at most, it sits in the swipe hint`)
+    if (slide.type === 'photo' && !slide.image && !doc.look?.image) errors.push(`${at} (photo): missing "image" (or a carousel-wide "look.image")`)
+    if (slide.type === 'photo' && slide.dim !== undefined && !(Number(slide.dim) >= 0 && Number(slide.dim) <= 0.8)) errors.push(`${at} (photo): dim is from 0 to 0.8, more hides the photo`)
+    if (slide.type === 'compare')
+      for (const side of ['before', 'after']) if (slide[side] && !slide[side].text) errors.push(`${at} (compare): ${side} needs a text`)
     if (slide.type === 'quote' && slide.author && !slide.author.name) errors.push(`${at} (quote): author needs a name`)
     if (slide.type === 'chat' && Array.isArray(slide.messages)) {
       if (slide.messages.length < 2 || slide.messages.length > 5) errors.push(`${at} (chat): 2 to 5 messages fit on a slide, got ${slide.messages.length}`)
@@ -285,11 +300,12 @@ export function findPlaceholders(doc) {
     else if (value && typeof value === 'object') for (const [k, v] of Object.entries(value)) if (k !== 'image') walk(v, where)
   }
   doc.slides.forEach((slide, i) => walk(slide, `slide ${i + 1}`))
-  walk({ handle: doc.handle }, 'carousel')
+  ;(doc.covers ?? []).forEach((cover) => walk(cover, `cover ${cover.id}`))
+  walk({ handle: doc.handle, intake: doc.intake }, 'carousel')
   return found
 }
 
-const COPY_SKIP = new Set(['type', 'theme', 'image', 'fit', 'from', 'severity', 'state', 'missing', 'active', 'percent', 'found', 'total', 'pose', 'alt', 'url'])
+const COPY_SKIP = new Set(['type', 'theme', 'image', 'fit', 'from', 'severity', 'state', 'missing', 'active', 'percent', 'found', 'total', 'pose', 'alt', 'url', 'id', 'dim'])
 
 /** The words on each slide as one paragraph, markup stripped: what a reader sees, in order. */
 export function extractCopy(doc) {
@@ -359,6 +375,14 @@ const docHtml = (doc, against) => `
       <p class="cite">${inline(doc.quote)}</p>
       ${against ? `<p class="doc-meta against"><span>${inline(against.name)}</span><strong>${inline(against.note ?? '')}</strong></p>` : ''}
     </div>`
+
+/** A full-bleed photo behind a slide's words, with a scrim whose strength `dim` sets. */
+function photoBg(src, dim, { baseDir, labels }) {
+  if (!src) return `<div class="photo-bg missing"><span>${escapeHtml(labels.missing)}</span></div>`
+  const file = path.resolve(baseDir, src)
+  const inner = existsSync(file) ? `<img src="${pathToFileURL(file).href}" alt="">` : `<span>${escapeHtml(labels.missing)}<br>${escapeHtml(src)}</span>`
+  return `<div class="photo-bg${existsSync(file) ? '' : ' missing'}">${inner}</div><div class="photo-scrim" style="--dim:${Number(dim)}"></div>`
+}
 
 /** A grey cloud stands in while a brand has no mascot poses yet, so a draft previews. */
 const MASCOT_PLACEHOLDER = `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg"><path d="M55 120 a30 30 0 0 1 -5 -59 a38 38 0 0 1 72 -16 a32 32 0 0 1 43 30 a26 26 0 0 1 -10 45 z" fill="#e8e5de" stroke="#c9c4b8" stroke-width="4" stroke-linejoin="round"/><circle cx="85" cy="85" r="5" fill="#8d897e"/><circle cx="125" cy="85" r="5" fill="#8d897e"/><path d="M96 103 q9 7 18 0" fill="none" stroke="#8d897e" stroke-width="4" stroke-linecap="round"/></svg>`
@@ -477,6 +501,30 @@ const BODIES = {
     <h2 class="headline">${inline(s.headline)}</h2>
     ${para(s.body, 'subline')}
     ${s.button || s.url ? `<div class="actions">${s.button ? `<p class="button">${inline(s.button)}</p>` : ''}${s.url ? `<p class="url">${inline(s.url)}</p>` : ''}</div>` : ''}`,
+  photo: (s, ctx) => `
+    <div class="photo-text">
+    ${kicker(s.kicker)}
+    <h1 class="headline">${inline(s.headline)}</h1>
+    ${para(s.subline, 'subline')}
+    </div>`,
+  listicle: (s, ctx) => `
+    ${kicker(s.kicker)}
+    <p class="list-num">${inline(s.number)}</p>
+    <h2 class="title">${inline(s.title)}</h2>
+    ${para(s.body)}
+    ${bullets(s.bullets)}
+    ${imageHtml(s.image, { ...ctx, fit: s.fit })}`,
+  compare: (s, ctx) => `
+    ${kicker(s.kicker)}
+    ${s.title ? `<h2 class="title">${inline(s.title)}</h2>` : ''}
+    <div class="compare">
+      ${['before', 'after'].map((side) => `<div class="side ${side}"><p class="side-label">${inline(s[side].label ?? ctx.labels[side])}</p>${imageHtml(s[side].image, { ...ctx, className: 'side-shot' })}<p class="side-text">${inline(s[side].text)}</p></div>`).join('')}
+    </div>`,
+  screen: (s, ctx) => `
+    ${kicker(s.kicker)}
+    <div class="screen-head">${s.step ? `<span class="step-badge">${inline(String(s.step))}</span>` : ''}<h2 class="title">${inline(s.title)}</h2></div>
+    ${para(s.body)}
+    ${imageHtml(s.image, { ...ctx, fit: s.fit })}`,
   lettered: (s, ctx) => `
     <div class="lettered-lines">${s.lines.map(letteredLine).join('<br>')}</div>
     <div class="mascot">${s.pose && ctx.poses[s.pose] ? `<img src="${escapeHtml(ctx.poses[s.pose])}" alt="">` : MASCOT_PLACEHOLDER}</div>
@@ -489,11 +537,12 @@ export function renderSlide(slide, index, doc, { baseDir, brand, total }) {
   const labels = LABELS[langOf(doc, brand)]
   const poses = posesOf(doc, brand, baseDir)
   const footer = doc.footer ?? doc.handle ?? brand.config.handle ?? ''
-  const theme = slide.theme ?? doc.theme ?? 'light'
+  const theme = slide.theme ?? (slide.type === 'photo' ? 'dark' : (doc.theme ?? 'light'))
   const last = index === total - 1
   const counter = `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`
   return `
 <section class="slide type-${slide.type} ${theme}${slide.image ? ' has-image' : ''}">
+  ${slide.type === 'photo' ? photoBg(slide.image ?? doc.look?.image, slide.dim ?? doc.look?.dim ?? 0.35, { baseDir, labels }) : ''}
   <header class="chrome">
     ${
       brand.wordmark
@@ -502,10 +551,10 @@ export function renderSlide(slide, index, doc, { baseDir, brand, total }) {
     }
     <span class="counter">${counter}</span>
   </header>
-  <main class="content">${BODIES[slide.type](slide, { baseDir, labels, poses, footer, index, total })}</main>
+  <main class="content">${BODIES[slide.type](slide, { baseDir, labels, poses, footer, index, total, look: doc.look })}</main>
   <footer class="chrome">
     <span class="handle">${inline(doc.handle ?? brand.config.handle ?? '')}</span>
-    ${last ? '' : `<span class="swipe">${labels.swipe} <b>→</b></span>`}
+    ${last ? '' : `<span class="swipe">${slide.loop ? inline(slide.loop) : labels.swipe} <b>→</b></span>`}
   </footer>
 </section>`
 }
@@ -623,6 +672,14 @@ async function renderFormat(browser, doc, { baseDir, outDir, format }) {
         return el && el.scrollHeight > el.clientHeight + 1 ? [`slide ${i + 1}: content is ${el.scrollHeight - el.clientHeight}px taller than the slide, cut words (never shrink the type)`] : []
       }),
     )
+    // Panels and numbers clip their own overflow: measure them like the content.
+    overflowing.push(
+      ...(await page.evaluate(() =>
+        [...document.querySelectorAll('section.slide')].flatMap((slide, i) =>
+          [...slide.querySelectorAll('.side')].flatMap((el) => (el.scrollHeight > el.clientHeight + 1 ? [`slide ${i + 1}: a before/after panel is ${el.scrollHeight - el.clientHeight}px taller than its room, cut words`] : [])),
+        ),
+      )),
+    )
     // A lettered line never wraps: one that is wider than the slide is cut by it.
     const wide = await page.evaluate(() =>
       [...document.querySelectorAll('section.slide')].flatMap((slide, i) => {
@@ -669,6 +726,40 @@ async function renderFormat(browser, doc, { baseDir, outDir, format }) {
   return warnings
 }
 
+/**
+ * The words around the slides: caption.md and replies.md sit beside carousel.json, and every link
+ * in them carries the tracking that ties a visit to this carousel.
+ */
+async function sidecarProblems(doc, baseDir) {
+  const slug = doc.experiment?.slug
+  const problems = []
+  for (const name of ['caption.md', 'replies.md']) {
+    const file = path.join(baseDir, name)
+    if (!existsSync(file)) {
+      problems.push(`${name} is missing next to carousel.json (caption with hashtags, then the DM and reply script)`)
+      continue
+    }
+    problems.push(...(readFileSync(file, 'utf8').match(/\[[^\]\n]{2,}\](?!\()/g) ?? []).map((m) => `${name}: placeholder ${m}`))
+    if (slug) problems.push(...checkLinks(readFileSync(file, 'utf8'), slug).map((p) => `${name}: ${p}`))
+  }
+  return problems
+}
+
+/** One PNG per cover variant in out/covers/<id>.png, rendered like slide 1 of the deck. */
+async function renderCovers(browser, doc, { baseDir, outDir, format }) {
+  const coversDir = path.join(outDir, 'covers')
+  mkdirSync(coversDir, { recursive: true })
+  for (const { id, deck } of coverDecks(doc)) {
+    const tmp = mkdtempSync(path.join(tmpdir(), 'carousel-cover-'))
+    try {
+      await renderFormat(browser, deck, { baseDir, outDir: tmp, format })
+      writeFileSync(path.join(coversDir, `${id}.png`), readFileSync(path.join(tmp, '01.png')))
+    } finally {
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  }
+}
+
 async function main(argv) {
   const args = argv.filter((a) => !a.startsWith('--'))
   const strict = argv.includes('--strict')
@@ -693,18 +784,20 @@ async function main(argv) {
   }
 
   if (copyOnly) {
-    console.log(extractCopy(doc))
+    console.log(extractCopy(resolveDeck(doc)))
     return 0
   }
 
   const brand = loadBrand(doc.brand, baseDir)
   const poses = posesOf(doc, brand, baseDir)
   const cropWarnings = await runCrops(doc, outDir)
-  const missing = doc.slides
+  // The deck as posted: the picked cover (or the first, while the pick is open) before the slides.
+  const deck = resolveDeck(doc)
+  const missing = deck.slides
     .flatMap((s, i) => [s.image, s.author?.image].filter(Boolean).map((src) => [i, src]))
     .filter(([, src]) => !existsSync(path.resolve(baseDir, src)))
     .map(([i, src]) => `slide ${i + 1}: image ${src} not found, rendered as placeholder`)
-  const lettered = doc.slides.flatMap((s, i) =>
+  const lettered = deck.slides.flatMap((s, i) =>
     s.type !== 'lettered'
       ? []
       : [
@@ -712,7 +805,7 @@ async function main(argv) {
           ...(!s.alt ? [`slide ${i + 1}: no alt text`] : []),
         ],
   )
-  const warnings = [...findPlaceholders(doc), ...cropWarnings, ...missing, ...lettered]
+  const warnings = [...findPlaceholders(doc), ...cropWarnings, ...missing, ...lettered, ...lintDeck(doc), ...specGate(doc), ...(await sidecarProblems(doc, baseDir))]
   const missingFonts = fontFaces(brand).missing
   if (missingFonts.length) warnings.push(`brand fonts not found (install the app's dependencies?): ${[...new Set(missingFonts.map((f) => f.family))].join(', ')}, rendered with the fallback`)
   const unset = unsetTokens(brand)
@@ -723,19 +816,21 @@ async function main(argv) {
   const browser = await launchChromium()
   try {
     for (const format of formats) {
-      const found = await renderFormat(browser, doc, { baseDir, outDir: path.join(outDir, format), format })
+      const found = await renderFormat(browser, deck, { baseDir, outDir: path.join(outDir, format), format })
       warnings.push(...found.map((w) => `${format} ${w}`))
     }
+    // Every cover variant on its own, to look at side by side and pick from.
+    if (doc.covers) await renderCovers(browser, doc, { baseDir, outDir, format: formats.includes('1080x1350') ? '1080x1350' : formats[0] })
   } finally {
     await browser.close()
   }
 
-  if (doc.slides.some((s) => s.alt))
-    writeFileSync(path.join(outDir, 'alt.md'), doc.slides.map((s, i) => `${String(i + 1).padStart(2, '0')}: ${s.alt ?? ''}`).join('\n') + '\n')
+  const copies = extractCopy(deck).split('\n\n')
+  writeFileSync(path.join(outDir, 'alt.md'), deck.slides.map((s, i) => `${String(i + 1).padStart(2, '0')}: ${s.alt ?? copies[i]}`).join('\n') + '\n')
 
   for (const w of warnings) console.warn(`${strict ? '✗' : '!'} ${w}`)
   const outro = brand.outro(langOf(doc, brand)) ? ' + closing slide' : ''
-  console.log(`rendered ${doc.slides.length} slides${outro} (${brand.id}) in ${formats.join(', ')} → ${outDir}`)
+  console.log(`rendered ${deck.slides.length} slides${outro} (${brand.id}) in ${formats.join(', ')} → ${outDir}`)
   return strict && warnings.length ? 1 : 0
 }
 

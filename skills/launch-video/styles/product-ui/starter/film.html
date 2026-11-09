@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product walkthrough</title>
+<style>
+  /* The product's tokens. A neutral placeholder set: the Designer role replaces these values (and the
+     three font stacks) with the brand's own, and nothing below the tokens needs to change. */
+  :root {
+    --desk: #E9ECF1; --screen: #FFFFFF; --panel: #F5F6F8; --line: #DDE1E8; --ink: #14171C; --muted: #5E6573; --faint: #9AA1AE;
+    --accent: #2F6BFF; --on-accent: #FFFFFF; --ring: rgba(47, 107, 255, .25);
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif; --round: ui-rounded, "SF Pro Rounded", "Helvetica Neue", sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--desk); }
+  body { font: 500 24px/1.3 var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--desk); }
+
+  /* The window is built about 1.3x its real size, so the smallest label is 20 px on the 1080p frame. */
+  #window { position: absolute; left: 180px; top: 30px; width: 1560px; height: 860px; display: flex; flex-direction: column; overflow: hidden; border-radius: 28px; background: var(--screen); box-shadow: 0 1px 0 var(--line), 0 28px 60px -24px rgba(20, 23, 28, .22); }
+  header { height: 84px; flex: none; display: flex; align-items: center; gap: 64px; padding: 0 40px; border-bottom: 2px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 14px; font: 700 30px/1 var(--round); }
+  .brand i { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); }
+  #tabs { display: flex; padding: 6px; border-radius: 999px; background: var(--panel); }
+  #tabs .ind { background: var(--ink); border-radius: 999px; }
+  #tabs [data-tab] { width: 168px; height: 52px; border-radius: 999px; text-align: center; font: 600 24px/52px var(--sans); color: var(--muted); }
+  #tabs [data-state="on"] { color: var(--on-accent); }
+
+  #pages { position: relative; flex: 1; }
+  .page { position: absolute; inset: 0; padding: 32px; background: var(--screen); }
+  #page-request { display: grid; grid-template-columns: 760px 1fr; gap: 36px; align-items: start; }
+  .card { border: 2px solid var(--line); border-radius: 24px; background: var(--screen); }
+  h2 { font: 700 38px/1.15 var(--round); }
+  h3 { font: 600 24px/1.2 var(--sans); color: var(--muted); }
+
+  #form { padding: 44px; display: flex; flex-direction: column; }
+  #form label { margin: 26px 0 14px; font: 600 24px/1.2 var(--sans); color: var(--muted); }
+  #ask { height: 96px; padding: 0 28px; display: flex; align-items: center; border: 2px solid var(--line); border-radius: 20px; font: 500 28px/1 var(--sans); background: var(--screen); }
+  #ask[data-state="focus"] { border-color: var(--accent); }
+  .ph { color: var(--faint); }
+  .caret { display: inline-block; width: 3px; height: 38px; margin-left: 2px; border-radius: 2px; background: var(--accent); }
+  .option { margin: 38px 0 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; font: 500 28px/1.2 var(--sans); }
+  #share { width: 88px; height: 48px; border-radius: 24px; background: var(--line); }
+  #share .fill { background: var(--accent); }
+  #share .knob { left: 6px; top: 6px; width: 36px; height: 36px; border-radius: 18px; background: #fff; box-shadow: 0 2px 6px rgba(20, 23, 28, .28); }
+  #start { height: 84px; border-radius: 42px; text-align: center; font: 600 30px/84px var(--sans); }
+  #start[data-state="on"] { background: var(--accent); color: var(--on-accent); }
+  #start[data-state="pressed"] { background: #2457E0; color: var(--on-accent); }
+  #start[data-state="off"] { background: var(--panel); color: var(--faint); }
+
+  #right { display: flex; flex-direction: column; gap: 28px; }
+  #progress { padding: 34px 36px 30px; }
+  #checks { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; list-style: none; }
+  #checks li { height: 68px; padding: 0 24px; display: flex; align-items: center; gap: 20px; border-radius: 18px; background: var(--panel); font: 500 28px/1 var(--sans); }
+  #checks li[data-state="hidden"] { background: transparent; }
+  #checks .dot { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--line); }
+  #checks .spin, #checks .fill { margin: -3px; }
+  #checks .spin { border: 3px solid transparent; border-top-color: var(--accent); }
+  #checks .fill { background: var(--accent); }
+  #checks .lbl { color: var(--muted); }
+  #checks li[data-state="done"] .lbl { color: var(--ink); }
+  #result { height: 250px; padding: 34px 36px; border-color: var(--line); background: var(--screen); }
+  .chip { display: inline-block; padding: 7px 18px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 700 20px/1.3 var(--sans); letter-spacing: .02em; }
+  #result h3 { margin-top: 16px; font: 700 40px/1.15 var(--round); color: var(--ink); }
+  #result p { margin-top: 8px; font: 500 26px/1.3 var(--sans); color: var(--muted); }
+
+  #page-reports { display: flex; justify-content: center; }
+  #reports { width: 1180px; display: flex; flex-direction: column; gap: 24px; }
+  #list { display: flex; flex-direction: column; gap: 16px; list-style: none; }
+  .row { height: 104px; padding: 0 28px; display: flex; align-items: center; gap: 24px; border: 2px solid var(--line); border-radius: 22px; background: var(--screen); }
+  .row .ic { flex: none; width: 60px; height: 60px; border-radius: 16px; display: grid; place-items: center; background: var(--panel); color: var(--muted); }
+  .row .name { font: 600 30px/1.2 var(--sans); }
+  .row .meta { margin-top: 4px; font: 500 22px/1.2 var(--sans); color: var(--muted); }
+  .row .chip { margin-left: auto; }
+  #new-report { border-color: var(--accent); }
+  #new-report .ic { background: var(--accent); color: var(--on-accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="window" data-ui="screen">
+    <header>
+      <div class="brand"><i></i>Product</div>
+      <nav id="tabs" data-ui="tabs" data-initial="request">
+        <div id="tab-request" data-tab="request">Request</div>
+        <div id="tab-reports" data-tab="reports">Reports</div>
+      </nav>
+    </header>
+    <main id="pages" data-ui="panels">
+      <section id="page-request" class="page" data-panel="request">
+        <div id="form" class="card">
+          <h2>New request</h2>
+          <label>What should it do?</label>
+          <div id="ask" data-ui="field" data-ph="Describe the task in your own words"></div>
+          <div class="option"><span>Share the result with the team</span><div id="share" data-ui="toggle"><i class="knob"></i></div></div>
+          <div id="start" data-ui="button" data-needs="#ask">Start</div>
+        </div>
+        <div id="right">
+          <div id="progress" class="card">
+            <h3>Progress</h3>
+            <ol id="checks" data-ui="checklist">
+              <li id="r1"><span class="dot"></span><span class="lbl">Read the sources</span></li>
+              <li id="r2"><span class="dot"></span><span class="lbl">Group by theme</span></li>
+              <li id="r3"><span class="dot"></span><span class="lbl">Check the facts</span></li>
+              <li id="r4"><span class="dot"></span><span class="lbl">Write the summary</span></li>
+            </ol>
+          </div>
+          <div id="result" class="card" data-ui="result">
+            <span class="chip pop">Ready</span>
+            <h3 class="rise">Summary ready</h3>
+            <p class="rise">Short, sourced and ready to send.</p>
+          </div>
+        </div>
+      </section>
+      <section id="page-reports" class="page" data-panel="reports">
+        <div id="reports">
+        <h2 class="rise">Reports</h2>
+        <ul id="list">
+          <li id="new-report" class="row rise"><span class="ic" data-icon="file-text"></span><div><div class="name">Feedback summary</div><div class="meta">Just now</div></div><span class="chip">New</span></li>
+          <li class="row rise"><span class="ic" data-icon="file-text"></span><div><div class="name">Release notes draft</div><div class="meta">Yesterday</div></div></li>
+          <li class="row rise"><span class="ic" data-icon="file-text"></span><div><div class="name">Support themes</div><div class="meta">Last week</div></div></li>
+          <li class="row rise"><span class="ic" data-icon="file-text"></span><div><div class="name">Onboarding calls</div><div class="meta">Last month</div></div></li>
+          <li class="row rise"><span class="ic" data-icon="file-text"></span><div><div class="name">Customer interviews</div><div class="meta">Last quarter</div></div></li>
+        </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<!-- the kit gives the motion and the browser viewer (space plays, arrows step a beat); the engine does the film -->
+<script src="/.agents/skills/launch-video/templates/kit.js"></script>
+<script src="/.agents/skills/launch-video/templates/icons.js"></script>
+<script type="module">
+import { build } from '/.agents/skills/launch-video/styles/product-ui/engine.js'
+import spec from './spec.js'
+
+// the app's icons, before the engine measures the page
+document.querySelectorAll('[data-icon]').forEach((n) => { n.innerHTML = icon(n.dataset.icon, 30) })
+const film = await build(spec)
+window.film = film
+kit(film.width, film.height).hud(film)
+</script>
+</body>
+</html>
