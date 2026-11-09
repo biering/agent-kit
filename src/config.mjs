@@ -12,7 +12,8 @@
  *     "name": "maelstrom",                       // required
  *     "linear": { "team": "MAE", "workspace": "Maelstrom Lab", "owner": "Christoph",
  *                 "labels": ["needs-decision"] },             // existing queues to fold in
- *     "ceo": { "checkout": "../maelstrom-ceo", "launchd": "com.maelstrom.ceo", "hour": 8 },
+ *     "ceo": { "checkout": "../maelstrom-ceo", "launchd": "com.maelstrom.ceo", "hour": 8,
+ *              "layout": "ops/herdr-panel/layout.sh" },      // run on the new CEO pane
  *     "sessions": { "dir": "../maelstrom-worktrees", "agent": "claude" },
  *     "stats": { "repos": { "maelstrom": ".", "leverage": "../../leverage/leverage" } },
  *     "mail": { "inbox": "<inbox>@agentmail.to" },
@@ -74,6 +75,9 @@ export const config = {
     manual: raw.ceo?.manual ?? 'ops/CEO.md',
     // The merge gate for the CEO alone; false when the repo's own settings gate every session.
     gate: raw.ceo?.gate ?? true,
+    // A script in the repo that arranges herdr around the CEO pane (board,
+    // graph tab); `pnpm ceo` runs it with the pane id. null: the bare pane.
+    layout: raw.ceo?.layout ?? null,
   },
   sessions: {
     dir: at(raw.sessions?.dir ?? `../${name}-worktrees`),

@@ -1,12 +1,15 @@
 # [Title]: caption
 
+The caption is searchable text: name the topic plainly. Every link carries `utm_source=<platform>`
+and `utm_content=<slug>` (the experiment's slug). Alt text per slide is written to `out/alt.md`.
+
 ## Instagram
 
-[Hook in one line: a question or a concrete problem.]
+[Hook in one line: the cover's promise, as a question or a concrete problem.]
 
-[Two or three sentences: what is new, for whom, on which plan.]
+[Two or three sentences: what it is, for whom, on which plan.]
 
-Link in bio.
+Link in bio: [https://example.com/landing?utm_source=instagram&utm_medium=social&utm_content=carousel-slug]
 
 [4 to 8 hashtags: one broad, the rest niche]
 
@@ -22,4 +25,4 @@ Link in bio.
 
 [What the product now does differently, with one concrete example.]
 
-[Plan or availability]: [domain]
+[Plan or availability]: [https://example.com/landing?utm_source=linkedin&utm_medium=social&utm_content=carousel-slug]

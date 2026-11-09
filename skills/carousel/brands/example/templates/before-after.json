@@ -1,0 +1,89 @@
+{
+  "title": "[Before and after]",
+  "brand": "example",
+  "intake": {
+    "selling": "[What you are selling, in one sentence.]",
+    "audience": "[Who it is for, one kind of person.]",
+    "action": "[The one action we want: the CTA.]",
+    "result": {
+      "text": "[One true number or a real screenshot.]",
+      "source": "[Where it comes from: analytics, changelog, a file in the repo.]"
+    }
+  },
+  "experiment": {
+    "slug": "[carousel-slug]",
+    "angle": {
+      "dimension": "[problem | audience | hook | benefit]",
+      "value": "[This carousel's variant of that dimension.]"
+    },
+    "platforms": [
+      "instagram",
+      "tiktok"
+    ]
+  },
+  "lang": "en",
+  "covers": [
+    {
+      "id": "a",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "Before / after",
+      "headline": "[From the old way] *[to the new way.]*",
+      "subline": "[Hook type: transformation]"
+    },
+    {
+      "id": "b",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "Before / after",
+      "headline": "[The cost of the old way] *[in one number.]*",
+      "subline": "[Hook type: result]"
+    },
+    {
+      "id": "c",
+      "type": "cover",
+      "theme": "dark",
+      "kicker": "Before / after",
+      "headline": "[Why the old way] *[never worked.]*",
+      "subline": "[Hook type: contrarian]"
+    }
+  ],
+  "slides": [
+    {
+      "type": "compare",
+      "title": "[The task, named.]",
+      "before": {
+        "text": "[The old way, in the user's words.]"
+      },
+      "after": {
+        "text": "[The new way, one sentence.]"
+      },
+      "loop": "[how it changes]"
+    },
+    {
+      "type": "compare",
+      "before": {
+        "text": "[A second moment of the old way.]"
+      },
+      "after": {
+        "text": "[The same moment, now.]"
+      },
+      "loop": "[the proof]"
+    },
+    {
+      "type": "stat",
+      "kicker": "The difference",
+      "value": "[The true number]",
+      "label": "[What it measures.]",
+      "source": "[Where it comes from]"
+    },
+    {
+      "type": "cta",
+      "theme": "dark",
+      "kicker": "Try it",
+      "headline": "[The one action worth taking.]",
+      "button": "[The landing's CTA text]",
+      "url": "[domain]"
+    }
+  ]
+}

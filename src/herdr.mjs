@@ -99,6 +99,10 @@ function ceo() {
   startClaude(AGENT, ws.pane, [...CEO_ARGS, '--remote-control', AGENT]) ??
     die('herdr could not start Claude Code in the CEO pane.')
   herdr(['agent', 'focus', AGENT])
+  if (config.ceo.layout) {
+    const r = spawnSync('sh', [join(main, config.ceo.layout), ws.pane], { cwd: main, encoding: 'utf8' })
+    if (r.status !== 0) console.error(`Layout ${config.ceo.layout} failed: ${(r.stderr || r.error?.message || '').trim()}`)
+  }
   prompt(
     AGENT,
     `${config.linear.owner} opened this session. Read your state as ${config.ceo.manual} says, give the five-line report, then wait.`,

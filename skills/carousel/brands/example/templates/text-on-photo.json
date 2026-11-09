@@ -1,0 +1,72 @@
+{
+  "title": "[Text on photo]",
+  "brand": "example",
+  "intake": {
+    "selling": "[What you are selling, in one sentence.]",
+    "audience": "[Who it is for, one kind of person.]",
+    "action": "[The one action we want: the CTA.]",
+    "result": {
+      "text": "[One true number or a real screenshot.]",
+      "source": "[Where it comes from: analytics, changelog, a file in the repo.]"
+    }
+  },
+  "experiment": {
+    "slug": "[carousel-slug]",
+    "angle": {
+      "dimension": "[problem | audience | hook | benefit]",
+      "value": "[This carousel's variant of that dimension.]"
+    },
+    "platforms": [
+      "instagram",
+      "tiktok"
+    ]
+  },
+  "lang": "en",
+  "look": {
+    "image": "assets/reference.jpg",
+    "dim": 0.4
+  },
+  "covers": [
+    {
+      "id": "a",
+      "type": "photo",
+      "headline": "[A question in the user's words?]",
+      "alt": "[What the photo shows. Text: the headline.]"
+    },
+    {
+      "id": "b",
+      "type": "photo",
+      "headline": "[The true result, as a number.]",
+      "alt": "[What the photo shows. Text: the headline.]"
+    },
+    {
+      "id": "c",
+      "type": "photo",
+      "headline": "[A belief the audience holds, turned.]",
+      "alt": "[What the photo shows. Text: the headline.]"
+    }
+  ],
+  "slides": [
+    {
+      "type": "photo",
+      "headline": "[The cost of the problem, concrete.]",
+      "subline": "[One line.]",
+      "loop": "[the way out]",
+      "alt": "[What the photo shows. Text: the slide's words.]"
+    },
+    {
+      "type": "photo",
+      "headline": "[What changes, as a sentence with a verb.]",
+      "image": "assets/photo-2.jpg",
+      "loop": "[the proof]",
+      "alt": "[What the photo shows. Text: the slide's words.]"
+    },
+    {
+      "type": "photo",
+      "headline": "[The one action worth taking.]",
+      "subline": "[The domain]",
+      "image": "assets/photo-3.jpg",
+      "alt": "[What the photo shows. Text: the slide's words.]"
+    }
+  ]
+}
