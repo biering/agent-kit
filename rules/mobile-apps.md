@@ -45,7 +45,12 @@ purpose: follow them, and put the app-specific detail in the app.
   within a minute.
 - Ask for each permission (notifications, analytics consent) in context, only
   when its value is clear. Never as a batch at launch.
-- A paywall after onboarding is allowed, but it must be dismissible.
+- A paywall after onboarding is allowed, but it must be dismissible. A hard
+  paywall (nothing works before paying) is an experiment with a written kill
+  threshold, shipped only after the dismissible version has a measured baseline.
+- Model the flow on evidence: walk the first-run flow of three earning
+  competitors, copy the structure they share (screen order, where the paywall
+  sits, price and trial length), never their wording or art.
 - Show it once and persist completion.
 - Respect reduced motion.
 - Track onboarding steps reached, skipped and completed, after consent.
@@ -76,3 +81,12 @@ Method and checklists: the `app-review` skill (`skills/app-review/SKILL.md`).
   onboarding, no fake social proof or absolute claims, no copy of another app.
   Permissions are asked in context. Apps with user content need report, block,
   a contact-support button and moderation.
+
+## 5. Market proof before building
+
+- A paid mobile app needs proof before code: at least three apps in the niche
+  earning roughly $10k a month or more (estimates are fine, label them
+  estimated), and creators already promoting them on TikTok or Instagram.
+- No proof means a waitlist or a web test first. Record the three competitors,
+  their prices and trial lengths in the product brief.
+- Never invent a revenue figure when the source is a paid tool you do not have.
