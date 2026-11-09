@@ -53,7 +53,7 @@ under `claude --agent`). A repo that gates every session wires it in its own
    for "waits on the owner" into the inbox, `linear.states` names the state
    for each role (`ask`, `task`, `start`, `done`, `canceled`) where a team's
    own rules place issues, `linear.close: false` leaves closing to people, `ceo.manual` moves the operating
-   manual from `ops/CEO.md`, and `bootstrap` is the repo's own preparation of a
+   manual from `ops/CEO.md`, `ceo.layout` names a script `herdr ceo` runs on the new CEO pane (board, graph tab), and `bootstrap` is the repo's own preparation of a
    new checkout. Defaults follow from `name`: the CEO checkout `../<name>-ceo`, its herdr
    agent `<name>-ceo`, sessions in `../<name>-worktrees`, launchd label
    `com.<name>.ceo` at 08:00, herdr plugin `<name>.ops`. `src/config.mjs` lists
