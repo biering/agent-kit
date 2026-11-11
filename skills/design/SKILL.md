@@ -6,6 +6,9 @@ description: >-
 
 # Design
 
+Read the repo's `AGENTS.md` and `docs/agent-kit/design.md` first; they win where they differ from
+this skill.
+
 Pick the part that matches the job, read only that part, and finish with the look step at the
 end. Motion polish is the upstream `emil-design-eng` skill; components come from the kit the repo
 names (see App UI).
