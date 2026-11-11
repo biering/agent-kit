@@ -42,13 +42,19 @@ sections this shape needs.
 
 ## 3. What every shape has to do
 
+Where a rule below is doubted, `landing-evidence.md` says what was measured and what was not.
+
 - **Continue the sentence they arrived with.** Traffic from a post or an ad lands on a first
   screen that repeats its promise in its words and its look. A mismatch is the commonest reason a
   click leaves.
 - **The first screen holds:** the outcome for this audience, one sentence on how, the primary
   action, one proof signal, and the product itself. The taste run's step 5 sets how big.
+- **The first screen has one hook** (`landing-hook.md`): the thing that moves or answers and
+  shows the claim happening. It loads after the text and never slows the first paint.
+- **Start the task before the account** when the product allows it: a link to paste, an amount to
+  type, a result before signup (`landing-evidence.md`, rows 12 and 13).
 - **One primary action.** No competing action above the fold. The close repeats the same action
-  with the same words.
+  with the same words. On a phone it stays reachable in a sticky bar.
 - **Benefits before features.** A feature is what it does; the benefit is what changes for them.
   Three to five, each with its proof or detail beside it.
 - **Specific beats smooth.** "Your weekly report in 15 minutes instead of four hours", not "save
@@ -75,7 +81,8 @@ Write these down and show them with the taste run's argument (its step 2) and co
 
 1. the shape from section 2 and why;
 2. the outline from `landing-anatomy.md`: those sections in that order, each one a claim and its proof. A section that file marks honesty-gated is omitted when the proof does not exist, and the omission is named;
-3. the first screen: headline, supporting sentence, action, proof signal;
+3. the first screen: headline, supporting sentence, action, proof signal, and the hook as one
+   sentence ("the hook shows [the claim] by [what the visitor sees]");
 4. the benefits, the steps (if the product has a how), the FAQ;
 5. index or noindex, and the title and description if indexed.
 

@@ -16,7 +16,7 @@ not use it.
 | # | Section | What belongs in it | id / landmark |
 |---|---------|--------------------|---------------|
 | 1 | Sticky navbar | Logo, links to the page's own sections, one CTA button. Stays visible. | `<header>` with `<nav>` |
-| 2 | Hero | A social-proof line (honesty-gated), a title that names the problem or what is sold, one supporting line, a primary and a secondary action, and a product video or screenshot. | `id="hero"` |
+| 2 | Hero | A social-proof line (honesty-gated), a title that names the problem or what is sold, one supporting line, a primary and a secondary action, and a product video or screenshot. The media slot is where the hook lives (`landing-hook.md`). | `id="hero"` |
 | 3 | Partners / trust | Logos or badges. Real, or a true substitute, or absent. | `id="trust"` |
 | 4 | Benefits | What changes for the user. A bento, not a row of identical cards. | `id="benefits"` |
 | 5 | How it works | Getting started in three steps. | `id="how-it-works"` |
