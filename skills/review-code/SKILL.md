@@ -71,6 +71,8 @@ the diff instead of reviewing inline, so the review runs in a fresh context.
   credential only; every row id is checked against that user; webhooks verify signatures and fail
   closed without their secret; no bypass, key or shared password in code; no service-role key on a
   public edge worker.
+- A schema or migration change in the diff gets the `data-schema` skill's review checklist
+  (section 4).
 
 ### Analytics instrumentation
 

@@ -1,0 +1,6 @@
+import { defineSchema, defineTable } from 'convex/server'
+import { v } from 'convex/values'
+// v.any() in a comment is fine
+export default defineSchema({
+  items: defineTable({ label: v.string(), extra: v.any() }),
+})

@@ -1,0 +1,7 @@
+// Durable Object schema steps
+export const STEPS = [
+  (sql) => sql.exec(`CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY)`),
+  (sql) => sql.exec('BEGIN TRANSACTION'),
+  (sql) => sql.exec("COMMIT;"),
+]
+const label = 'Commit your changes'

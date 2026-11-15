@@ -14,6 +14,7 @@ agent in the repo.
 | `agent-kit ceo-schedule install` / `status` / `run` | The CEO's daily run (launchd), in its own checkout on `origin/main` |
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
 | `agent-kit mail …` | The agents' AgentMail inbox |
+| `agent-kit migrations [--base origin/main] [--all] [--json]` | Checks every schema file changed against the base by the `data-schema` rules and names the reference and official skill each one needs; exit 1 on a failure |
 | `agent-kit sync <repo>` | Vendor this kit into a repo |
 | `terminal/install.sh` | The shared terminal setup: Ghostty, herdr's config, the theme switch, Raycast commands for the Mac minis (`terminal/README.md`) |
 
@@ -68,6 +69,34 @@ under `claude --agent`). A repo that gates every session wires it in its own
    PRs and CI come from `gh`. `node bin/agent-kit.mjs daylog collect [--date YYYY-MM-DD] [--budget N]`
    prints the UTC day, capped (default 6000 tokens) with a `Cut for size` note.
 
+   `schema` is read by `agent-kit migrations` and the `data-schema` skill:
+
+   ```json
+   "schema": {
+     "engines": {
+       "d1": ["apps/api/migrations/*.sql"],
+       "supabase": ["supabase/migrations/*.sql"],
+       "durable-objects": ["apps/api/src/objects/*.ts"],
+       "convex": ["convex/schema.ts", "convex/schema/**/*.ts"]
+     },
+     "allowlist": "scripts/migrations-allowlist.json",
+     "base": "origin/main"
+   }
+   ```
+
+   `engines` maps each engine (`postgres`, `supabase`, `d1`, `sqlite`, `durable-objects`, `convex`)
+   to globs over repo paths; the first match wins. Without the block, `supabase/migrations` and
+   `convex/schema*` are recognised and any other `migrations/*.sql` is checked as SQL of an unknown
+   engine. Only files changed against `base` (`--base` overrides) are judged, so history needs no
+   fixing. Rules: a header comment, a unique number not below the base's highest, no
+   `BEGIN`/`COMMIT` on D1 or in Durable Object SQL, no REAL or float for money-like columns,
+   `json_valid` on JSON-looking text (warning), an `Undo:` or `Destructive:` line for `DROP`,
+   `RENAME` and `TRUNCATE`, and a warning when a migration already on the base is edited or deleted.
+   `allowlist` is a ratchet, `{ "allow": [{ "file", "rule", "why" }] }`: an entry silences one rule
+   on one file, and the check reports entries that no longer fire so they get removed. `--all`
+   judges every schema file, to seed the allowlist when adopting. Wire it into the repo's local
+   verify (the `loop.verify` command) so it runs before every PR.
+
    Other keys: `linear.labels` folds labels another process already uses
    for "waits on the owner" into the inbox, `linear.states` names the state
    for each role (`ask`, `task`, `start`, `done`, `canceled`) where a team's
@@ -103,6 +132,7 @@ Then make the layout match:
 - Do not edit an installed skill. A rule that differs in this repo goes in AGENTS.md, in docs/agent-kit/<skill>.md, or in agent-kit.config.json (the loop, carousel and ads blocks). Those files are not overwritten by a later npx skills update.
 - If this repo already says which skills stay out of .claude/skills, follow that and say which ones you left unlinked. Otherwise link all of them.
 - If this repo links a subset of skills from .cursor/skills, link the new ones the same way.
+- For each database engine this repo uses, also install the official skill that data-schema's routing table names (from the vendor's own repository, the same way), unless it is already installed.
 - If a kit skill has the same name as a skill this repo wrote itself, stop and ask before replacing it.
 - Do not commit unless asked.
 ```
@@ -124,7 +154,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Ship | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix` |
 | Review | `review-code`, `review-api`, `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
-| Build | `scaffold` (a new app on this kit's stack, Python services included), `design` |
+| Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
 | Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest) |
 | Market | `aso`, `app-screenshots`, `launch-video` (a video studio: seven roles, five styles, measured QA, X player cards), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ads-landingpage` |
 | Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
@@ -142,9 +172,12 @@ reads before it acts (a repo's PR scope, its copy carve-outs, its launch
 steps). Nothing a repo writes there is overwritten by `npx skills update`.
 
 Skills that are already published upstream (coss, nuxt-ui, heroui-native,
-emil-design-eng, supabase-postgres-best-practices, stripe-best-practices) are
+emil-design-eng, supabase-postgres-best-practices, stripe-best-practices, and the
+Supabase, Cloudflare and Convex skills `data-schema` routes to) are
 installed from their own repositories; this kit names them and never copies
-them. `skills/design/references/taste/` is the exception: it is vendored from
+them. `skills/data-schema/references/postgres.md` adapts parts of two Apache-2.0
+Postgres skills (Neon, Timescale), with attribution, pinned commits and the licence
+beside it. `skills/design/references/taste/` is the exception: it is vendored from
 [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (MIT, licence
 beside it) because the design router needs it as a reference, not a skill.
 `skills/design/references/landing-page.md` adapts the strategy half of

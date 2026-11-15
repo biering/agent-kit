@@ -19,6 +19,8 @@
  *     "mail": { "inbox": "<inbox>@agentmail.to" },
  *     "loop": { "verify": "pnpm gates", "docs": "pnpm verify:docs", "gate": null },  // dev-loop skill
  *     "daylog": { "log": "docs/daily-log", "decisions": "docs/decisions.md" },   // daily-log skill
+ *     "schema": { "engines": { "d1": ["apps/api/migrations/*.sql"] },          // read by `agent-kit migrations`
+ *                 "allowlist": "scripts/migrations-allowlist.json", "base": "origin/main" },  // itself, see src/lib/migrations.mjs
  *     "bootstrap": ["pnpm", "worktree:prepare"]          // prepares a new checkout
  *   }
  *
