@@ -82,6 +82,7 @@ Schedule one run a day, shortly after UTC midnight, for the day that just ended.
   touches the log dir alone** (check `git diff --name-only`; anything else, stop and leave the PR
   open). Auto-merge needs the required checks to report; a path filter that skips CI entirely
   leaves them pending, so give the repo a trivial always-green check for docs-only paths first.
+- **Exception to the pr and dev-loop rule.** Those say never to push to the default branch; this is a deliberate carve-out for a bot that writes only a text file in the log dir, and a repo that wants no exception uses the docs-PR path. Update the default branch (`git pull --ff-only`) before collecting so the digest and the file see the same history.
 - **Idempotent:** if `<log dir>/YYYY-MM-DD.md` exists, do nothing.
 - **Scheduling:** any scheduler works (a cron job, a hosted agent routine, the CEO's daily run).
   The command line is the same.

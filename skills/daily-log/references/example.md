@@ -16,6 +16,6 @@ Source: PR #17
 A session-graph viewer shows what an agent and its subagents are doing without reading the transcript. The binding lives in the kit because the install script replaces the user's config, so a key set by hand would vanish on the next install.
 Source: PR #16
 
-## journey: Owner wants the same screen every morning
-The owner asked that the CEO chat, the work board and the session graph look identical every time the CEO opens. Until then each start meant a few minutes of rebuilding the setup.
+## journey: Owner wants the same screen every time the CEO opens
+The owner asked for one fixed layout: the CEO chat with the work board beside it, and the session graph in its own tab. Until now the pane opened bare and the rest was rebuilt by hand.
 Source: PR #17 (the owner's request in its Why)

@@ -24,7 +24,7 @@ const squash = (s, max) => {
 export function dayBounds(date) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`--date must be YYYY-MM-DD, got "${date}"`)
   const start = Date.parse(`${date}T00:00:00Z`)
-  if (Number.isNaN(start)) throw new Error(`Not a date: ${date}`)
+  if (Number.isNaN(start) || new Date(start).toISOString().slice(0, 10) !== date) throw new Error(`Not a date: ${date}`)
   return { start, end: start + 86_400_000 }
 }
 const inDay = (iso, { start, end }) => {
@@ -39,6 +39,7 @@ export function whySections(body) {
   let keep = null
   for (const line of lines) {
     const h = line.match(/^#{1,4}\s*(.+?)\s*$/)
+    if (!h && keep && /^(tests?|how|notes?)\b[^.]{0,30}:/i.test(line.trim())) keep = null
     if (h) {
       keep = /^(why|benefits?|value|motivation)\b/i.test(h[1]) ? h[1] : null
       continue
@@ -48,7 +49,7 @@ export function whySections(body) {
   return squash(out.join(' ').replace(/🤖?\s*Generated with \[Claude Code\]\([^)]*\)/g, '').replace(/Co-Authored-By:[^\n]*/gi, ''), 600)
 }
 
-function prs(run, repoDir, date, bounds, notes) {
+function prs(run, repoDir, date, bounds, notes, base) {
   let list
   try {
     const from = new Date(bounds.start - 86_400_000).toISOString().slice(0, 10)
@@ -64,7 +65,7 @@ function prs(run, repoDir, date, bounds, notes) {
   const reverted = []
   const closed = []
   for (const p of list) {
-    if (p.state === 'MERGED' && inDay(p.mergedAt, bounds)) {
+    if (p.state === 'MERGED' && inDay(p.mergedAt, bounds) && (!p.baseRefName || p.baseRefName === base)) {
       const row = { n: p.number, title: squash(p.title, 120), why: whySections(p.body) }
       ;(/^revert\b/i.test(p.title) ? reverted : merged).push(row)
     } else if (p.state === 'CLOSED' && inDay(p.closedAt, bounds)) {
@@ -123,8 +124,12 @@ function decisions(run, repoDir, file, bounds, notes) {
 export function ownerWords(text, owner) {
   if (!owner) return []
   const name = owner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const re = new RegExp(`${name}[^'"“‘\\n]{0,30}['"“‘]([^'"”’]{25,400})['"”’]`, 'g')
-  return [...String(text ?? '').matchAll(re)].map((m) => squash(m[1], 300))
+  // A quote ends at its own closing mark; an apostrophe inside a word (don't) does not end a single-quoted one.
+  const re = new RegExp(
+    `${name}[^'"“‘\\n]{0,30}(?:'((?:[^'\\n]|(?<=\\w)'(?=\\w)){25,400}?)'(?!\\w)|"([^"\\n]{25,400})"|“([^”\\n]{25,400})”|‘([^’\\n]{25,400})’(?!\\w))`,
+    'g',
+  )
+  return [...String(text ?? '').matchAll(re)].map((m) => squash(m[1] ?? m[2] ?? m[3] ?? m[4], 300))
 }
 
 /** Tasks of the board folder (<dir>/<repo>/<n>/task.json) that finished on the day. */
@@ -148,7 +153,7 @@ function board(dir, repo, owner, bounds, notes) {
     if (!(at >= bounds.start && at < bounds.end)) continue
     let first = ''
     const closing = join(base, n, 'closing.md')
-    if (existsSync(closing)) first = readFileSync(closing, 'utf8').split('\n').find((l) => l.trim()) ?? ''
+    if (existsSync(closing)) first = (readFileSync(closing, 'utf8').split('\n').find((l) => l.trim() && !/^#/.test(l.trim())) ?? '').trim()
     tasks.push({ id: t.id ?? `${repo}/${n}`, stage, title: squash(t.title, 120), first: squash(first || t.msg, 220) })
     for (const w of ownerWords(t.description, owner)) words.push({ id: t.id ?? `${repo}/${n}`, w })
   }
@@ -182,9 +187,10 @@ function extras(run, repoDir, list, bounds, notes) {
 export function collect({ repoDir, date, config, run = defaultRun, budgetTokens }) {
   const bounds = dayBounds(date)
   const dl = config.daylog ?? {}
+  if (budgetTokens !== undefined && !(budgetTokens > 0)) throw new Error('--budget must be a positive number of tokens')
   const budget = (budgetTokens ?? dl.budgetTokens ?? DEFAULT_BUDGET_TOKENS) * CHARS_PER_TOKEN
   const notes = []
-  const p = prs(run, repoDir, date, bounds, notes)
+  const p = prs(run, repoDir, date, bounds, notes, dl.base ?? 'main')
   const ci = ciFixed(run, repoDir, date, notes)
   const b = board(dl.board, config.name, config.owner, bounds, notes)
   const dec = decisions(run, repoDir, dl.decisions, bounds, notes)

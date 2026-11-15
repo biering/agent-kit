@@ -97,6 +97,24 @@ describe('daylog collect', () => {
   })
 })
 
+describe('fixes', () => {
+  it('keeps apostrophes inside an owner quote', () => {
+    const t = "Boss: 'we need a daily log, don't over-think it please'. What's next?"
+    assert.deepEqual(ownerWords(t, 'Boss'), ["we need a daily log, don't over-think it please"])
+  })
+  it('ignores PRs merged into another base', () => {
+    const run = (c, a) => JSON.stringify(a[0] === 'pr' ? [{ number: 1, title: 't', state: 'MERGED', mergedAt: '2026-03-10T09:00:00Z', baseRefName: 'feat/x', body: '' }] : [])
+    assert.doesNotMatch(collect({ repoDir: '.', date: DAY, config: { name: 'd' }, run }), /#1 /)
+  })
+  it('rejects 2026-02-31 and a non-numeric budget', () => {
+    assert.throws(() => dayBounds('2026-02-31'))
+    assert.throws(() => collect({ repoDir: '.', date: DAY, config: {}, run: () => '[]', budgetTokens: NaN }))
+  })
+  it('stops a Why section at a Tests: paragraph', () => assert.equal(whySections('## Benefits
+b
+Tests: x'), 'b'))
+})
+
 describe('helpers', () => {
   it('rejects a bad date', () => assert.throws(() => dayBounds('10.03.2026')))
   it('reads Value as a Why section too', () => assert.equal(whySections('## Value\nfast'), 'fast'))

@@ -19,7 +19,7 @@ if (args[0] !== 'collect') {
 const date = flag('--date') ?? new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
 try {
   process.stdout.write(
-    collect({ repoDir: main, date, config: { name: config.name, owner: config.linear.owner, daylog: config.daylog }, budgetTokens: flag('--budget') ? Number(flag('--budget')) : undefined }),
+    collect({ repoDir: main, date, config: { name: config.name, owner: config.linear.owner, daylog: config.daylog }, budgetTokens: flag('--budget') !== undefined ? Number(flag('--budget')) : undefined }),
   )
 } catch (e) {
   console.error(e.message)
