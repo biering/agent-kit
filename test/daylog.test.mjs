@@ -110,9 +110,7 @@ describe('fixes', () => {
     assert.throws(() => dayBounds('2026-02-31'))
     assert.throws(() => collect({ repoDir: '.', date: DAY, config: {}, run: () => '[]', budgetTokens: NaN }))
   })
-  it('stops a Why section at a Tests: paragraph', () => assert.equal(whySections('## Benefits
-b
-Tests: x'), 'b'))
+  it('stops a Why section at a Tests: paragraph', () => assert.equal(whySections('## Benefits\nb\nTests: x'), 'b'))
 })
 
 describe('helpers', () => {
