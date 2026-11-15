@@ -6,13 +6,16 @@ description: >-
 
 # Design
 
+Read the repo's `AGENTS.md` and `docs/agent-kit/design.md` first; they win where they differ from
+this skill.
+
 Pick the part that matches the job, read only that part, and finish with the look step at the
 end. Motion polish is the upstream `emil-design-eng` skill; components come from the kit the repo
 names (see App UI).
 
 | Job | Read |
 |---|---|
-| A landing page, marketing site, product page, portfolio, one-pager, hero | `references/landing-page.md` (the offer), then `references/landing-anatomy.md` (the sections, in order, with their ids), then `references/taste/GUIDE.md`, the full run |
+| A landing page, marketing site, product page, portfolio, one-pager, hero | `references/landing-page.md` (the offer), then `references/landing-anatomy.md` (the sections, in order, with their ids), then `references/landing-hook.md` (the one thing on the first screen that moves and proves the claim), then `references/taste/GUIDE.md`, the full run. `references/landing-evidence.md` when a choice is argued from best practice |
 | Redesign or review of a page that already exists | `references/redesign.md`, then the taste run from its step 2 |
 | App screens: dashboards, settings, forms, lists, onboarding | `references/app-ui.md` |
 | A single section or component inside an existing design | match what is there, apply the house rules in `references/taste/GUIDE.md`, and look |

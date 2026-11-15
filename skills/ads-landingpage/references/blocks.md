@@ -46,6 +46,12 @@ A second wording is a second action.
 date in the claim ledger. A page without a counter loses nothing; a page with an invented one
 loses the account when someone asks.
 
+**Hook.** One thing on the first screen that moves or answers and shows the promise happening:
+the demo already started, a figure that changes, the ad's picture continued. It loads after the
+text, and its example is copy: every figure in it goes through the claim ledger. Where the repo
+installs agent-kit's `design`, its `references/landing-hook.md` has the job, the budget and the
+checks.
+
 ## Proof strip ("Works with")
 
 Job: remove "does it work with what I use?". A row of names the reader already trusts: the

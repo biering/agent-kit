@@ -19,6 +19,36 @@ describe('readme', () => {
   })
 })
 
+describe('landing hook', () => {
+  const root = new URL('..', import.meta.url)
+  const read = (file) => readFileSync(new URL(file, root), 'utf8')
+
+  it('is read for a landing page, after the anatomy and before the taste run', () => {
+    const skill = read('skills/design/SKILL.md')
+    assert.match(skill, /landing-anatomy\.md.*landing-hook\.md.*taste\/GUIDE\.md/)
+    assert.match(skill, /landing-evidence\.md/)
+    assert.match(read('skills/design/references/landing-page.md'), /landing-hook\.md/)
+    assert.match(read('skills/design/references/landing-anatomy.md'), /landing-hook\.md/)
+  })
+
+  it('names the three mechanics and a budget that puts text first', () => {
+    const hook = read('skills/design/references/landing-hook.md')
+    for (const mechanic of ['Show', 'Start', 'Play']) assert.match(hook, new RegExp(`\\*\\*${mechanic}\\*\\*`))
+    assert.match(hook, /Text first/)
+    assert.match(hook, /prefers-reduced-motion/)
+  })
+
+  it('cites only evidence rows that exist', () => {
+    const rows = new Set([...read('skills/design/references/landing-evidence.md').matchAll(/^\| (\d+) \|/gm)].map((match) => match[1]))
+    assert.ok(rows.size >= 15)
+    for (const file of ['landing-hook.md', 'landing-evidence.md']) {
+      for (const cite of read(`skills/design/references/${file}`).matchAll(/\[(\d+)\](?!\()/g)) {
+        assert.ok(rows.has(cite[1]), `${file} cites [${cite[1]}], which landing-evidence.md does not list`)
+      }
+    }
+  })
+})
+
 describe('landing anatomy', () => {
   it('is what the design skill reads for a landing page, with the canonical ids', () => {
     const root = new URL('..', import.meta.url)
