@@ -55,6 +55,9 @@ work: stay on it. Never commit or push on the default branch.
 Make the change. A behavior change gets a test that fails without it. When a change is not worth
 testing (copy, styling, types only), say so in the PR rather than skipping silently.
 
+A change that adds or alters a table, column, index, validator or migration file follows the
+`data-schema` skill first, and `agent-kit migrations` is green before the PR.
+
 Fix the class, not the instance: when the change improves something other apps do too, land the
 shared mechanism (script, guide, scaffold reference) in the same PR. Keep the branch surgical.
 An unrelated smell goes on its own branch.
