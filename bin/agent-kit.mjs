@@ -7,6 +7,7 @@
  *   agent-kit ceo-schedule …  the daily run (launchd)
  *   agent-kit stats …         daily numbers for Claude Code and Cursor
  *   agent-kit mail …          the agents' AgentMail inbox
+ *   agent-kit daylog collect  one UTC day of a repo as a compact digest (daily-log skill)
  *   agent-kit sync <repo>     vendor this kit into a repo (run from the kit's checkout)
  *
  * Each command is a module in src/ that reads its own arguments; this file
@@ -18,6 +19,7 @@ const COMMANDS = {
   'ceo-schedule': '../src/ceo-schedule.mjs',
   stats: '../src/agent-stats.mjs',
   mail: '../src/agentmail.mjs',
+  daylog: '../src/daylog.mjs',
   sync: '../src/sync.mjs',
 }
 

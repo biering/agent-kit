@@ -49,6 +49,25 @@ under `claude --agent`). A repo that gates every session wires it in its own
    folder, where Playwright lives) and `ads` (the landing-page register and the
    URL pattern per brand, for `ads-landingpage`).
 
+   `daylog` is read by `agent-kit daylog collect` and the `daily-log` skill:
+
+   ```json
+   "daylog": {
+     "log": "docs/daily-log",
+     "decisions": "docs/decisions.md",
+     "board": "../work-board/tasks",
+     "extra": [{ "label": "Experiments", "file": "docs/experiments.md" }],
+     "budgetTokens": 6000
+   }
+   ```
+
+   `log` is where the skill writes `YYYY-MM-DD.md`. `decisions` is a file whose rows added
+   that day go into the digest. `board` is a folder of `<name>/<n>/task.json` (+ `closing.md`)
+   for finished, failed or stopped tasks and the owner's quoted words. `extra` adds a file (its
+   lines added that day) or `{ "label", "cmd": [...] }` (a command's first lines). All optional;
+   PRs and CI come from `gh`. `node bin/agent-kit.mjs daylog collect [--date YYYY-MM-DD] [--budget N]`
+   prints the UTC day, capped (default 6000 tokens) with a `Cut for size` note.
+
    Other keys: `linear.labels` folds labels another process already uses
    for "waits on the owner" into the inbox, `linear.states` names the state
    for each role (`ask`, `task`, `start`, `done`, `canceled`) where a team's
@@ -106,7 +125,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Review | `review-code`, `review-api`, `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design` |
-| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog` |
+| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest) |
 | Market | `aso`, `app-screenshots`, `launch-video` (a video studio: seven roles, five styles, measured QA, X player cards), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ads-landingpage` |
 | Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |
