@@ -18,6 +18,7 @@
  *     "stats": { "repos": { "maelstrom": ".", "leverage": "../../leverage/leverage" } },
  *     "mail": { "inbox": "<inbox>@agentmail.to" },
  *     "loop": { "verify": "pnpm gates", "docs": "pnpm verify:docs", "gate": null },  // dev-loop skill
+ *     "daylog": { "log": "docs/daily-log", "decisions": "docs/decisions.md" },   // daily-log skill
  *     "bootstrap": ["pnpm", "worktree:prepare"]          // prepares a new checkout
  *   }
  *
@@ -92,5 +93,13 @@ export const config = {
   mail: { inbox: raw.mail?.inbox },
   // Read by the dev-loop skill, not by the CLI: the repo's local verify, docs check and gate script.
   loop: { verify: raw.loop?.verify, docs: raw.loop?.docs, gate: raw.loop?.gate ?? null },
+  // Read by `daylog collect`: where the day's facts come from. `log` is where the daily-log skill writes.
+  daylog: {
+    log: raw.daylog?.log ?? 'docs/daily-log',
+    decisions: raw.daylog?.decisions ?? null,
+    board: raw.daylog?.board ? at(raw.daylog.board) : null,
+    extra: raw.daylog?.extra ?? [],
+    budgetTokens: raw.daylog?.budgetTokens ?? 6000,
+  },
   bootstrap: raw.bootstrap,
 }
