@@ -1,88 +1,99 @@
 # PR title and body
 
-Writing rules for the `pr` skill. Sources:
-[Blockly, write a good PR](https://docs.blockly.com/guides/contribute/get-started/write_a_good_pr/),
-[Willow, how to write a good pull request description](https://willowvoice.com/blog/how-to-write-good-pull-request-description),
-and GitHub's own guidance: favor why and context over restating the diff.
+Writing rules for the `pr` skill. The evidence is in [research.md](research.md); a worked
+before and after is in [example.md](example.md).
 
 ## Title
 
 - One problem, one [Conventional Commit](https://www.conventionalcommits.org/) subject.
   Imperative, under 72 characters, equal to the commit title.
 - Scope is the ticket id when there is one, otherwise the area. Omit it when none is honest.
-- The title is the what. The why goes in the body.
+- The title is the what. The body does not repeat it.
 
-## Length and tone
-
-- Write for the reviewer. Concise and complete.
-- Small fix: about 50 to 100 words. Single feature: 150 to 250. Multi-area: 300 to 400. Cut
-  LLM-length drafts.
-- Lead with what changed and why, then the benefit, then only the how the diff will not say.
-  Tradeoffs and limits go near the top, not in a footnote.
-- Start summary bullets with an active verb. No "this PR is about...".
-- Describe only what the diff shows. Never invent changes, tests or screenshots.
-
-## Sections
-
-Omit a section that does not apply, except the ones marked required.
-
-| Section | Answers |
-|---|---|
-| **Summary** | What changed, 1 to 3 bullets grouped by area, not by file. Call out new public APIs, config, version bumps. |
-| **Why** (required) | The problem or motivation, and the ticket link. |
-| **Benefits** (required) | What is better for a user or operator after this lands. Not a restatement of the diff. A repo may require a stronger form (Leverage: `## Value`). |
-| **How** | Approach, tradeoffs, alternatives that lost. Only what the diff will not tell. |
-| **Test plan** | Exact commands or click paths, environment, edge cases actually run. "Tested locally" is not a plan. |
-| **UI evidence** | For user-facing work: pass or fail plus a screenshot or other proof. |
-| **What to review** (required when code changed) | See below. |
-| **Notes for reviewers** | Feedback wanted, follow-ups, breaking changes, migration steps to run. |
-
-## What to review
-
-The handful of places a human should read, most critical first, each with its file (and symbol)
-and one clause on what could go wrong there. At most eight entries; a 150-file PR and a 3-file PR
-both get a short list, never a file list. A docs-only or config-only PR keeps the heading and says
-so in one line. Pick by consequence, not diff size:
-
-- **data structures:** new or changed tables, columns, enums, stored JSON, API fields, workflow
-  inputs, and how old data or old callers still fit;
-- **money and irreversible actions:** charges, refunds, emails, deletions, migrations;
-- **auth and access:** who may call it, ownership checks, secrets, anything dev-only;
-- **long-running or replayed code:** workflows, schedules, idempotency keys;
-- **shared code:** a package or route another product also uses;
-- **the choice you are least sure of**, named as such.
-
-## Template
+## The body in one view
 
 ```markdown
-## Summary
-- <primary change>
+## Benefit
+<One or two plain sentences: what a user or the business gains.>
 
-## Why
-<What was missing, broken or postponed. Ticket link.>
+## Review focus
+- `<path>:<line>`: <what could go wrong here>
 
-## Benefits
-- <user or operator outcome>
+## Changed            (optional, at most 5 bullets)
+- <change by area, not by file>
 
-## How
-<Only what the diff will not tell.>
+## Verified           (optional)
+- <command or click path, and the result>
 
-## Test plan
-- [ ] <command or click path>
-- [ ] <edge case you actually checked>
-
-## What to review
-1. `<file>` `<symbol>`: <what could go wrong>
+## Needs a human      (optional)
+- <approval, setup step, secret to set, link>
 ```
 
-## Ticket links
+The first two sections are required whenever code or config changed. The three below them appear
+only when they say something the reader needs.
 
-Reference the ticket by id. A closing keyword (`Closes #123`) only works for GitHub issues; some
-trackers link on their own id in the body (read the repo note).
+## Length budget
+
+- **Benefit plus Review focus: about 120 words in total, 150 at most.** Everything before the
+  first optional heading counts.
+- The whole body: 250 words is a long one. A one-line fix can be one sentence and one bullet.
+- Do not restate the title or the Benefit anywhere else. Say a thing once.
+- No file-by-file narration. The diff has the file list.
+- Plain words, short sentences. No em dashes, no filler ("this PR", "in order to", "various").
+- Describe only what the diff shows. Never invent changes, tests or screenshots.
+
+`scripts/pr-body-check.mjs <body.md>` counts the budget and flags the usual slips. Run it on the
+temp file before `gh pr create`.
+
+## Benefit
+
+What the user or the business gains, in their terms. Not what files or functions changed.
+
+- Good: "Checkout no longer fails for customers with an apostrophe in their name."
+- Bad: "Escapes the name in `buildOrder`."
+- With no user effect (refactor, CI, docs), say who gains and how: "CI is two minutes faster per
+  run", "New agents find the release steps without asking".
+- If the PR has a tradeoff or limit that changes whether it should merge, it goes here too, in
+  one clause.
+
+## Review focus
+
+One to three bullets, ordered by consequence. Each names `path:line` and what could go wrong
+there, so the reviewer can start reading at the risky spot. Not a file list, not a summary.
+
+Pick by consequence, not diff size:
+
+- data structures: new or changed tables, columns, enums, stored JSON, API fields, and how old
+  data or old callers still fit;
+- money and irreversible actions: charges, refunds, emails, deletions, migrations;
+- auth and access: who may call it, ownership checks, secrets, dev-only paths;
+- long-running or replayed code: workflows, schedules, idempotency;
+- shared code that another product also uses;
+- the choice you are least sure of, named as such.
+
+Docs-only or config-only: one bullet that says what to read and what could be wrong in it
+("`docs/setup.md:12`: is the token scope right?"). If nothing is risky, say so in one line instead
+of inventing a risk.
+
+## Optional sections
+
+- **Changed**: only when the diff is hard to read without a map, at most 5 bullets, grouped by
+  area. Call out a new public API, config key, or version bump.
+- **Verified**: the exact commands or click paths and what they showed. "Tested locally" is not
+  an entry. For UI work add the screenshots here, each with a one-line caption.
+- **Needs a human**: approvals, setup steps to run after merge, secrets to set, links to the
+  ticket or the design. Link the ticket by id; a closing keyword (`Closes #123`) works only for
+  GitHub issues, so follow the repo note for other trackers.
+
+## Updating
+
+When the branch changes, rewrite the whole body for the branch as it is now. Never append "also
+updated...", never leave a section describing a version that no longer exists.
 
 ## Common misses
 
-- Why without benefits, or benefits that repeat "we added X".
-- An implementation dump before the problem.
+- Benefit that restates the title, or says "adds X".
+- Review focus that lists files instead of risks, or has no line number.
+- A Changed section that is the commit log.
 - A second issue smuggled into the same PR.
-- Updating a PR by appending "also..." instead of rewriting the body for the whole branch.
+- Em dashes and filler words.

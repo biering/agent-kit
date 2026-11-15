@@ -1,7 +1,7 @@
 ---
 name: pr
 description: >-
-  Open or update the one pull request for the current branch: Conventional Commits title, a body that says why and what to review. Use for 'open a PR', 'update the PR body', 'write the PR description', '/pr'.
+  Open or update the one pull request for the current branch: Conventional Commits title, a short body that opens with the benefit and where to focus the review. Use for 'open a PR', 'update the PR body', 'write the PR description', '/pr'.
 ---
 
 # Pull request
@@ -63,8 +63,26 @@ Nothing to ship (on the default branch, clean tree, no unique commits): stop. No
 
 ## 4. Body
 
-Write it from `references/description.md`. Write to a temp file and pass `--body-file`; delete the
-file afterwards. A `.github/` PR template gets filled in, not replaced. If the harness appends a
+Short. It opens with two things, in this order; everything else is optional:
+
+```markdown
+## Benefit
+One or two plain sentences: what the user or the business gains. Not what files changed.
+
+## Review focus
+- `path:line`: what could go wrong here (1 to 3 bullets, riskiest first)
+```
+
+Then only if the reader needs it: **Changed** (at most 5 bullets, by area, never by file),
+**Verified** (commands and what they showed), **Needs a human** (approvals, setup steps, links).
+Hard budget: Benefit plus Review focus about 120 words, no file-by-file narration, nothing said
+twice, plain words, no em dashes. The rules, how to pick review spots and a before and after are
+in `references/description.md` and `references/example.md`; the evidence is in
+`references/research.md`.
+
+Write the body to a temp file, run `node scripts/pr-body-check.mjs <file>` (from this skill's
+folder), fix what it flags, pass the file with `--body-file`, delete it afterwards. A `.github/`
+PR template gets filled in with these two sections first, not replaced. If the harness appends a
 trailer (a "Generated with" line, a session link), keep it.
 
 **Screenshots**, only when the branch changes what a user sees (a component, page, layout, styles,
@@ -103,7 +121,7 @@ The `ci` skill owns that transition.
 ## 6. Report
 
 - Say **created** or **updated**, plus one line on what changed.
-- Repeat the body's **What to review** list in the chat; the person merging reads the chat first.
-  A docs-only or config-only PR repeats its one line. Update both when later commits change it.
+- Repeat the body's **Benefit** and **Review focus** in the chat, nothing more; the person merging
+  reads the chat first. Update both when later commits change them.
 - End the reply with the PR URL alone on the last line. If `gh` did not print it:
   `gh pr view --json url --jq .url`.
