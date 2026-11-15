@@ -193,6 +193,9 @@ matches the work.
 
 - [`rules/mobile-apps.md`](rules/mobile-apps.md): analytics consent (not ATT),
   the review prompt, onboarding.
+- [`rules/how-we-win.md`](rules/how-we-win.md): the guiding principles for
+  evaluating ideas, building, experimenting and deleting; every repo's CEO and
+  idea scoring follow it.
 
 ## Why vendored
 
