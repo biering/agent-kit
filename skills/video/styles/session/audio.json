@@ -1,0 +1,28 @@
+{
+  "style": "session",
+  "description": "The Sound role's profile for a session film: a mid-tempo bed whose quiet bars are the wait for the answer and whose drop is the result landing, a few effects on the session's own events (the full stop, send, the tool call, the result, a mark, the flood into the end card), and room for a voice-over that lowers the bed under each line. A film must work muted: the captions tell the story.",
+  "tempo": {
+    "bpm": [110, 130],
+    "session": "25 to 30 s at 118 to 128 BPM: the prompt is typed over about 8 beats, the wait for the answer is two bars, the result lands on the drop",
+    "longer": "a session with a longer answer adds beats to the answer, never to the wait: a drawn session's wait is music, not a claim about the product's speed"
+  },
+  "structure": "sound on frame 0, two quiet bars before the drop under the tool call, the drop on the result, a fade of about 1.6 s as the end card settles",
+  "fit": "beats.py <track> --bpm <intended> --drop-beat <the result's beat>: the fitted tempo and the music.start that puts the drop on that beat",
+  "music": {
+    "recorded": { "id": 471, "source": "https://assets.mixkit.co/music/471/471.mp3", "measured": "123.64 BPM; its drop at 15.653 s, two quiet bars before it; start 4.006 puts the drop on film beat 24, where the starter's result lands" },
+    "generated": "Optional. Higgsfield MCP generate_audio when its catalog lists a music model: get_cost first, show the price, wait for a yes, then one run. Fit the result with beats.py and trust the fit, never the prompt."
+  },
+  "gain_db": -6,
+  "kit": {
+    "pop": { "mixkit": 2354, "gain_db": -10, "note": "the hook's full stop pops; the end card's mark closes" },
+    "whoosh": { "mixkit": 166, "gain_db": -12, "note": "the full stop grows into the window" },
+    "click": { "mixkit": 2577, "gain_db": -7, "note": "send: the prompt leaves the composer" },
+    "tool": { "mixkit": 2357, "gain_db": -13, "note": "the tool chip appears" },
+    "result": { "mixkit": 1489, "gain_db": -8, "anchor": "peak", "note": "the answer's card lands, on the drop" },
+    "mark": { "mixkit": 2568, "gain_db": -12, "note": "a line is drawn around a region" },
+    "flood": { "mixkit": 1474, "gain_db": -10, "anchor": "peak", "note": "the pill floods into the end card, placed by its peak" }
+  },
+  "voice": "Optional, one line per caption or so, in cues.json's voice.<lang>; speak.mjs and voice.mjs (references/session.md) duck the bed under each line and master to -14 LUFS",
+  "levels": { "lufs": -14, "true_peak_dbtp": -1, "sfx": "each effect is normalised to -1 dBFS before its gain, so a gain says where it sits against the others" },
+  "gate": "earshot critique on the encoded file; fix every [critical] and [major], or write down why a line stays"
+}

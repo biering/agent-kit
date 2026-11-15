@@ -1,6 +1,6 @@
 ---
 name: video
-description: A video studio in code. Producer, director, designer, animator, sound, editor and delivery roles, five styles (kinetic, one-shape, product-ui, story, ambient-loop), measured QA. Makes a launch film, feature film, promo clip, app trailer or App Store loop, and ships it, on X as a player card.
+description: A video studio in code. Seven roles, six styles (kinetic, one-shape, product-ui, story, ambient-loop, session), measured QA, voice-over, and a recorder for explainers of the real app. Makes a launch film, feature film, agent film, promo clip, app trailer, App Store loop or in-app explainer, and ships it, on X as a player card.
 ---
 
 # Launch video
@@ -47,6 +47,11 @@ from the brief.
 | [product-ui](styles/product-ui/STYLE.md) | a real screen, a cursor that causes every change, springs | a cut, a made-up UI | no cuts, something visible every 3 to 5 s |
 | [story](styles/story/STYLE.md) | a person, a moment, a turn, then the product | a feature tour | 2 to 6 cuts per 10 s, plates that always move |
 | [ambient-loop](styles/ambient-loop/STYLE.md) | the App Store header (21:9) and search-result tile (3:2): muted, seamless | sound, a call to action | the wrap is one ordinary step |
+| [session](styles/session/STYLE.md) | an agent's chat as footage: a prompt, the tool call, the answer, framed by a camera, captions and an end card where the assistants take turns | a client driven by a script, a made-up claim of speed | no cuts, sped-up stretches labelled, 16:9 and 9:16, one take per language |
+
+An explainer (the real app, silent, for a changelog entry or in-app help) is not a film: it is
+recorded from a storyboard, [explainer.md](references/explainer.md). A voice-over on any film is
+[session.md](references/session.md)'s `speak.mjs` and `voice.mjs`.
 
 ## What lives where
 
@@ -63,9 +68,12 @@ video/
 │   ├── render.md          # what render.mjs guards and why
 │   ├── formats.md         # layout(w, h), 16:9 1:1 9:16, the store loops, spring presets
 │   ├── setup.md           # the studio, once per machine
+│   ├── session.md         # an agent film's take (drawn or recorded), its voice, its languages
+│   ├── explainer.md       # recording the real app from a storyboard (record.mjs), not a film
 │   └── x-player-card.md   # shipping the film inside a post on X
 ├── templates/             # kit.js (motion kit), icons.js, brand.css, film.html, moves.html
-└── scripts/               # render.mjs, qa.mjs, beats.py, peaks.py, mix.py, mixkit.py, popscan.py, earshot.sh, player-card.mjs
+└── scripts/               # render.mjs, qa.mjs, beats.py, peaks.py, mix.py, mixkit.py, popscan.py, earshot.sh, player-card.mjs,
+                           # take.mjs, speak.mjs, voice.mjs (session), record.mjs (explainers)
 ```
 
 A film is source code and lives in the repo, one folder per film (the repo's notes say where):
@@ -97,8 +105,8 @@ the Director's gate. A revision round is every note of one viewing, then one ren
   ceiling.
 - **Captions are timed in beats**, like every cue.
 - **Generated pictures are checked at 100%** for third-party brand marks before they go in.
-- **Paid generation** (Higgsfield pictures, music, speech) is priced with `get_cost` first, inside
-  the brief's ceiling, and run only after the user's yes.
+- **Paid generation** (Higgsfield pictures, music, speech) is priced first (`get_cost`, or
+  `speak.mjs` without `--yes`), inside the brief's ceiling, and run only after the user's yes.
 - **A failed QA target fails the render.** Fix the film; do not edit the profile to pass.
 - **Every on-screen line goes through the `unslop` skill** before the final render, no em dashes.
 - **The end card does not contradict the plan.** A feature that is paid in part says which part.

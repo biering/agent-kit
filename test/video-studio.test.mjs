@@ -10,7 +10,7 @@ import { lintPure } from '../skills/video/scripts/render.mjs'
 import { evaluate, loadProfile, loopSeam, measureSteps, stepStats, validateProfile } from '../skills/video/scripts/qa.mjs'
 
 const SKILL = fileURLToPath(new URL('../skills/video/', import.meta.url))
-const STYLES = ['kinetic', 'one-shape', 'product-ui', 'story', 'ambient-loop']
+const STYLES = ['kinetic', 'one-shape', 'product-ui', 'story', 'ambient-loop', 'session']
 const ROLES = ['producer', 'director', 'designer', 'animator', 'sound', 'editor', 'delivery']
 
 const haveFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
@@ -131,7 +131,7 @@ describe('video measured QA', () => {
 })
 
 describe('video styles', () => {
-  it('has the five styles, each a complete folder', () => {
+  it('has the six styles, each a complete folder', () => {
     for (const name of STYLES) {
       for (const f of ['STYLE.md', 'spec.js', 'engine.js', 'qa.json', 'audio.json', 'starter/spec.js', 'starter/film.html']) {
         assert.ok(existsSync(path.join(SKILL, 'styles', name, f)), `styles/${name}/${f} is missing`)

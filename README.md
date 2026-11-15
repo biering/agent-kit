@@ -156,7 +156,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
 | Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest) |
-| Market | `aso`, `app-screenshots`, `video` (a video studio: seven roles, five styles, measured QA, X player cards), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ads-landingpage` |
+| Market | `aso`, `app-screenshots`, `video` (a video studio: seven roles, six styles including agent films, measured QA, voice-over, X player cards, and `record.mjs` for explainers of the real app), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ads-landingpage` |
 | Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |
 
