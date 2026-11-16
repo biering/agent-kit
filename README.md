@@ -69,6 +69,63 @@ under `claude --agent`). A repo that gates every session wires it in its own
    PRs and CI come from `gh`. `node bin/agent-kit.mjs daylog collect [--date YYYY-MM-DD] [--budget N]`
    prints the UTC day, capped (default 6000 tokens) with a `Cut for size` note.
 
+   **Stats block.** With `daylog.stats`, `collect` leads with a `## Stats` section that the skill copies
+   verbatim above the day's entries: facts for a writer outside the repo, never post text. Per product it
+   has the day's visitors, sign-ups, revenue, refunds, fees, profit and any counters, each with its source
+   and as-of time, the change against the day before and the running total; for a challenge, `day N of M`
+   and the score. A number that cannot be read is `not measured: <reason>`, never a guess. Only totals
+   are printed (no customer, no single payment).
+
+   ```json
+   "daylog": {
+     "stats": {
+       "analytics": {
+         "url": "https://analytics.example.com/api/sites/{site}/summary?date={date}",
+         "tokenEnv": "ANALYTICS_TOKEN",
+         "fields": { "visitors": "data.visitors", "signups": "data.signups" },
+         "asOfPath": "data.updatedAt"
+       },
+       "products": [
+         {
+           "name": "Example App",
+           "site": "site-id-from-the-analytics-tool",
+           "revenue": { "provider": "stripe", "keyEnv": "PAYMENTS_READONLY_KEY", "currency": "usd" },
+           "counters": [{ "name": "Apps shipped", "url": "https://example.com/api/count", "path": "count" }]
+         }
+       ],
+       "challenge": {
+         "name": "Ten days of shipping", "start": "2026-11-05", "end": "2026-11-14", "product": "Example App",
+         "score": { "label": "Points", "formula": "visitors / 10 + signups * 5 + profit" }
+       }
+     }
+   }
+   ```
+
+   - **Secrets** are never in the config: `tokenEnv` / `keyEnv` name an environment variable (a
+     read-only key for the payment provider), and a literal `token`, `key` or `secret` is refused.
+   - **Sources** (`analytics`, `revenue`, a counter) are one of: `url` (JSON over GET, `{site}`, `{date}`,
+     `{prev}`, `{next}`, `{startMs}`, `{endMs}` filled in; `tokenHeader` and `tokenScheme` default to
+     `Authorization` and `Bearer`), `cmd` (a command that prints JSON), or `mcp` (`{ "server", "tool", "args" }`).
+     `fields` maps a metric to a path in the JSON (`a.b[0].c`); give `{ "path", "totalPath" }` to take the
+     running total from the source. A product may override `analytics` and sets its `site`.
+   - **Revenue** `{ "provider": "stripe" }` sums the day's balance transactions (revenue, refunds, fees;
+     profit = revenue − refunds − fees) in `currency`, up to `maxPages` x 100 transactions (default 10),
+     and says `not measured` past that. Any other provider: a `url` or `cmd` source with `fields` for
+     `revenue`, `refunds`, `fees` and optionally `profit` (derived when all three are given), and
+     `scale` (100 when it reports minor units).
+   - **MCP sources** cannot be called by the command. The first run lists them under `## MCP reads needed`;
+     the agent calls each tool once, saves `{"<key>": <result>}` and runs `collect --mcp <file>` again.
+   - **Counters** are `{ "name", "url" | "cmd" | "mcp", "path" }`; `"kind": "gauge"` marks a running figure
+     (a follower count): its change is against the day before's figure.
+   - **Calls:** one per source per run, cached by URL or command; the day before and the running total come
+     from the `<!-- stats-data -->` line at the end of the previous day's log, so they cost no call. A day
+     without a log restarts the total (`since <date>`); a challenge score needs totals that begin at its
+     start, so start the logs on day one or give the source a `totalPath`, else it says `not measured`.
+   - **Challenge** `score.formula` uses `+ - * / ( )`, numbers and metric names (`visitors`, `signups`,
+     `revenue`, `refunds`, `fees`, `profit`, a counter's name lower-cased with `_`), evaluated on the
+     running totals. The Stats block is never cut for size; it counts against `budgetTokens`.
+   - **As of** is the time the source was read, or its own timestamp when `asOfPath` points at one.
+
    `schema` is read by `agent-kit migrations` and the `data-schema` skill:
 
    ```json
@@ -155,7 +212,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Review | `review-code`, `review-api`, `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
-| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest) |
+| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest, led by a per-product Stats block when configured) |
 | Market | `aso`, `app-screenshots`, `launch-video` (a video studio: seven roles, five styles, measured QA, X player cards), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ads-landingpage` |
 | Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |
