@@ -20,7 +20,9 @@ agent in the repo.
 
 `hooks/merge-gate.sh` is the Claude Code hook that holds back merges needing
 the owner's decision (data structure, prices, a first launch) and blocks red
-checks. By default only the CEO carries it (`ceo.gate`, passed at launch as
+checks. It looks the PR up in its own repo (the one in a full PR URL, else `-R`/`--repo`,
+else the current directory's remote) and only acts on a real `gh pr merge`, not on text that
+mentions one (`hooks/merge-gate-parse.mjs` reads the command). By default only the CEO carries it (`ceo.gate`, passed at launch as
 `--settings hooks/ceo-settings.json`, since hooks in an agent file do not run
 under `claude --agent`). A repo that gates every session wires it in its own
 `.claude/settings.json` and sets `"gate": false`.
