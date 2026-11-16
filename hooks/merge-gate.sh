@@ -13,8 +13,13 @@
 # Also blocks the commands that change live prices: `pnpm iap … --apply` and
 # `pnpm release … --price … --apply`.
 #
-# It fails closed: anything that looks like a merge is checked, and a merge it
-# cannot attribute to one literal PR is refused.
+# It fails closed where a merge could hide: a real `gh pr merge` is checked, also
+# behind env, sudo, xargs, pnpm exec, npx, ssh, bash -c, eval, $(), a pipe or here-string
+# into a shell; text handed to node -e / python -c that names a merge is refused; and
+# a merge it cannot attribute to one literal PR is refused. Only text that nothing
+# runs (an echo, a commit message, a quoted argument of another command) is let through.
+# Not followed: a script file (bash x.sh), and a repo set earlier in the command
+# (export GH_REPO=…; cd other-repo &&): the PR is looked up in the hook's directory.
 #
 # Exit 0 = allow. Exit 2 = block (stderr is shown to Claude).
 set -u

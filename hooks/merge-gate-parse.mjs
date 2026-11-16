@@ -32,6 +32,8 @@ function parse(src, out = []) {
   let cmd = { words: [], docs: [] }
   let word = null
   const pendingDocs = [] // { delim, strip, cmd }
+  let hereString = false // the next word is the text of a <<< here-string
+  let lastPushed = null
 
   const addText = (s, x = false, q = false) => {
     if (!word) word = { t: '', x: false, q: false }
@@ -41,12 +43,12 @@ function parse(src, out = []) {
   }
   const endWord = () => {
     if (!word) return
-    cmd.words.push(word)
+    if (hereString) { cmd.docs.push(word.t); hereString = false } else cmd.words.push(word)
     word = null
   }
   const endCmd = () => {
     endWord()
-    if (cmd.words.length) out.push(cmd)
+    if (cmd.words.length) { out.push(cmd); lastPushed = cmd }
     cmd = { words: [], docs: [] }
   }
   // The text up to the ) that closes the ( before i, quotes respected; leaves i after it.
@@ -156,7 +158,11 @@ function parse(src, out = []) {
     } else if (c === ' ' || c === '\t' || c === '\r') {
       endWord()
       i++
-    } else if (c === '<' && src[i + 1] === '<' && src[i + 2] !== '<') {
+    } else if (c === '<' && src[i + 1] === '<' && src[i + 2] === '<') {
+      endWord()
+      i += 3
+      hereString = true
+    } else if (c === '<' && src[i + 1] === '<') {
       // here-doc: its body follows after the end of this line.
       endWord()
       i += 2
@@ -179,9 +185,14 @@ function parse(src, out = []) {
         i++
         continue
       }
+      const isPipe = c === '|' && src[i + 1] !== '|'
       endCmd()
       i++
       if ((c === '&' || c === '|') && src[i] === c) i++
+      if (isPipe) {
+        if (src[i] === '&') i++ // |&
+        cmd.pipedFrom = lastPushed // what feeds this command's stdin
+      }
     } else {
       addText(c)
       i++
@@ -218,10 +229,20 @@ function analyzeGh(args, envRepo, results) {
   }
   if (pos[0]?.t !== 'pr' || pos[1]?.t !== 'merge') return
   const target = pos[2]
-  if (target?.x) results.push(['UNSAFE', 'variable or substitution as the PR'])
+  if (target && /[%{\\]/.test(target.t)) results.push(['UNSAFE', 'a placeholder as the PR'])
+  else if (target?.x) results.push(['UNSAFE', 'variable or substitution as the PR'])
   else if (repo?.x) results.push(['UNSAFE', 'variable or substitution as the repository'])
   else results.push(['MERGE', repo?.t ?? '', target?.t ?? ''])
 }
+
+// What a command's words say when something else runs them as shell: a loose match for
+// `gh … pr … merge`, to fail closed on text that reaches a shell the parser cannot follow.
+const LOOSE = /\bgh\b[^\n]*\bpr\b[^\n]*\bmerge\b/
+
+// Package runners (pnpm exec, npx …), remote shells and interpreters run the text they are given.
+const RUNNERS = new Set(['npx', 'pnpx', 'bunx', 'ssh', 'su', 'script', 'at', 'tmux', 'screen', 'docker', 'podman', 'kubectl', 'osascript'])
+const MANAGERS = new Set(['pnpm', 'npm', 'yarn', 'bun'])
+const INTERPRETERS = new Set(['node', 'nodejs', 'deno', 'python', 'python2', 'python3', 'ruby', 'perl', 'php'])
 
 function analyze(cmd, results, depth, envRepo) {
   if (depth > 8) { results.push(['UNSAFE', 'commands nested too deep']); return }
@@ -235,33 +256,55 @@ function analyze(cmd, results, depth, envRepo) {
   if (i >= words.length) return
   const name = base(words[i].t)
   const rest = words.slice(i + 1)
+  const before = results.length
+  // Code handed to something that runs it: if its text names a merge, the merge is
+  // read from the text, and when that does not give one the command is refused.
+  const loose = () => {
+    const text = [...rest.map((w) => w.t), ...cmd.docs].join('\n')
+    if (!LOOSE.test(text)) return
+    for (const w of rest) if (LOOSE.test(w.t)) analyzeString(w.t, results, depth + 1, repo)
+    if (!results.slice(before).some((r) => r[0] === 'MERGE')) results.push(['UNSAFE', 'a merge inside what ' + name + ' runs'])
+  }
   if (name === 'gh') analyzeGh(rest, repo, results)
   else if (SHELLS.has(name)) {
+    let code = false
     for (let j = 0; j < rest.length; j++) {
       if (/^-[A-Za-z]*c[A-Za-z]*$/.test(rest[j].t) && rest[j + 1]) {
         analyzeString(rest[j + 1].t, results, depth + 1, repo)
+        code = true
         break
       }
     }
     for (const d of cmd.docs) analyzeString(d, results, depth + 1, repo)
+    // a shell with no -c and no script file reads its commands from stdin: echo "…" | bash
+    if (!code && !rest.some((w) => !w.t.startsWith('-') || w.t === '-')) {
+      for (let c = cmd.pipedFrom; c; c = c.pipedFrom) {
+        const text = [...c.words.slice(1).map((w) => w.t), ...c.docs].join('\n')
+        if (!LOOSE.test(text)) continue
+        const n = results.length
+        analyzeString(text, results, depth + 1, repo)
+        // printf and echo -e turn \n into a newline: what the shell then reads is not this text
+        if (text.includes('\\') || !results.slice(n).some((r) => r[0] === 'MERGE')) results.push(['UNSAFE', 'a merge piped into ' + name])
+      }
+    }
   } else if (name === 'eval') analyzeString(rest.map((w) => w.t).join(' '), results, depth + 1, repo)
-  else if (WRAPPERS.has(name)) {
+  else if (WRAPPERS.has(name) || RUNNERS.has(name) || (MANAGERS.has(name) && ['exec', 'dlx', 'x'].includes(rest[0]?.t))) {
     for (let j = 0; j < rest.length; j++) {
       if (rest[j].t.startsWith('GH_REPO=')) repo = { t: rest[j].t.slice(8), x: rest[j].x }
       const n = base(rest[j].t)
       if (n === 'gh' || SHELLS.has(n) || n === 'eval') {
-        const before = results.length
-        analyze({ words: rest.slice(j), docs: cmd.docs }, results, depth + 1, repo)
+        analyze({ words: rest.slice(j), docs: cmd.docs, pipedFrom: cmd.pipedFrom }, results, depth + 1, repo)
         // xargs, find -exec and parallel supply the PR numbers: the gate cannot see them
         if (name === 'xargs' || name === 'find' || name === 'parallel') {
           for (let r = before; r < results.length; r++) {
             if (results[r][0] === 'MERGE' && (!results[r][2] || results[r][2].includes('{'))) results[r] = ['UNSAFE', 'PR numbers come through ' + name]
           }
         }
-        break
+        return
       }
     }
-  }
+    loose() // ssh host "gh pr merge 5", docker exec c sh -c … : the text is the command
+  } else if (INTERPRETERS.has(name) && rest.some((w) => /^(-e|-c|-p|-E|--eval|--print)$/.test(w.t) || /^-[a-z]*[ecp]$/.test(w.t))) loose()
 }
 
 function analyzeString(src, results, depth = 0, envRepo) {

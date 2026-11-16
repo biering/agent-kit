@@ -288,3 +288,59 @@ withGate('live price changes stay blocked', (g) => {
   assert.equal(r.code, BLOCK)
   assert.match(r.stderr, /live App Store price/)
 })
+
+// Fails closed: a merge behind a runner or shell the parser has to look into is
+// still gated, and when its text cannot be read as a merge it is refused.
+for (const [name, cmd] of Object.entries({
+  'pnpm exec gh': 'pnpm exec gh pr merge 5 --squash',
+  'pnpm dlx gh': 'pnpm dlx gh pr merge 5',
+  'npx gh': 'npx gh pr merge 5',
+  'ssh host gh': 'ssh host gh pr merge 5',
+  'ssh host quoted': 'ssh host "gh pr merge 5 --squash"',
+  'docker exec': 'docker exec c gh pr merge 5',
+  'echo piped to bash': 'echo "gh pr merge 5" | bash',
+  'printf piped to sh': 'printf "gh pr merge 5\\n" | sh',
+  'here-string to bash': 'bash <<< "gh pr merge 5"',
+  'here-doc piped to bash': 'cat <<EOF | bash\ngh pr merge 5\nEOF',
+  'xargs bash -c': 'echo 5 | xargs bash -c "gh pr merge 5"',
+})) {
+  withGate(`a merge behind a runner or shell is gated: ${name}`, (g) => {
+    g.cwdRepo('acme/maelstrom')
+    g.pr('acme/maelstrom', 5, { checks: 'red' })
+    const r = g.run(cmd)
+    assert.equal(r.code, BLOCK, `${cmd}\n${r.stderr}`)
+    assert.match(r.stderr, /#5 has checks|merge one PR per command/)
+  })
+}
+
+for (const [name, cmd] of Object.entries({
+  'node -e': `node -e "require('child_process').execSync('gh pr merge 5')"`,
+  'python -c': 'python3 -c "import os; os.system(\'gh pr merge 5\')"',
+  'printf with a placeholder': 'printf "gh pr merge %s" 5 | sh',
+  'pnpm exec with a variable': 'pnpm exec gh pr merge "$N"',
+})) {
+  withGate(`a merge inside an interpreter is refused: ${name}`, (g) => {
+    g.cwdRepo('acme/maelstrom')
+    g.pr('acme/maelstrom', 5)
+    const r = g.run(cmd)
+    assert.equal(r.code, BLOCK, `${cmd}\n${r.stderr}`)
+    assert.match(r.stderr, /merge one PR per command/)
+  })
+}
+
+for (const [name, cmd] of Object.entries({
+  'echo piped to cat': 'echo "gh pr merge 5" | cat',
+  'echo piped to bash without a merge': 'echo hi | bash',
+  'a script file': 'bash scripts/gates.sh',
+  'pnpm script with a mention': 'pnpm linear ask approval "Merge: gh pr merge 5"',
+  'node script with a mention': 'node bin/agent-kit.mjs board add --desc "gh pr merge 5"',
+  'ssh without a merge': 'ssh host ls',
+})) {
+  withGate(`still only a mention: ${name}`, (g) => {
+    g.cwdRepo('acme/maelstrom')
+    g.pr('acme/maelstrom', 5, { checks: 'red' })
+    const r = g.run(cmd)
+    assert.equal(r.code, ALLOW, r.stderr)
+    assert.doesNotMatch(r.calls, /pulls|checks/)
+  })
+}
