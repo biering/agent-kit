@@ -1,0 +1,65 @@
+{
+  "sizes": ["6.9", "6.7", "6.3"],
+  "background": "#0F5132",
+  "ink": "#FFFFFF",
+  "subInk": "#CFE3D6",
+  "accent": "#C8F169",
+  "emphasis": "pill",
+  "pill": "#C8F169",
+  "pillInk": "#0F5132",
+  "font": "fonts/ArchivoBlack-Regular.ttf",
+  "out": "render",
+  "frames": [
+    {
+      "template": "hero-object",
+      "slug": "arrives",
+      "headline": "Know the day it *arrives*",
+      "sub": "Every parcel, every carrier, one list",
+      "device": { "screen": "caps/01-list.png", "x": 250, "y": 660, "width": 270, "rotate": -10 },
+      "object": { "image": "art/parcel.svg", "x": 410, "y": 790, "width": 250, "rotate": -6 }
+    },
+    {
+      "template": "panorama",
+      "slug": "closer",
+      "headline": "Watch it come *closer*",
+      "device": { "screen": "caps/02-detail.png", "x": 250, "y": 660, "width": 300, "rotate": 7 },
+      "stickers": [{ "text": "6 stops away", "x": 330, "y": 455, "rotate": 6, "fill": "#C8F169", "ink": "#0F5132" }]
+    },
+    {
+      "template": "feature-callout",
+      "slug": "share",
+      "background": "#EEF3EA",
+      "ink": "#13201A",
+      "subInk": "#4A5A51",
+      "headline": "Tell the house it's *coming*",
+      "sub": "They see the window update live",
+      "device": { "screen": "caps/06-share.png" },
+      "callouts": [{ "crop": [60, 591, 1086, 396], "scale": 1.18, "shift": [0, -6], "rotate": -3 }]
+    },
+    {
+      "template": "before-after",
+      "slug": "paste",
+      "background": "#EEF3EA",
+      "ink": "#13201A",
+      "headline": "Paste a code, get a *date*",
+      "before": { "screen": "caps/03-paste.png" },
+      "after": { "screen": "caps/04-found.png" },
+      "labels": { "before": "Pasted", "after": "Found" }
+    },
+    {
+      "template": "tilted-device",
+      "slug": "week",
+      "copy": "bottom",
+      "headline": "Know when to be *home*",
+      "sub": "Every delivery this week, by day",
+      "device": { "screen": "caps/07-week.png" }
+    },
+    {
+      "template": "proof",
+      "slug": "private",
+      "headline": "Private by *default*",
+      "facts": ["No account", "Stays on your phone", "No ads, no trackers"],
+      "device": { "screen": "caps/05-privacy.png" }
+    }
+  ]
+}

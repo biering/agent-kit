@@ -118,6 +118,20 @@ Change one field at a time and leave it long enough to read the result. App Stor
 Product Page Optimization runs a real A/B test with a confidence figure; use it instead of
 swapping copy and guessing from a week of downloads.
 
+## Screenshots and the listing
+
+The fields get the listing found; the first three screenshots decide whether anyone taps
+(`app-screenshots`). Two places where the jobs touch:
+
+- **Caption text may be indexed.** Appfigures (June 2025) infers that the store now reads
+  screenshot captions as keyword metadata; Apple has not confirmed it. Let a caption use the term
+  the name or subtitle targets where it reads naturally, and never write a caption for the
+  algorithm instead of the person.
+- **Test screenshots, not just words.** Product Page Optimization tests up to three treatments of
+  icons, screenshots and previews against the original, for up to 90 days; a custom product page
+  (up to 70) carries its own screenshots and keywords for one audience or campaign. Change frame 1
+  or the order, one at a time, and read the confidence figure.
+
 ## Before a launch
 
 The listing is judged together with:

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 640" width="600" height="640">
+  <!-- Boxtrail's hero object: one parcel, three flat tones, drawn for the example. -->
+  <ellipse cx="300" cy="590" rx="250" ry="42" fill="#000" fill-opacity="0.22"/>
+  <!-- faces -->
+  <path d="M300 110 520 220 300 330 80 220Z" fill="#E4B77C"/>
+  <path d="M80 220 300 330 300 560 80 450Z" fill="#C9925A"/>
+  <path d="M300 330 520 220 520 450 300 560Z" fill="#AE7643"/>
+  <!-- flaps seam on the top face -->
+  <path d="M190 165 410 275" stroke="#C9925A" stroke-width="3"/>
+  <!-- tape over the top and down the right face -->
+  <path d="M216.4 151.8 436.4 261.8 383.6 288.2 163.6 178.2Z" fill="#F0D3A2"/>
+  <path d="M436.4 261.8 436.4 381.8 383.6 408.2 383.6 288.2Z" fill="#CC9C63"/>
+  <!-- edge light -->
+  <path d="M80 220 300 330 520 220" fill="none" stroke="#F2CF98" stroke-width="4" stroke-linejoin="round"/>
+  <!-- shipping label on the left face -->
+  <path d="M118 296 228 351 228 451 118 396Z" fill="#FBF8F1"/>
+  <path d="M132 320 186 347" stroke="#0F5132" stroke-width="9" stroke-linecap="round"/>
+  <g stroke="#13201A" stroke-width="4">
+    <path d="M136 352v34M146 357v34M152 360v34M163 365v34M170 369v34M180 374v34M186 377v34M197 382v34M204 386v34M212 390v34"/>
+  </g>
+  <!-- delivered mark -->
+  <circle cx="482" cy="150" r="64" fill="#C8F169"/>
+  <path d="M452 151 474 173 514 131" fill="none" stroke="#0F5132" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
