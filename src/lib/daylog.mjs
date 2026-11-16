@@ -8,6 +8,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { renderMcpNeeded } from './daystats.mjs'
 
 export const DEFAULT_BUDGET_TOKENS = 6000
 const CHARS_PER_TOKEN = 4
@@ -181,14 +182,18 @@ function extras(run, repoDir, list, bounds, notes) {
 }
 
 /**
- * @param {{repoDir:string, date:string, config:{name?:string, owner?:string, daylog?:object}, run?:Function, budgetTokens?:number}} o
+ * @param {{repoDir:string, date:string, config:{name?:string, owner?:string, daylog?:object}, run?:Function, budgetTokens?:number, stats?:{block:string, mcpNeeded?:object[]}}} o
+ *   `stats` is the prebuilt Stats block (daystats.mjs; async because it reads over the network):
+ *   printed first, never cut, and counted against the budget.
  * @returns {string} the digest
  */
-export function collect({ repoDir, date, config, run = defaultRun, budgetTokens }) {
+export function collect({ repoDir, date, config, run = defaultRun, budgetTokens, stats }) {
   const bounds = dayBounds(date)
   const dl = config.daylog ?? {}
   if (budgetTokens !== undefined && !(budgetTokens > 0)) throw new Error('--budget must be a positive number of tokens')
-  const budget = (budgetTokens ?? dl.budgetTokens ?? DEFAULT_BUDGET_TOKENS) * CHARS_PER_TOKEN
+  const statsText = stats?.block ? `\n${stats.block}\n` : ''
+  const mcpText = renderMcpNeeded(stats?.mcpNeeded ?? [])
+  const budget = (budgetTokens ?? dl.budgetTokens ?? DEFAULT_BUDGET_TOKENS) * CHARS_PER_TOKEN - statsText.length - mcpText.length
   const notes = []
   const p = prs(run, repoDir, date, bounds, notes, dl.base ?? 'main')
   const ci = ciFixed(run, repoDir, date, notes)
@@ -210,7 +215,7 @@ export function collect({ repoDir, date, config, run = defaultRun, budgetTokens 
 
   const head = `# Digest ${config.name ?? ''} ${date} (UTC)`.replace('  ', ' ')
   const render = (secs, cut) => {
-    const parts = [head]
+    const parts = [head + statsText + mcpText]
     for (const [title, items] of secs) if (items.length) parts.push(`\n## ${title} (${items.length})\n${items.join('\n')}`)
     if (parts.length === 1) parts.push('\nNothing happened in the sources.')
     if (notes.length) parts.push(`\n## Notes\n${notes.map((n) => `- ${n}`).join('\n')}`)

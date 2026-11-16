@@ -7,7 +7,7 @@
  *   agent-kit ceo-schedule …  the daily run (launchd)
  *   agent-kit stats …         daily numbers for Claude Code and Cursor
  *   agent-kit mail …          the agents' AgentMail inbox
- *   agent-kit daylog collect  one UTC day of a repo as a compact digest (daily-log skill)
+ *   agent-kit daylog collect  one UTC day of a repo as a compact digest, with a per-product Stats block (daily-log skill)
  *   agent-kit migrations      check changed schema files against the data-schema rules
  *   agent-kit sync <repo>     vendor this kit into a repo (run from the kit's checkout)
  *
