@@ -8,8 +8,12 @@ import { fileURLToPath } from 'node:url'
 import {
   DEFAULTS,
   TEMPLATES,
+  CAPTURE_RATIO,
+  contrast,
   copyErrors,
   fitTokens,
+  polygonsOverlap,
+  rotatedCorners,
   groundOf,
   overlaps,
   resolveFrame,
@@ -32,11 +36,36 @@ const withFrame = (frame) => ({ ...example(), frames: [frame] })
 const errorsFor = (frame) => validateSetSpec(withFrame(frame))
 
 describe('set spec', () => {
-  it('accepts the example, which uses every template but the plain tilted device', () => {
+  it('accepts the example, which uses every template and both copy positions', () => {
     const spec = example()
     assert.deepEqual(validateSetSpec(spec), [])
     const used = new Set(spec.frames.map((f) => f.template))
-    for (const t of TEMPLATES.filter((t) => t !== 'tilted-device')) assert.ok(used.has(t), `example lacks ${t}`)
+    for (const t of TEMPLATES) assert.ok(used.has(t), `example lacks ${t}`)
+    assert.ok(spec.frames.some((f) => f.copy === 'bottom'))
+  })
+
+  it('refuses a device turned more than 15 degrees, but lets an object turn', () => {
+    assert.match(errorsFor({ template: 'tilted-device', headline: 'Ship it', device: { screen: 'a.png', rotate: 30 } }).join(), /turned more than 15°/)
+    assert.match(errorsFor({ template: 'before-after', headline: 'Ship it', before: { screen: 'a.png', rotate: -20 }, after: { screen: 'b.png' } }).join(), /turned more than 15°/)
+    assert.deepEqual(errorsFor({ template: 'hero-object', headline: 'Ship it', object: { image: 'o.svg', rotate: 40 } }), [])
+  })
+
+  it('refuses words and marks that would not read on their ground', () => {
+    const light = { template: 'proof', headline: 'Loved by *people*', background: '#F4F6F1', ink: '#13201A', facts: ['No account'] }
+    const colour = { ...example(), emphasis: 'colour', accent: '#C8F169', frames: [light] }
+    const errors = validateSetSpec(colour).join('\n')
+    assert.match(errors, /emphasised word \(accent\) #C8F169 on #F4F6F1/)
+    assert.match(errors, /proof marks/)
+    const faint = { template: 'tilted-device', headline: 'Ship it', sub: 'Quietly', subInk: '#FFFFFF33', device: { screen: 'a.png' } }
+    assert.match(errorsFor(faint).join(), /sub-line ink #FFFFFF33/)
+    assert.match(errorsFor({ ...faint, sub: undefined, ink: '#123D29' }).join(), /headline ink/)
+  })
+
+  it('measures contrast the WCAG way', () => {
+    assert.equal(Math.round(contrast('#000000', '#FFFFFF')), 21)
+    assert.equal(contrast('#777', '#777'), 1)
+    assert.equal(contrast('white', '#000'), null)
+    assert.ok(contrast('#FFFFFF80', '#000000') < contrast('#FFFFFF', '#000000'))
   })
 
   it('names a default for every template', () => {
@@ -91,7 +120,7 @@ describe('honesty', () => {
   })
 
   it('refuses money, percentages, multipliers, user counts and ratings without a source', () => {
-    for (const text of ['+$439 this week', 'Earn €50 a day', 'Save 30%', '3x faster replies', '100K+ users', '4.9 stars', '★★★★★']) {
+    for (const text of ['+$439 this week', 'Earn €50 a day', 'Save 30%', '3x faster replies', 'Three times faster', 'Twice as fast', '100K+ users', '4.9 stars', '★★★★★']) {
       assert.ok(copyErrors(text, { at }).length > 0, text)
     }
   })
@@ -153,6 +182,29 @@ describe('layout', () => {
     assert.throws(() => fitTokens(toks, measure, { maxWidth: 40, maxFont: 30, minFont: 20, maxLines: 3 }), /will not fit/)
   })
 
+  it('moves the default picture up when the copy is at the bottom, and keeps a frame\'s own height', () => {
+    for (const template of TEMPLATES) {
+      const pieces = { device: { screen: 'a.png' }, object: { image: 'o.svg' }, before: { screen: 'a.png' }, after: { screen: 'b.png' } }
+      const top = resolveFrame({ template, headline: 'x', ...pieces })
+      const bottom = resolveFrame({ template, headline: 'x', copy: 'bottom', ...pieces })
+      for (const key of ['device', 'object', 'before', 'after']) {
+        if (!DEFAULTS[template][key]) continue
+        assert.ok(bottom[key].y < 467 && top[key].y > 467, `${template}.${key}: ${top[key].y} -> ${bottom[key].y}`)
+      }
+    }
+    const own = resolveFrame({ template: 'tilted-device', headline: 'x', copy: 'bottom', device: { screen: 'a.png', y: 700 } })
+    assert.equal(own.device.y, 700)
+  })
+
+  it('tests turned shapes against a headline exactly, not by their bounding box', () => {
+    const headline = [[0, 0], [100, 0], [100, 40], [0, 40]]
+    // A tall device turned 30°: its bounding box reaches the headline's corner, the device does not.
+    const device = rotatedCorners(150, 160, 60, 200, 30)
+    assert.ok(!polygonsOverlap(device, headline))
+    assert.ok(polygonsOverlap(rotatedCorners(90, 50, 60, 200, 30), headline))
+    assert.ok(Math.abs(CAPTURE_RATIO - 1320 / 2868) < 0.01, 'the 6.9" capture passes the capture check')
+  })
+
   it('boxes a turned rectangle and tests overlap', () => {
     const upright = rotatedBox(100, 100, 40, 80, 0)
     assert.deepEqual(upright, { left: 80, top: 60, right: 120, bottom: 140 })
@@ -187,5 +239,27 @@ describe('render', () => {
       assert.equal(meta.height, 2622)
       assert.equal(meta.hasAlpha, false)
     }
+
+    // Every template with its copy at the bottom and its default placements renders.
+    const bottom = { ...spec, out: path.join(out, 'bottom') }
+    bottom.frames = spec.frames.map((f) => {
+      const g = structuredClone(f)
+      g.copy = 'bottom'
+      for (const key of ['device', 'object', 'before', 'after']) if (g[key]) for (const k of ['x', 'y', 'width', 'rotate']) delete g[key][k]
+      delete g.stickers
+      return g
+    })
+    writeFileSync(file, JSON.stringify(bottom))
+    await composeSet(file, deps)
+
+    // A headline under a device is refused, not drawn.
+    const covered = { ...bottom, frames: [{ ...bottom.frames[4], device: { ...bottom.frames[4].device, y: 760 } }] }
+    writeFileSync(file, JSON.stringify(covered))
+    await assert.rejects(composeSet(file, deps), /its device covers the headline/)
+
+    // A composed image is not a capture.
+    const notCapture = { ...bottom, frames: [{ ...bottom.frames[4], device: { screen: abs('preview.png') } }] }
+    writeFileSync(file, JSON.stringify(notCapture))
+    await assert.rejects(composeSet(file, deps), /not a portrait iPhone capture/)
   })
 })

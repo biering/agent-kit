@@ -47,6 +47,14 @@
       "labels": { "before": "Pasted", "after": "Found" }
     },
     {
+      "template": "tilted-device",
+      "slug": "week",
+      "copy": "bottom",
+      "headline": "Know when to be *home*",
+      "sub": "Every delivery this week, by day",
+      "device": { "screen": "caps/07-week.png" }
+    },
+    {
       "template": "proof",
       "slug": "private",
       "headline": "Private by *default*",

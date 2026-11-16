@@ -232,6 +232,25 @@
   </div>
 </section>
 
+<!-- 7. The week: every delivery by day, so you know when to be home -->
+<section class="screen" id="week">
+  <div data-status></div>
+  <div class="pad">
+    <div class="sub">16 – 22 November</div>
+    <h1>This week</h1>
+    <div class="section" style="margin-top:14px">Today</div>
+    <div class="card"><div class="thumb t1">👟</div><div class="grow"><div class="name">Trail running shoes</div><div class="meta">Northwind Post</div></div><div class="eta"><span class="chip">14:00–16:00</span></div></div>
+    <div class="section">Tuesday</div>
+    <div class="card"><div class="thumb t2">💡</div><div class="grow"><div class="name">Desk lamp</div><div class="meta">Fleet Express</div></div><div class="eta"><div class="big">Morning</div><div class="small">08:00–12:00</div></div></div>
+    <div class="section">Thursday</div>
+    <div class="card"><div class="thumb t3">📚</div><div class="grow"><div class="name">Two paperbacks</div><div class="meta">Harbor Parcel · letterbox</div></div><div class="eta"><div class="big">Any time</div><div class="small">No one needs to be in</div></div></div>
+    <div class="section">Friday</div>
+    <div class="card"><div class="thumb t4">🎧</div><div class="grow"><div class="name">Headphone case</div><div class="meta">Northwind Post</div></div><div class="eta"><div class="big">Afternoon</div><div class="small">13:00–18:00</div></div></div>
+  </div>
+  <div class="tabbar"><div class="tab on"><svg class="ico" viewBox="0 0 26 26"><path d="M13 3 22 7.5v11L13 23 4 18.5v-11L13 3Zm0 0v0M4 7.5 13 12l9-4.5M13 12v11" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Deliveries</div><div class="tab"><svg class="ico" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 8.5v9M8.5 13h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add</div><div class="tab"><svg class="ico" viewBox="0 0 26 26"><path d="M5 8h16M5 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="8" r="3" fill="#fff" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="18" r="3" fill="#fff" stroke="currentColor" stroke-width="2"/></svg>Settings</div></div>
+  <div class="home-ind"></div>
+</section>
+
 <script>
   const tpl = document.getElementById('status').innerHTML
   document.querySelectorAll('[data-status]').forEach((el) => { el.innerHTML = tpl })

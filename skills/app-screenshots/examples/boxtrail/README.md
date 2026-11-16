@@ -10,7 +10,8 @@ set as the product page shows it, then with every word removed.
 | 2 | `panorama` | Watch it come *closer* | Same ground, a tilted device, the parcel's other half |
 | 3 | `feature-callout` | Tell the house it's *coming* | One feature: the shared window, lifted off the screen |
 | 4 | `before-after` | Paste a code, get a *date* | Codes pasted, parcels found: two real screens |
-| 5 | `proof` | Private by *default* | No ratings yet, so honest specifics instead |
+| 5 | `tilted-device` | Know when to be *home* | Copy at the bottom: the device hangs from the top edge |
+| 6 | `proof` | Private by *default* | No ratings yet, so honest specifics instead |
 
 Render it from a folder where `sharp` and `fontkitten` resolve:
 
@@ -24,5 +25,7 @@ Frames land in `render/<size>/` (ignored by git).
   simulator (SKILL.md, step 3). These were built in HTML (`app/screens.html`)
   and captured with `app/capture.mjs`, because the app does not exist.
 - `art/parcel.svg`: the hero object, drawn for the example.
+- No badge or quote: a made-up app has no ratings or reviews, and the example
+  will not invent them. `templates.md` shows both fields.
 - `fonts/ArchivoBlack-Regular.ttf`: Archivo Black, under the SIL Open Font
   Licence (`fonts/OFL.txt`).

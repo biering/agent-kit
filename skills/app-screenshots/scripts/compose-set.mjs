@@ -85,6 +85,15 @@ export const DEFAULTS = {
   proof: { copy: 'top', device: { x: 215, y: 845, width: 300, rotate: 0 } },
 }
 
+/** A device turned further than this is hard to read; objects may turn as they like. */
+export const MAX_DEVICE_TILT = 15
+
+/** WCAG's minimum for large text and graphics, which is what every word and mark on a frame is. */
+export const MIN_CONTRAST = 3
+
+/** The artboard height the defaults are drawn for; `copy: "bottom"` mirrors them about it. */
+const DEFAULT_HEIGHT = 934
+
 /** At most this many words in a headline, sub-line excluded. */
 export const MAX_HEADLINE_WORDS = 6
 
@@ -100,7 +109,7 @@ const RECOGNITION =
   /\b(editor'?s'? choice|app of the day|game of the day|apps? we love|apple design award|featured by apple|best of (?:the )?app store)\b|#\s?1\b|\bno\.?\s?1\b|\bnumber one\b|\b(?:best|top-rated|top rated) app\b/i
 /** A price, an amount of money, a percentage or a multiplier: claims that need evidence. */
 const MONEY = /[$€£¥₹]\s?\d|\d\s?[$€£¥₹]|\b\d[\d.,]*\s?(?:usd|eur|gbp|dollars?|euros?)\b/i
-const STAT = /\d\s?%|\b\d+(?:[.,]\d+)?\s?x\s+(?:faster|more|better|cheaper)\b|\b\d+(?:[.,]\d+)?[kKmM]\+?\s+(?:users|downloads|people|customers|ratings|reviews)\b/
+const STAT = /\d\s?%|\b(?:twice|double|triple|(?:two|three|four|five|six|seven|eight|nine|ten)\s+times)\s+(?:as\s+)?(?:fast|faster|more|better|cheaper|quick|quicker|much|many)\b|\b\d+(?:[.,]\d+)?\s?x\s+(?:faster|more|better|cheaper)\b|\b\d+(?:[.,]\d+)?[kKmM]\+?\s+(?:users|downloads|people|customers|ratings|reviews)\b/i
 const RATING = /\b[0-5][.,]\d\s?(?:★|stars?)|★/i
 const URL = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:com|app|io|net|org)\b/i
 const LEGAL = /[©®™]/
@@ -135,6 +144,52 @@ const isNum = (v) => typeof v === 'number' && Number.isFinite(v)
 const plain = (headline) => headline.replace(/\*/g, '')
 export const wordCount = (headline) => plain(headline).trim().split(/\s+/).filter(Boolean).length
 
+/** "#RGB", "#RRGGBB" or "#RRGGBBAA" as [r, g, b, a] in 0..1; null for anything else. */
+export function parseColour(c) {
+  if (typeof c !== 'string') return null
+  let h = c.trim().replace(/^#/, '')
+  if (!/^(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(h)) return null
+  if (h.length === 3) h = [...h].map((x) => x + x).join('')
+  const n = (i) => parseInt(h.slice(i, i + 2), 16) / 255
+  return [n(0), n(2), n(4), h.length === 8 ? n(6) : 1]
+}
+
+/**
+ * The WCAG contrast ratio of `fg` drawn on `bg`, with `fg`'s alpha blended
+ * over `bg`. Null when either colour is not a hex colour.
+ */
+export function contrast(fg, bg) {
+  const f = parseColour(fg)
+  const b = parseColour(bg)
+  if (!f || !b) return null
+  const mix = [0, 1, 2].map((i) => f[i] * f[3] + b[i] * (1 - f[3]))
+  const lum = (rgb) => {
+    const [r, g, bl] = rgb.map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl
+  }
+  const [hi, lo] = [lum(mix), lum(b.slice(0, 3))].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/** Words and marks that would not read on their ground, at the set's large-text minimum. */
+function contrastErrors(spec, frame, i, at) {
+  const ground = groundOf(spec, i)
+  const style = styleOf(spec, { ...frame, background: ground })
+  const pairs = [['headline ink', style.ink, ground]]
+  if (frame.sub) pairs.push(['sub-line ink', style.subInk, ground])
+  if (style.emphasis === 'pill') pairs.push(['emphasised word on its pill', style.emphasisInk, style.pill])
+  else if (isText(frame.headline) && frame.headline.includes('*')) pairs.push(['emphasised word (accent)', style.accent, ground])
+  if (frame.template === 'proof') pairs.push(['proof marks (accent: laurel, stars, ticks)', style.accent, ground])
+  const errors = []
+  for (const [what, fg, bg] of pairs) {
+    const ratio = contrast(fg, bg)
+    if (ratio !== null && ratio < MIN_CONTRAST) {
+      errors.push(`${at}: ${what} ${fg} on ${bg} has a contrast of ${ratio.toFixed(1)}:1; it needs ${MIN_CONTRAST}:1 to read at thumbnail size`)
+    }
+  }
+  return errors
+}
+
 function placementErrors(p, at, need) {
   // null drops a template's default piece ("device": null on a proof frame).
   if (p === undefined || p === null) return []
@@ -145,6 +200,9 @@ function placementErrors(p, at, need) {
     if (p[key] !== undefined && !isNum(p[key])) errors.push(`${at}.${key} must be a number`)
   }
   if (isNum(p.width) && p.width <= 0) errors.push(`${at}.width must be positive`)
+  if (need === 'screen' && isNum(p.rotate) && Math.abs(p.rotate) > MAX_DEVICE_TILT) {
+    errors.push(`${at}.rotate is ${p.rotate}°; a device turned more than ${MAX_DEVICE_TILT}° is hard to read (6° to 12° looks deliberate)`)
+  }
   return errors
 }
 
@@ -246,6 +304,7 @@ export function validateSetSpec(spec) {
         }
       }
     }
+    errors.push(...contrastErrors(spec, frame, i, at))
     for (const [si, s] of (Array.isArray(frame.stickers) ? frame.stickers : []).entries()) {
       if (!isText(s?.text)) errors.push(`${at}: stickers[${si}] needs "text"`)
       else errors.push(...copyErrors(s.text, { at, field: 'sticker', sourced: isText(s.source) }))
@@ -274,6 +333,9 @@ export function resolveFrame(frame) {
   const out = { ...frame, copy: frame.copy ?? d.copy, align: frame.align ?? 'center' }
   for (const key of ['device', 'object', 'before', 'after']) {
     const m = merge(key)
+    // The defaults are drawn for copy at the top. With the copy at the bottom
+    // the picture moves up: a default height is mirrored, a frame's own is kept.
+    if (m && out.copy === 'bottom' && d[key] && frame[key]?.y === undefined) m.y = DEFAULT_HEIGHT - d[key].y
     // A default placement with nothing to place is not a piece.
     if (m && (key === 'object' ? m.image : m.screen)) out[key] = m
     else delete out[key]
@@ -290,6 +352,42 @@ export function rotatedBox(cx, cy, w, h, deg) {
   const bw = Math.abs(w * Math.cos(r)) + Math.abs(h * Math.sin(r))
   const bh = Math.abs(w * Math.sin(r)) + Math.abs(h * Math.cos(r))
   return { left: cx - bw / 2, top: cy - bh / 2, right: cx + bw / 2, bottom: cy + bh / 2 }
+}
+
+/** The four corners of a w x h rectangle centred on (cx, cy) and turned by `deg`. */
+export function rotatedCorners(cx, cy, w, h, deg) {
+  const r = (deg * Math.PI) / 180
+  const c = Math.cos(r)
+  const sn = Math.sin(r)
+  return [
+    [-w / 2, -h / 2],
+    [w / 2, -h / 2],
+    [w / 2, h / 2],
+    [-w / 2, h / 2],
+  ].map(([x, y]) => [cx + x * c - y * sn, cy + x * sn + y * c])
+}
+
+const rectCorners = (b) => [
+  [b.left, b.top],
+  [b.right, b.top],
+  [b.right, b.bottom],
+  [b.left, b.bottom],
+]
+
+/** Whether two convex polygons overlap (separating axis test). Touching edges do not count. */
+export function polygonsOverlap(a, b) {
+  for (const poly of [a, b]) {
+    for (let i = 0; i < poly.length; i++) {
+      const [x1, y1] = poly[i]
+      const [x2, y2] = poly[(i + 1) % poly.length]
+      const axis = [y1 - y2, x2 - x1]
+      const project = (q) => q.map(([x, y]) => x * axis[0] + y * axis[1])
+      const pa = project(a)
+      const pb = project(b)
+      if (Math.max(...pa) <= Math.min(...pb) || Math.max(...pb) <= Math.min(...pa)) return false
+    }
+  }
+  return true
 }
 
 export const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
@@ -492,6 +590,15 @@ function styleOf(spec, frame) {
 async function deviceImage(sharp, screenPath, widthPx, { shadow = true, mute = false } = {}) {
   if (!existsSync(screenPath)) throw new Error(`capture not found: ${screenPath}`)
   const meta = await sharp(screenPath).metadata()
+  // Every portrait iPhone capture with a Face ID or Dynamic Island screen is
+  // about 0.46 wide to 1 tall. Anything else would be squeezed into the device.
+  const ratio = meta.width / meta.height
+  if (Math.abs(ratio - CAPTURE_RATIO) > 0.01) {
+    throw new Error(`${screenPath}: ${meta.width}x${meta.height} is not a portrait iPhone capture (about 1206x2622); capture the simulator, not a composed image`)
+  }
+  if (meta.hasAlpha && !(await sharp(screenPath).stats()).isOpaque) {
+    throw new Error(`${screenPath}: has transparent pixels; a simulator capture is opaque`)
+  }
   const bezel = Math.round(widthPx * 0.028)
   const innerW = widthPx - bezel * 2
   const innerH = Math.round((innerW / meta.width) * meta.height)
@@ -523,6 +630,9 @@ async function deviceImage(sharp, screenPath, widthPx, { shadow = true, mute = f
     .toBuffer()
   return { buffer: buf, pad, width: widthPx, height: h, bezel, innerW, innerH, source: meta }
 }
+
+/** Width over height of a portrait iPhone capture (1206x2622 and its siblings). */
+export const CAPTURE_RATIO = 1206 / 2622
 
 /** An object image (PNG or SVG) scaled to `widthPx`, rasterised sharp. */
 async function objectImage(sharp, imagePath, widthPx) {
@@ -693,7 +803,13 @@ export async function renderStrip(spec, sizeKey, { base, sharp, font, bodyFont, 
       const [cx, cy] = at(p)
       const layer = await placed(sharp, t, cx, cy, p.bleed ? canvas : own)
       if (layer) layers.push(layer)
-      boxes.push({ frame: i, what: 'device', bleed: p.bleed === true, ...rotatedBox(cx, cy, dev.width, dev.height, p.rotate ?? 0) })
+      boxes.push({
+        frame: i,
+        what: 'device',
+        bleed: p.bleed === true,
+        poly: rotatedCorners(cx, cy, dev.width, dev.height, p.rotate ?? 0),
+        ...rotatedBox(cx, cy, dev.width, dev.height, p.rotate ?? 0),
+      })
       return { dev, cx, cy }
     }
 
@@ -761,21 +877,27 @@ export async function renderStrip(spec, sizeKey, { base, sharp, font, bodyFont, 
       const layer = await placed(sharp, t, cx, cy, p.bleed === false ? own : canvas)
       if (layer) layers.push(layer)
       // Objects are drawn with air around them; count the middle 80% only.
-      boxes.push({ frame: i, what: 'object', ...rotatedBox(cx, cy, img.width * 0.8, img.height * 0.8, p.rotate ?? 0) })
+      boxes.push({
+        frame: i,
+        what: 'object',
+        bleed: p.bleed !== false,
+        poly: rotatedCorners(cx, cy, img.width * 0.8, img.height * 0.8, p.rotate ?? 0),
+        ...rotatedBox(cx, cy, img.width * 0.8, img.height * 0.8, p.rotate ?? 0),
+      })
     }
 
     const copy = copyBlock(frame, ctx, fl)
     if (show) words += copy.svg
-    for (const b of boxes) {
-      if (overlaps(b, copy.box)) {
-        warnings.push(`frame ${i + 1}: the ${b.what} of frame ${b.frame + 1} reaches into the headline; move it or set the copy at the other end`)
-      }
-    }
-    frame._copyBox = copy.box
+    frame._wordBoxes = [{ what: 'headline', ...copy.box }]
 
     if (frame.template === 'proof') {
-      const block = proofSvg(frame, ctx, fl, copy.box.bottom + 40 * s)
+      // Below a top headline, or above a bottom one.
+      const gap = 40 * s
+      const height = proofSvg(frame, ctx, fl, 0).bottom
+      const top = frame.copy === 'bottom' ? copy.box.top - gap - height : copy.box.bottom + gap
+      const block = proofSvg(frame, ctx, fl, top)
       if (show) words += block.svg
+      frame._wordBoxes.push({ what: 'proof block', left: fl + 32 * s, right: fl + size.w - 32 * s, top, bottom: top + height })
     }
     for (const st of frame.stickers ?? []) {
       const chip = stickerSvg(st, ctx, fl, { fill: '#FFFFFF', ink: '#1C1C1E' })
@@ -783,14 +905,22 @@ export async function renderStrip(spec, sizeKey, { base, sharp, font, bodyFont, 
       if (show) words += chip.svg
     }
   }
-  // A device placed after a headline was checked can still reach back into it.
+  // Nothing may lie on the words: words are drawn last, so a device under a
+  // headline turns it into white type on a white screen. A piece cut by its
+  // own frame can only reach that frame's words; a bleeding one, any frame's.
+  const covered = []
   for (const [i, frame] of frames.entries()) {
-    for (const b of boxes) {
-      if (b.frame > i && overlaps(b, frame._copyBox)) {
-        warnings.push(`frame ${i + 1}: the ${b.what} of frame ${b.frame + 1} reaches into the headline; move it or set the copy at the other end`)
+    for (const w of frame._wordBoxes) {
+      for (const b of boxes) {
+        if (b.frame !== i && !b.bleed) continue
+        if (polygonsOverlap(b.poly, rectCorners(w))) {
+          const whose = b.frame === i ? `its ${b.what}` : `the ${b.what} of frame ${b.frame + 1}`
+          covered.push(`frame ${i + 1}: ${whose} covers the ${w.what}; move it (\`y\`, \`width\`) or set the copy at the other end`)
+        }
       }
     }
   }
+  if (covered.length) throw new Error([...new Set(covered)].join('\n'))
 
   // The store shows frames as separate rounded cards with a gap between them,
   // so a screen across a seam is cut in half. Objects and grounds may cross; a

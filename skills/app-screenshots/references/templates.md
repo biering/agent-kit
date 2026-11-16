@@ -1,8 +1,8 @@
 # Six layout templates
 
 `scripts/compose-set.mjs` renders these. A set picks one per frame; the
-example in `examples/boxtrail/` uses five of them in one set, and its review
-sheet is `examples/boxtrail/preview.png`.
+example in `examples/boxtrail/` uses all six in one set, with the copy at the top
+and at the bottom, and its review sheet is `examples/boxtrail/preview.png`.
 
 They come from what strong sets share. A board of four (Halo AI, Sermon Scribe,
 ReminderOS, Zulachat, November 2026) and the sets in `concepts.md` all do the
@@ -50,6 +50,16 @@ and its own `background`, `ink`, `subInk`. Placements (`device`, `object`,
 430 wide and about 934 tall), `width` and `rotate` in degrees. Every default
 below can be overridden per frame.
 
+**Copy at the bottom.** The defaults below are for copy at the top. With
+`"copy": "bottom"` every default height is mirrored (`y` becomes `934 - y`), so
+the device hangs from the top edge and shows its lower part; a `y` the frame
+sets itself is kept. Pick the screen with that in mind, or set `y`.
+
+**Nothing covers the words.** A device or object that overlaps a headline, a
+sub-line or a proof block is refused with an error naming the frame (the turned
+shape is tested, not its bounding box). Move it, shrink it or set the copy at
+the other end.
+
 ### `hero-object`
 
 The outcome headline, one large object, and a tilted device behind it.
@@ -68,7 +78,8 @@ One oversized device, turned and cut by the frame's edge. The default "it
 looks designed" frame.
 
 - 6° to 12° reads as deliberate; under 4° reads as a mistake; over 15° makes
-  the screen hard to read.
+  the screen hard to read, and is refused for every device (objects may turn as
+  they like).
 - The device is cut by its own frame and never shows a sliver in the neighbour.
   `device.bleed: true` lets it cross, and the compositor warns, because the
   store draws a gap between frames that would cut the screen in half.
@@ -121,7 +132,12 @@ Why believe it. One of:
   specifics, the proof a new app has.
 
 A badge or quote without a `source` is refused, and a fact with a number in it
-is refused (a figure goes in a sourced badge). Give it `"device": { "screen" }`
+is refused (a figure goes in a sourced badge). Sizes are fixed, so keep them
+short: a badge `value` is the figure alone, such as "4.8", and its `label` a few
+words ("on the App Store"); a quote
+is one line, about 30 characters, and a longer one is refused rather than
+shrunk. Cut the reviewer's words to the sentence that carries the point, without
+changing what they meant. Give it `"device": { "screen" }`
 and a device peeks in from the bottom at (215, 845), 300 wide (the screen that
 backs the claim, such as the privacy settings); without one the frame is type
 alone.
@@ -169,9 +185,16 @@ sticker:
   itself (guideline 5.2.4).
 - **Prices and amounts of money** without a source, and never in a headline
   (guidelines 2.3.7 and 2.3.14).
-- **Measured claims without a source:** percentages, "3x faster", "100K+ users",
-  star ratings.
+- **Measured claims without a source:** percentages, "3x faster", "three times
+  faster", "twice as fast", "100K+ users", star ratings.
 - **URLs and ©, ® or ™.**
+- **Words that would not read:** headline, sub-line, emphasised word, pill and
+  proof marks under 3:1 contrast with what they sit on (WCAG's minimum for large
+  text). A lime accent on a near-white ground fails; use `"emphasis": "pill"`
+  there, or a darker accent.
+- **A screen that is not a capture:** a device's `screen` must be a portrait
+  iPhone capture (about 0.46 wide to 1 tall, opaque). A composed image or a
+  landscape shot would be squeezed into the device.
 
 What it cannot see, and the review must:
 

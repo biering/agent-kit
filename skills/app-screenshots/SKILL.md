@@ -187,10 +187,13 @@ node .agents/skills/app-screenshots/scripts/compose-set.mjs --spec <screenshots>
   all of them fit three lines.
 - A device is cut by its own frame; only objects and grounds cross a seam, because the store
   draws a gap between frames.
-- **Refused:** a headline over six words; Apple recognitions or ranks; prices and amounts of money,
-  percentages, multipliers, user counts or ratings without a `source`; URLs and ©/®/™; a badge or
-  quote without a `source`; a fact with a number; a panorama as frame 1.
-- **Warned:** a device or object reaching into a headline; a device that bleeds across a seam.
+- `"copy": "bottom"` mirrors the template's default heights, so the picture moves up.
+- **Refused, with exit 1:** a device or object covering a headline, sub-line or proof block; a
+  headline over six words; Apple recognitions or ranks; prices and amounts of money, percentages,
+  multipliers, user counts or ratings without a `source`; URLs and ©/®/™; a badge or quote without
+  a `source`; a fact with a number; words under 3:1 contrast; a device turned more than 15°; a
+  screen that is not a portrait iPhone capture; a panorama as frame 1.
+- **Warned:** a device that bleeds across a seam.
 - `--sheet` writes the whole set as the product page shows it (rounded, with gaps, so the
   panorama is judged with its seams) and again with every word removed.
 

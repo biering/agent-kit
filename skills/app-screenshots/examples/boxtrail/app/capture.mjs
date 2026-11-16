@@ -21,7 +21,7 @@ const { chromium } = createRequire(path.join(process.cwd(), 'package.json'))('pl
 const browser = await chromium.launch({ executablePath: chrome })
 const page = await browser.newPage({ viewport: { width: 402, height: 874 }, deviceScaleFactor: 3 })
 await page.goto(pathToFileURL(path.join(here, 'screens.html')).href)
-for (const [n, id] of ['list', 'detail', 'paste', 'found', 'privacy', 'share'].entries()) {
+for (const [n, id] of ['list', 'detail', 'paste', 'found', 'privacy', 'share', 'week'].entries()) {
   const file = path.join(here, '..', 'caps', `${String(n + 1).padStart(2, '0')}-${id}.png`)
   await page.locator(`#${id}`).screenshot({ path: file })
   console.log(file)
