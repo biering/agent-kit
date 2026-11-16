@@ -364,7 +364,7 @@ function accentLine(font, words, size, ink, accent) {
 }
 
 /** A laurel branch beside a badge. `side` is -1 (left) or 1 (right). */
-function laurel(cx, cy, rx, ry, side, fill) {
+export function laurel(cx, cy, rx, ry, side, fill) {
   const leaves = []
   const leaf = ry * 0.32
   for (let i = 0; i < 6; i++) {
@@ -383,7 +383,7 @@ function laurel(cx, cy, rx, ry, side, fill) {
 }
 
 /** A five-point star centred on (cx, cy). */
-function star(cx, cy, r, fill) {
+export function star(cx, cy, r, fill) {
   const pts = []
   for (let i = 0; i < 10; i++) {
     const a = -Math.PI / 2 + (i * Math.PI) / 5

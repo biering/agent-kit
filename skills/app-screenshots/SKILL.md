@@ -1,7 +1,7 @@
 ---
 name: app-screenshots
 description: >-
-  App Store screenshots for an Expo app: concept, simulator captures, then offline device-framed frames at Apple's sizes. Use for App Store screenshots, listing images, a regenerated set, or an IAP review screenshot.
+  App Store screenshots for an Expo app: concept, simulator captures, then offline frames at Apple's sizes from six layout templates (hero object, tilted device, panorama, feature callout, before and after, honest proof). Use for App Store screenshots, listing images, a regenerated set, or an IAP review screenshot.
 ---
 
 # App Store screenshots
@@ -17,7 +17,8 @@ the one submission asset nothing can fake: every frame has to be the app actuall
 
 Decide what each frame says before deciding which screen it shows. Read
 `references/concepts.md` first: research, the seven principles as checks, patterns from strong
-sets mapped to spec fields, and what Apple does not allow.
+sets mapped to spec fields, and what Apple does not allow. `references/store-practice.md` has
+the evidence behind the rules below, with sources, and what is only folklore.
 
 The first three frames appear in search results without anyone opening the listing, so they work
 as a group:
@@ -29,12 +30,27 @@ as a group:
 Then four to five more at most. Eight strong frames beat ten with two weak ones, because the weak
 ones are where a skimmer stops.
 
+**What strong sets share** (the rules every template follows):
+
+- **One benefit headline per frame, three to six words, set huge.** It is the largest thing on
+  the frame. One word or phrase may be emphasised, never two.
+- **One strong brand colour** across the set, or two grounds of one family alternating. Same
+  headline position and type size on every frame.
+- **The device is composed, not parked:** tilted 6° to 12°, oversized, cut by the frame edge.
+- **A hero object carries the idea** where the app has one (and owns the art): bigger than life,
+  allowed to cross into frame 2 so the set opens as one picture.
+- **Frame 1 sells the outcome; every later frame shows one feature.**
+- **Real UI in the device,** in a populated state. Never a wall of text, never a mockup.
+- **Proof only where honest:** a sourced rating, a real review, or plain specifics ("No account").
+  No invented reviews, ratings, user counts or earnings.
+
 **Captions:**
 
 - Lead with a concrete verb and noun. Skip "powerful", "seamless", "all-in-one": they say nothing.
-- About five words; two lines at most (the compositor refuses three). Long compounds (German) eat the budget fast.
+- Three to six words (`compose-set.mjs` refuses seven). Long compounds (German) eat the budget fast.
 - Match the repo's address form and copy rules, and run the list through `unslop` before rendering.
 - Same position and colour across the set. Inconsistency reads as amateur faster than one weak frame.
+- Use the words the listing targets (`aso`) where they fit naturally: the store may read caption text.
 
 ## 2. Sizes
 
@@ -75,6 +91,17 @@ Put the app in a **populated state** first. Never capture empty states, spinners
 untouched settings or anything mid-transition. One real entry beats a perfect empty screen.
 
 ## 4. Compose
+
+Three compositors, one per kind of set:
+
+| Set | Script | Spec |
+|---|---|---|
+| Designed from templates: tilted devices, a hero object, a panorama, before and after | `compose-set.mjs` | `set.json`, `references/templates.md` |
+| Plain: one caption over one upright device per frame, callouts, badges | `compose.mjs` | `spec.json`, below |
+| Drawn by a designer (a Claude Design `.dc.html`) | `compose-artboards.mjs` | `artboards.json`, "A designed set" below |
+
+Start with `compose-set.mjs` for a new set; it is what the reference sets look like. The other
+two stay for existing plain sets and for designer artboards.
 
 Store material sits beside the app, typically `<app>/distribution/app-store/screenshots/`:
 `spec.json` (reviewed like code), `caps/` (raw captures), and one folder per rendered size.
@@ -123,6 +150,54 @@ the wrong dimensions, a caption that will not fit, copy that pushes the device p
 frame, and a callout that leaves the canvas. Each means the concept needs cutting, not the
 renderer loosening.
 
+### A set from templates
+
+`scripts/compose-set.mjs` draws the whole set on one strip, frames side by side, and cuts it into
+frames at the end, so a hero object can cross from frame 1 into frame 2. Each frame names one of
+six templates; `references/templates.md` says when to use which, every field and default, and the
+honesty rules. `examples/boxtrail/` is a full example from a fictional app (spec, captures, art,
+font, and `preview.png`, its review sheet).
+
+```bash
+node .agents/skills/app-screenshots/scripts/compose-set.mjs --spec <screenshots>/set.json --sheet <scratch>/review.png
+```
+
+```json
+{
+  "sizes": ["6.3", "6.9", "6.7"],
+  "background": "#0F5132", "ink": "#FFFFFF", "accent": "#C8F169",
+  "emphasis": "pill", "pill": "#C8F169", "pillInk": "#0F5132",
+  "font": "<display .ttf>", "out": "en-US",
+  "frames": [
+    { "template": "hero-object", "headline": "Know the day it *arrives*",
+      "device": { "screen": "caps/01.png" }, "object": { "image": "art/parcel.svg", "x": 410, "y": 790 } },
+    { "template": "panorama", "headline": "Watch it come *closer*", "device": { "screen": "caps/02.png" } },
+    { "template": "feature-callout", "background": "#EEF3EA", "ink": "#13201A", "headline": "Tell the house it's *coming*",
+      "device": { "screen": "caps/06.png" }, "callouts": [{ "crop": [60, 591, 1086, 396], "rotate": -3 }] },
+    { "template": "before-after", "headline": "Paste a code, get a *date*",
+      "before": { "screen": "caps/03.png" }, "after": { "screen": "caps/04.png" } },
+    { "template": "proof", "headline": "Private by *default*", "facts": ["No account", "No ads, no trackers"] }
+  ]
+}
+```
+
+- Placements are in artboard units (each frame 430 wide, about 934 tall), centre `x`/`y`, so one
+  spec renders every size. Templates fill in sensible placements; override only to nudge.
+- Every headline gets one type size across the set (`"headlineSize": "set"`), the largest at which
+  all of them fit three lines.
+- A device is cut by its own frame; only objects and grounds cross a seam, because the store
+  draws a gap between frames.
+- **Refused:** a headline over six words; Apple recognitions or ranks; prices and amounts of money,
+  percentages, multipliers, user counts or ratings without a `source`; URLs and ©/®/™; a badge or
+  quote without a `source`; a fact with a number; a panorama as frame 1.
+- **Warned:** a device or object reaching into a headline; a device that bleeds across a seam.
+- `--sheet` writes the whole set as the product page shows it (rounded, with gaps, so the
+  panorama is judged with its seams) and again with every word removed.
+
+Then **look at the sheet** and fix the top three problems before rendering the final set: the
+design skill's taste guide (`design`, `references/taste/GUIDE.md`, "Look") applies here too.
+Type size, crops and seams are judged on the picture, not the spec.
+
 ### A designed set
 
 When a designer has drawn the frames (a Claude Design `.dc.html`, say), do not approximate them
@@ -166,11 +241,21 @@ An IAP is **rejected without a screenshot of the paid surface**. Only App Review
 capture of the paywall at 640x920 or larger, no caption, no frame, attached under the purchase's
 Review Information (or uploaded by the repo's release tooling).
 
+## Localising
+
+One spec per locale, with captures from the app running in that language: never English UI under a
+translated caption. Write the headline again in the language instead of translating it word for
+word, and keep it short enough that the set's type size holds (translated text runs much longer,
+`references/store-practice.md` §5). For a right-to-left language, mirror the placements
+(`x` becomes `430 - x`, `rotate` changes sign) but not the hero object or photographs. Set `slug`
+so every locale shares file names.
+
 ## Before uploading
 
 - Every file at its class's exact size, RGB, no alpha; at least one `6.3` set.
 - `references/concepts.md`'s review checklist passes, including the `--sheet` test.
 - One visual language across the set: same ground, type and accent; layouts may vary.
+- Every figure, rating and review on a frame has a source you could show App Review.
 - No placeholder data, no lorem, no other company's trademark on screen.
 - A plausible status bar. The simulator default is fine; a 14% battery is a distraction.
 
