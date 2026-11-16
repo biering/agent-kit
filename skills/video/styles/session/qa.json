@@ -1,0 +1,23 @@
+{
+  "style": "session",
+  "description": "A session film: product-ui's measure (320 px wide, a frame is still when under 0.4% of its area moved by more than 8 grey levels, so the camera's creep counts as still), with the end card (the last 1.5 s) left out. The take moves in small ways the measure cannot see: a prompt typed in 18 px type, a spinner while the tool runs, an answer written word by word. Measured on the starter (draft render, wide): 73% still and a longest hold of 3.15 s, the prompt being typed; then 2.7 s as the answer finishes and 2.2 s under the mark. Targets: still at most 85%, hold at most 3.8 s (the 7.5 beats of typing at 123.64 BPM, 3.6 s, and a little), where product-ui allows 70% and 0.85 s. hardCutsMax 0: the window grows out of the full stop and the pill floods into the end card, so nothing is cut (the starter measured 0).",
+  "measure": {
+    "stillDelta": 8,
+    "stillShare": 0.004,
+    "endCardSeconds": 1.5
+  },
+  "targets": {
+    "stillShareMax": 0.85,
+    "holdMax": 3.8,
+    "hardCutsMax": 0,
+    "bytesMax": 1000000000,
+    "levelMax": 5.2,
+    "hardwareDecode": true,
+    "audio": "required",
+    "loudness": {
+      "min": -16,
+      "max": -12,
+      "truePeak": -1
+    }
+  }
+}

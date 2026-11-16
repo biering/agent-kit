@@ -38,7 +38,7 @@ captions so the notes can point at them ("see shot 6").
 ## Rendering the captions
 
 Record the raw screen capture first, then lay the captions over it in code with
-the `launch-video` pipeline (`.agents/skills/launch-video/SKILL.md`):
+the `video` pipeline (`.agents/skills/video/SKILL.md`):
 
 1. Copy `templates/film.html` and replace the scene with the raw clip as a
    `<video>` layer, seeked from `seek(t)`. The clip is the background; the caption

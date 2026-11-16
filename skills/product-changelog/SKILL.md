@@ -113,6 +113,9 @@ in the repo's public changelog image path and reference it from every locale's e
 | Performance | A chart of the improvement |
 | Complex feature | An animated GIF or a short video demo |
 
+A short video is an explainer: the real app recorded from a storyboard, silent, with captions.
+The `video` skill records it (`references/explainer.md`, `scripts/record.mjs`).
+
 
 ## Versioning and channels
 
