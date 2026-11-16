@@ -33,99 +33,135 @@ if has "(app-store-iap\.mjs|${PNPM}iap)[^;|&]*--apply" \
   exit 2
 fi
 
-# `gh pr merge`, also as /opt/homebrew/bin/gh, `gh -R o/r pr merge`, in a loop,
-# behind env assignments or inside `bash -c` / `$(…)`.
-MERGE_RE='(^|[^[:alnum:]_-])gh([[:space:]]+(-R|--repo)([[:space:]]+|=)[^[:space:]]+)?[[:space:]]+pr[[:space:]]+merge'
-has "$MERGE_RE" || exit 0
+# Which merges does the command really run? hooks/merge-gate-parse.mjs reads it
+# like the shell does (`gh pr merge`, as /opt/homebrew/bin/gh, `gh -R o/r pr merge`,
+# behind env assignments, `bash -c`, `$(…)`, in a loop) and skips text that only
+# mentions one: an echo, a commit message, a quoted argument of another command.
+printf '%s\n' "$CMD" | grep -q 'merge' || exit 0
+if ! command -v node >/dev/null 2>&1; then
+  echo "BLOCKED: node is needed to read this command for the merge gate." >&2
+  exit 2
+fi
+MERGES="$(printf '%s' "$CMD" | node "$(dirname "$0")/merge-gate-parse.mjs" 2>/dev/null)" || {
+  echo "BLOCKED: could not read this command for the merge gate. Merge one PR per command: gh pr merge <number or URL> --squash --delete-branch." >&2
+  exit 2
+}
+[ -n "$MERGES" ] || exit 0
 
 cd "$(hook_cwd)" 2>/dev/null || exit 0
-# `-R owner/repo` names another repository than the one in this directory:
-# every gh call below must look at that one (gh reads GH_REPO, {owner}/{repo} too).
-REPO="$(printf '%s\n' "$CMD" | grep -oE "(^|[[:space:]])(-R|--repo)([[:space:]]+|=)[^[:space:];|&)\"'\`]+" | head -1 | sed -E 's/.*(-R|--repo)([[:space:]]+|=)//')"
-[ -n "$REPO" ] && export GH_REPO="$REPO"
 
-# The arguments of the first merge: up to the next ; | & ) quote or backtick.
-ARGS="$(printf '%s\n' "$CMD" | grep -oE "${MERGE_RE}[^;|&)\"'\`]*" | head -1 | sed -E 's/.*pr[[:space:]]+merge//')"
-TARGET=""
-skip=""
-for tok in $ARGS; do
-  if [ -n "$skip" ]; then skip=""; continue; fi
-  case "$tok" in
-    -R | --repo | -t | --subject | -b | --body | -F | --body-file | --match-head-commit | -A | --author-email) skip=1 ;;
-    -*) ;;
-    *) TARGET="$tok"; break ;;
-  esac
-done
+# check_merge <repo from -R/--repo or GH_REPO, or empty> <PR number, URL, branch, or empty>
+# The PR is looked up in its own repository: the one in a full PR URL, else -R/--repo,
+# else the one the current directory's git remote points at. A PR number alone
+# means nothing in another repository.
+check_merge() {
+  local repo="$1" target="$2" PR="" SLUG="" url="" LIST PATCHES FILES changed host=""
+  local url_re='^https?://([^/]+)/([^/]+)/([^/]+)/pull/([0-9]+)([/?#].*)?$'
 
-case "$TARGET" in
-  *'$'* | *'`'*)
-    echo "BLOCKED: merge one PR per command, with a literal number (gh pr merge 231 --squash --delete-branch), so the gate can check it. Not a loop or a variable." >&2
+  if [[ "$target" =~ $url_re ]]; then
+    SLUG="${BASH_REMATCH[2]}/${BASH_REMATCH[3]}"
+    [ "${BASH_REMATCH[1]}" = "github.com" ] || SLUG="${BASH_REMATCH[1]}/$SLUG"
+    PR="${BASH_REMATCH[4]}"
+  else
+    SLUG="$repo"
+    case "$target" in
+      '' | *[!0-9]*)
+        # the current branch, or a branch name: ask gh which PR that is, in that repo
+        url="$( ( [ -n "$SLUG" ] && export GH_REPO="$SLUG"; gh pr view ${target:+"$target"} --json number,url -q '[.number,.url] | @tsv' 2>/dev/null ) )"
+        # Nothing resolvable means gh itself has nothing to merge: a mention in a
+        # commit message, or a branch without a PR.
+        [ -n "$url" ] || return 0
+        PR="${url%%$'\t'*}"
+        url="${url#*$'\t'}"
+        if [[ "$url" =~ $url_re ]]; then
+          SLUG="${BASH_REMATCH[2]}/${BASH_REMATCH[3]}"
+          [ "${BASH_REMATCH[1]}" = "github.com" ] || SLUG="${BASH_REMATCH[1]}/$SLUG"
+        fi
+        ;;
+      *) PR="$target" ;;
+    esac
+    # A bare number: the repository of the current directory.
+    [ -n "$SLUG" ] || SLUG="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)"
+  fi
+  if [ -z "$SLUG" ] || [ -z "$PR" ]; then
+    echo "BLOCKED: could not tell which repository PR ${PR:-$target} belongs to (gh offline, not authenticated, or no GitHub remote here). Merge by full URL: gh pr merge https://github.com/<owner>/<repo>/pull/<number> --squash --delete-branch." >&2
     exit 2
-    ;;
-esac
-if [ -z "$TARGET" ] && has '(^|[^[:alnum:]_-])xargs[[:space:]]'; then
-  echo "BLOCKED: merge one PR per command, with a literal number, not through xargs." >&2
-  exit 2
-fi
+  fi
 
-case "$TARGET" in
-  '') PR="$(gh pr view --json number -q .number 2>/dev/null)" ;;
-  *[!0-9]*) PR="$(gh pr view "$TARGET" --json number -q .number 2>/dev/null)" ;;
-  *) PR="$TARGET" ;;
-esac
-# Nothing resolvable means gh itself has nothing to merge: a mention in a
-# commit message, or a branch without a PR.
-[ -n "$PR" ] || exit 0
+  # [HOST/]OWNER/REPO: a GitHub Enterprise host needs --hostname on gh api.
+  local api=(gh api) path="$SLUG"
+  if [ "$(printf '%s' "$SLUG" | tr -cd '/' | wc -c | tr -d ' ')" -ge 2 ]; then
+    host="${SLUG%%/*}"
+    path="${SLUG#*/}"
+    api=(gh api --hostname "$host")
+  fi
 
-# Every file, paginated (gh pr view stops at 100, gh pr diff fails past 300).
-LIST="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR/files?per_page=100" --jq '.[] | [.status, .filename, (if .patch then "y" else "n" end)] | @tsv' 2>/dev/null)"
-# Content checks read config only (wrangler, JSON, TOML, env), not code or docs
-# that merely mention the words.
-PATCHES="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR/files?per_page=100" --jq '.[] | select(.filename | test("(\\.jsonc?|\\.toml|\\.env[^/]*)$")) | .patch // ""' 2>/dev/null)"
-if [ -z "$LIST" ]; then
-  echo "BLOCKED: could not read the files of PR $PR (gh offline or not authenticated)." >&2
-  exit 2
-fi
-FILES="$(printf '%s\n' "$LIST" | cut -f2)"
-changed="$(printf '%s\n' "$PATCHES" | grep -E '^[+-]')"
+  # Every file, paginated (gh pr view stops at 100, gh pr diff fails past 300).
+  LIST="$("${api[@]}" --paginate "repos/$path/pulls/$PR/files?per_page=100" --jq '.[] | [.status, .filename, (if .patch then "y" else "n" end)] | @tsv' 2>/dev/null)"
+  # Content checks read config only (wrangler, JSON, TOML, env), not code or docs
+  # that merely mention the words.
+  PATCHES="$("${api[@]}" --paginate "repos/$path/pulls/$PR/files?per_page=100" --jq '.[] | select(.filename | test("(\\.jsonc?|\\.toml|\\.env[^/]*)$")) | .patch // ""' 2>/dev/null)"
+  if [ -z "$LIST" ]; then
+    echo "BLOCKED: could not read the files of PR $SLUG#$PR (gh offline or not authenticated)." >&2
+    exit 2
+  fi
+  FILES="$(printf '%s\n' "$LIST" | cut -f2)"
+  changed="$(printf '%s\n' "$PATCHES" | grep -E '^[+-]')"
+
+  # Config can rewire data or money without touching a gated path: a wrangler
+  # var that points at another database, or swaps a price id.
+  local data money launch
+  data="$( {
+    printf '%s\n' "$FILES" | grep -E '(^|/)migrations/|\.sql$|(^|/)supabase/|(^|/)convex/schema|^packages/directory-core/'
+    printf '%s\n' "$changed" | grep -oE '"(PUBLIC_)?(SUPABASE_URL|DATABASE_URL|CONVEX_URL|INSFORGE_[A-Z_]*URL)"' | sort -u | sed 's/^/var /'
+  } | nonblank)"
+  money="$( {
+    printf '%s\n' "$FILES" | grep -v '\.md$' | grep -iE 'entitlement|purchases?\.tsx?$|stripe|polar|revenuecat|storekit|checkout|billing|pricing|prices?[^/]*$|paywall|(^|/)(tiers?|plans?)\.ts$'
+    printf '%s\n' "$changed" | grep -oE '"[A-Z_]*(STRIPE|POLAR|PRICE)[A-Z_]*"' | sort -u | sed 's/^/var /'
+  } | nonblank)"
+  launch="$( {
+    printf '%s\n' "$LIST" | awk -F'\t' '$1 == "added" && $2 ~ /wrangler\.jsonc$/ { print $2 }'
+    printf '%s\n' "$LIST" | awk -F'\t' '$3 == "n" && $2 ~ /wrangler\.jsonc$/ { print $2 " (diff too large to read)" }'
+    printf '%s\n' "$changed" | grep -q '^+.*"custom_domain"' && echo 'new custom_domain route'
+  } | nonblank)"
+
+  reasons=""
+  add 'production data structure' "$data"
+  add 'prices and payments' "$money"
+  add 'first public launch' "$launch"
+
+  if [ -n "$reasons" ]; then
+    echo "BLOCKED: PR $SLUG#$PR is one the owner merges (ops/CEO.md):${reasons}" >&2
+    echo "File it: pnpm linear ask approval \"Merge $SLUG#$PR: <what it changes>\" --body \"<PR link, what changes, risk, how verified>\"" >&2
+    exit 2
+  fi
+
+  local checks status
+  checks="$(gh pr checks "$PR" -R "$SLUG" 2>&1)"
+  status=$?
+  if [ "$status" -ne 0 ] && ! printf '%s' "$checks" | grep -q 'no checks reported'; then
+    echo "BLOCKED: PR $SLUG#$PR has checks that are not green yet. Watch with \`gh pr checks $PR -R $SLUG --watch\` and fix red ones (.agents/skills/ci/SKILL.md)." >&2
+    printf '%s\n' "$checks" | grep -vE '\bpass\b' | head -20 >&2
+    exit 2
+  fi
+}
+
 nonblank() { grep -v '^[[:space:]]*$'; }
-
-# Config can rewire data or money without touching a gated path: a wrangler
-# var that points at another database, or swaps a price id.
-data="$( {
-  printf '%s\n' "$FILES" | grep -E '(^|/)migrations/|\.sql$|(^|/)supabase/|(^|/)convex/schema|^packages/directory-core/'
-  printf '%s\n' "$changed" | grep -oE '"(PUBLIC_)?(SUPABASE_URL|DATABASE_URL|CONVEX_URL|INSFORGE_[A-Z_]*URL)"' | sort -u | sed 's/^/var /'
-} | nonblank)"
-money="$( {
-  printf '%s\n' "$FILES" | grep -v '\.md$' | grep -iE 'entitlement|purchases?\.tsx?$|stripe|polar|revenuecat|storekit|checkout|billing|pricing|prices?[^/]*$|paywall|(^|/)(tiers?|plans?)\.ts$'
-  printf '%s\n' "$changed" | grep -oE '"[A-Z_]*(STRIPE|POLAR|PRICE)[A-Z_]*"' | sort -u | sed 's/^/var /'
-} | nonblank)"
-launch="$( {
-  printf '%s\n' "$LIST" | awk -F'\t' '$1 == "added" && $2 ~ /wrangler\.jsonc$/ { print $2 }'
-  printf '%s\n' "$LIST" | awk -F'\t' '$3 == "n" && $2 ~ /wrangler\.jsonc$/ { print $2 " (diff too large to read)" }'
-  printf '%s\n' "$changed" | grep -q '^+.*"custom_domain"' && echo 'new custom_domain route'
-} | nonblank)"
-
 reasons=""
 add() { [ -n "$2" ] && reasons="${reasons}
   $1:
 $(printf '%s\n' "$2" | sed 's/^/    /')"; }
-add 'production data structure' "$data"
-add 'prices and payments' "$money"
-add 'first public launch' "$launch"
 
-if [ -n "$reasons" ]; then
-  echo "BLOCKED: PR $PR is one the owner merges (ops/CEO.md):${reasons}" >&2
-  echo "File it: pnpm linear ask approval \"Merge #$PR: <what it changes>\" --body \"<PR link, what changes, risk, how verified>\"" >&2
-  exit 2
-fi
-
-checks="$(gh pr checks "$PR" 2>&1)"
-status=$?
-if [ "$status" -ne 0 ] && ! printf '%s' "$checks" | grep -q 'no checks reported'; then
-  echo "BLOCKED: PR $PR has checks that are not green yet. Watch with \`gh pr checks $PR --watch\` and fix red ones (.agents/skills/ci/SKILL.md)." >&2
-  printf '%s\n' "$checks" | grep -vE '\bpass\b' | head -20 >&2
-  exit 2
-fi
+while IFS=$'\x1f' read -r kind repo target; do
+  case "$kind" in
+    UNSAFE)
+      echo "BLOCKED: merge one PR per command, with a literal number or URL (gh pr merge 231 --squash --delete-branch), so the gate can check it. Not a loop, a variable or xargs ($repo)." >&2
+      exit 2
+      ;;
+    MERGE) check_merge "$repo" "$target" ;;
+  esac
+done <<EOF2
+$MERGES
+EOF2
 
 exit 0
