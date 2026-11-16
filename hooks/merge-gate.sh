@@ -15,7 +15,9 @@
 #
 # It fails closed where a merge could hide: a real `gh pr merge` is checked, also
 # behind env, sudo, xargs, pnpm exec, npx, ssh, bash -c, eval, $(), a pipe or here-string
-# into a shell; text handed to node -e / python -c that names a merge is refused; and
+# into a shell (quoted or not); text handed to node -e / python -c that names a merge is
+# refused; code built at run time (eval "$x", bash -c "$(…)", source <(…), gh $args) is
+# refused when the command says "merge"; and
 # a merge it cannot attribute to one literal PR is refused. Only text that nothing
 # runs (an echo, a commit message, a quoted argument of another command) is let through.
 # Not followed: a script file (bash x.sh), and a repo set earlier in the command

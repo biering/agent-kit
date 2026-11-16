@@ -344,3 +344,45 @@ for (const [name, cmd] of Object.entries({
     assert.doesNotMatch(r.calls, /pulls|checks/)
   })
 }
+
+// Fails closed on code the gate cannot read: unquoted text into a shell, and code
+// built at run time. Each was refused by the old text-matching gate.
+for (const [name, cmd] of Object.entries({
+  'unquoted echo into sh': 'echo gh pr merge 5 | sh',
+  'unquoted echo into bash': 'echo gh pr merge 5 --squash | bash',
+  'unquoted echo into xargs sh -c': 'echo gh pr merge 5 | xargs sh -c',
+  'eval of a variable': 'x="gh pr merge 5"; eval "$x"',
+  'bash -c of a substitution': 'bash -c "$(echo gh pr merge 5)"',
+  'bash -c of a variable': 'cmd="gh pr merge 5"; bash -c "$cmd"',
+  'source of a process substitution': 'source <(echo gh pr merge 5)',
+  'bash of a process substitution': 'bash <(echo gh pr merge 5)',
+  'a variable piped into sh': 'x="gh pr merge 5"; echo $x | sh',
+  'gh with a variable subcommand': 'a="pr merge 5"; gh $a',
+  'a variable as the command': 'g=gh; $g pr merge 5',
+})) {
+  withGate(`a merge the gate cannot read is gated or refused: ${name}`, (g) => {
+    g.cwdRepo('acme/maelstrom')
+    g.pr('acme/maelstrom', 5, { checks: 'red' })
+    const r = g.run(cmd)
+    assert.equal(r.code, BLOCK, `${cmd}\n${r.stderr}`)
+    assert.match(r.stderr, /#5 has checks|merge one PR per command/)
+  })
+}
+
+for (const [name, cmd] of Object.entries({
+  'eval of ssh-agent': 'eval "$(ssh-agent)"',
+  'source a plain file': 'source ~/.zshrc',
+  'source a variable file': 'source "$HOME/.profile"',
+  'bash -c of a variable, no merge anywhere': 'cmd="ls"; bash -c "$cmd"',
+  'gh with variables for other subcommands': 'gh pr view $N --json title',
+  'gh with a variable repo for other subcommands': 'gh issue list -R "$R"',
+  'echo into bash': 'echo hi | bash',
+  'a redirect and an fd copy': 'ls > out.txt 2>&1',
+})) {
+  withGate(`dynamic code with no merge in it is not refused: ${name}`, (g) => {
+    g.cwdRepo('acme/maelstrom')
+    g.pr('acme/maelstrom', 5, { checks: 'red' })
+    const r = g.run(cmd)
+    assert.equal(r.code, ALLOW, r.stderr)
+  })
+}

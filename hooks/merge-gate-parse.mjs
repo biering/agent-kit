@@ -207,13 +207,21 @@ function dropRedirects(words) {
   const kept = []
   for (let k = 0; k < words.length; k++) {
     const w = words[k]
-    if (!w.q && /^\d*[<>&]/.test(w.t)) {
+    if (!w.q && !w.x && /^\d*[<>&]/.test(w.t)) {
       if (/^\d*(>>?|<|>\||&>>?)$/.test(w.t)) k++
       continue
     }
     kept.push(w)
   }
   return kept
+}
+
+// The whole command, as given: when code is built at run time (eval "$x", bash -c "$(…)",
+// source <(…), gh $args) the gate cannot read it, and refuses if the command says "merge".
+let FULL = ''
+const DYNAMIC = /\bmerge\b/
+const dynamic = (results, from, why) => {
+  if (DYNAMIC.test(FULL) && !results.slice(from).some((r) => r[0] === 'MERGE' || r[0] === 'UNSAFE')) results.push(['UNSAFE', why])
 }
 
 function analyzeGh(args, envRepo, results) {
@@ -227,6 +235,8 @@ function analyzeGh(args, envRepo, results) {
     else if (t.startsWith('-') && t !== '-') continue // --squash, -d, --admin …
     else pos.push(args[k])
   }
+  // gh $args: the subcommand is built at run time
+  if (pos[0]?.x || (pos[0]?.t === 'pr' && pos[1]?.x)) { dynamic(results, results.length, 'gh with a subcommand built at run time'); return }
   if (pos[0]?.t !== 'pr' || pos[1]?.t !== 'merge') return
   const target = pos[2]
   if (target && /[%{\\]/.test(target.t)) results.push(['UNSAFE', 'a placeholder as the PR'])
@@ -235,8 +245,9 @@ function analyzeGh(args, envRepo, results) {
   else results.push(['MERGE', repo?.t ?? '', target?.t ?? ''])
 }
 
-// What a command's words say when something else runs them as shell: a loose match for
-// `gh … pr … merge`, to fail closed on text that reaches a shell the parser cannot follow.
+// The words of a command as one line, for a loose look at what they say.
+const line = (words, docs = []) => [words.map((w) => w.t).join(' '), ...docs].join('\n')
+// A loose match for `gh … pr … merge`, to fail closed on text that reaches a shell the parser cannot follow.
 const LOOSE = /\bgh\b[^\n]*\bpr\b[^\n]*\bmerge\b/
 
 // Package runners (pnpm exec, npx …), remote shells and interpreters run the text they are given.
@@ -257,29 +268,31 @@ function analyze(cmd, results, depth, envRepo) {
   const name = base(words[i].t)
   const rest = words.slice(i + 1)
   const before = results.length
+  // The command itself is built at run time: $x pr merge 5, "$(which gh)" pr merge 5
+  if (words[i].x) { dynamic(results, before, 'a command built at run time'); return }
   // Code handed to something that runs it: if its text names a merge, the merge is
   // read from the text, and when that does not give one the command is refused.
   const loose = () => {
-    const text = [...rest.map((w) => w.t), ...cmd.docs].join('\n')
-    if (!LOOSE.test(text)) return
+    if (!LOOSE.test(line(rest, cmd.docs))) return
     for (const w of rest) if (LOOSE.test(w.t)) analyzeString(w.t, results, depth + 1, repo)
     if (!results.slice(before).some((r) => r[0] === 'MERGE')) results.push(['UNSAFE', 'a merge inside what ' + name + ' runs'])
   }
   if (name === 'gh') analyzeGh(rest, repo, results)
   else if (SHELLS.has(name)) {
-    let code = false
+    let code = null
     for (let j = 0; j < rest.length; j++) {
-      if (/^-[A-Za-z]*c[A-Za-z]*$/.test(rest[j].t) && rest[j + 1]) {
-        analyzeString(rest[j + 1].t, results, depth + 1, repo)
-        code = true
-        break
-      }
+      if (/^-[A-Za-z]*c[A-Za-z]*$/.test(rest[j].t)) { code = rest[j + 1] ?? { t: '', x: true }; break }
     }
+    if (code?.t) analyzeString(code.t, results, depth + 1, repo)
     for (const d of cmd.docs) analyzeString(d, results, depth + 1, repo)
-    // a shell with no -c and no script file reads its commands from stdin: echo "…" | bash
-    if (!code && !rest.some((w) => !w.t.startsWith('-') || w.t === '-')) {
+    // bash -c "$x", bash -c (xargs gives the code), bash <(…), bash $script
+    if (code?.x || rest.some((w) => w.x && w !== code)) dynamic(results, before, 'a shell running code built at run time')
+    // a shell with no script file reads its commands from stdin: echo … | bash, xargs sh -c
+    if (!code?.t && !rest.some((w) => !w.t.startsWith('-'))) {
       for (let c = cmd.pipedFrom; c; c = c.pipedFrom) {
-        const text = [...c.words.slice(1).map((w) => w.t), ...c.docs].join('\n')
+        const fed = c.words.slice(1)
+        const text = line(fed, c.docs)
+        if (fed.some((w) => w.x)) dynamic(results, before, 'a pipe of text built at run time into ' + name)
         if (!LOOSE.test(text)) continue
         const n = results.length
         analyzeString(text, results, depth + 1, repo)
@@ -287,8 +300,13 @@ function analyze(cmd, results, depth, envRepo) {
         if (text.includes('\\') || !results.slice(n).some((r) => r[0] === 'MERGE')) results.push(['UNSAFE', 'a merge piped into ' + name])
       }
     }
-  } else if (name === 'eval') analyzeString(rest.map((w) => w.t).join(' '), results, depth + 1, repo)
-  else if (WRAPPERS.has(name) || RUNNERS.has(name) || (MANAGERS.has(name) && ['exec', 'dlx', 'x'].includes(rest[0]?.t))) {
+  } else if (name === 'eval') {
+    analyzeString(rest.map((w) => w.t).join(' '), results, depth + 1, repo)
+    if (rest.some((w) => w.x)) dynamic(results, before, 'eval of text built at run time')
+  } else if (name === 'source' || name === '.') {
+    // source <(echo …), source "$f": a file named plainly is not read
+    if (rest.some((w) => w.x)) dynamic(results, before, name + ' of text built at run time')
+  } else if (WRAPPERS.has(name) || RUNNERS.has(name) || (MANAGERS.has(name) && ['exec', 'dlx', 'x'].includes(rest[0]?.t))) {
     for (let j = 0; j < rest.length; j++) {
       if (rest[j].t.startsWith('GH_REPO=')) repo = { t: rest[j].t.slice(8), x: rest[j].x }
       const n = base(rest[j].t)
@@ -316,6 +334,7 @@ process.stdin.setEncoding('utf8')
 process.stdin.on('data', (d) => (input += d))
 process.stdin.on('end', () => {
   const results = []
+  FULL = input
   analyzeString(input, results)
   for (const r of results) console.log(r.join('\x1f'))
 })
