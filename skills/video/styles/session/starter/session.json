@@ -1,0 +1,21 @@
+{
+  "_comment": "The session ../session.html draws for this film. `at` is in seconds at the film's own pace (beats 8, 15.5, 16, 18, 24 and 30 at 123.64 BPM, counted from second 1), so nothing in the film plays faster than the session does. The tasks are invented examples; the card says so. `sources` names where any digit on the page comes from; `tokens` may set the page's CSS variables; `fonts` lists faces to wait for.",
+  "at": { "promptStart": 1, "promptEnd": 4.64, "send": 4.882, "toolCall": 5.853, "result": 8.765, "answerEnd": 11.676 },
+  "product": { "name": "Product", "mark": "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" },
+  "tool": "tasks_search",
+  "sources": {},
+  "tokens": {},
+  "en": {
+    "client": "Assistant",
+    "model": "Model",
+    "hello": "How can I help today?",
+    "ghost": "Ask anything",
+    "reply": "Reply …",
+    "fresh": "New chat",
+    "chats": ["Plan the week", "Draft the update", "Review the roadmap", "Team offsite"],
+    "initial": "Y",
+    "prompt": "Find my open tasks that are due this week. Sort them by owner, and tell me which one is blocked and why.",
+    "lead": "Three open tasks are due this week, sorted by owner:",
+    "tail": "The billing fix is blocked: it waits for a review from Sam."
+  }
+}

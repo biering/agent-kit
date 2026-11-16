@@ -1,0 +1,27 @@
+{
+  "lang": "en-reel",
+  "source": "session-en-reel.mp4",
+  "fps": 30,
+  "frames": 395,
+  "dir": "takes/en-reel",
+  "from": 0,
+  "crop": [0, 0, 1500, 2700],
+  "width": 1500,
+  "height": 2700,
+  "blur": [],
+  "moments": {
+    "promptStart": 1,
+    "promptEnd": 4.64,
+    "send": 4.882,
+    "toolCall": 5.853,
+    "result": 8.765,
+    "answerEnd": 11.676
+  },
+  "regions": {
+    "composer": [30, 2094, 1440, 570],
+    "tool": [30, 174, 1440, 600],
+    "result": [30, 768, 1440, 1332],
+    "rows": [24, 972, 1452, 894],
+    "status": [1170, 1140, 240, 684]
+  }
+}

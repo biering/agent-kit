@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Session: an agent chat, drawn</title>
+<!-- A drawn session: a neutral assistant chat with the film's own prompt and an example answer.
+     It is rendered and ingested like a recording, and is then the take a session film shows. It
+     imitates no client: neutral greys, a sans answer, the client named in plain text from
+     session.json, no logo of it. The card in the answer is the film's own: card.html beside
+     session.json, and it says that what it shows is an example.
+
+       session.html?film=<folder>&lang=<code>[&shape=reel]   reads <folder>/session.json and <folder>/card.html
+
+     <folder> is a path from the server root (/films/2026-11-15-slug) or from this page (starter).
+     shape=reel is the narrow window a 9:16 cut shows. Wide is 1600 x 1000 drawn at 2.25 (3600 x 2250,
+     the most H.264 level 5.2 holds), reel 500 x 900 at 3 (1500 x 2700). The moments are session.json's `at`, in seconds.
+
+     The regions, where this page puts things (CSS px at 1x; multiply by 2.25, or 3 for a reel, to
+     write them into take.<lang>.json). The starter's take files hold these, padded:
+       composer   wide 550, 800, 760 x 150        reel 16, 708, 468 x 176
+       tool       the bubble and the tool chip: wide top 64 to 236, reel 68 to 248
+       result     the lead, the card and the tail: wide top 262 to about 640, reel 266 to about 690
+       the card   wide 550, 312, 760 wide        reel 16, 334, 468 wide; its rows are card.html's -->
+<style>
+  /* The page's tokens: neutral greys. A film can set any of them in session.json's `tokens`. */
+  :root {
+    --paper: #FFFFFF; --side: #F6F7F9; --line: #E4E7EC; --ink: #16181D; --soft: #6B7280; --faint: #A1A7B3; --mine: #F1F3F6;
+    --accent: #2F6BFF; --on-accent: #FFFFFF; --done: #1F9D55;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: var(--W); height: var(--H); overflow: hidden; background: var(--paper); }
+  body { font-family: var(--sans); font-weight: 500; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  /* Drawn small and enlarged, the way a retina recording comes out, and by enough that the film's
+     deepest push still shows a pixel of the take on less than a pixel of the frame. */
+  #stage { position: absolute; left: 0; top: 0; width: calc(var(--W) / var(--scale)); height: calc(var(--H) / var(--scale)); zoom: var(--scale); overflow: hidden; background: var(--paper); }
+  .abs { position: absolute; }
+
+  #side { left: 0; top: 0; width: 260px; height: 100%; background: var(--side); border-right: 1px solid var(--line); padding: 22px 18px; font-size: 14px; color: var(--soft); }
+  #side h1 { font-weight: 600; font-size: 20px; color: var(--ink); margin-bottom: 26px; }
+  #side .new { display: flex; align-items: center; gap: 10px; color: var(--ink); margin-bottom: 26px; }
+  #side .new i { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--paper); }
+  #side p { margin-bottom: 12px; white-space: nowrap; }
+  #side p.on { margin-left: -8px; padding: 7px 8px; border-radius: 8px; background: var(--line); color: var(--ink); }
+  #top { left: 0; top: 0; width: 100%; height: 52px; display: none; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 19px; }
+
+  #hello { left: 260px; right: 0; top: 400px; text-align: center; font-size: 34px; font-weight: 600; color: var(--ink); }
+  #bubble { left: 550px; top: 64px; width: 640px; height: 104px; display: flex; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--mine); font-size: 17px; line-height: 1.45; }
+  #bubble i { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--soft); color: var(--paper); font-style: normal; font-size: 13px; font-weight: 600; }
+  #tool { left: 550px; top: 196px; height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); font-size: 15px; white-space: nowrap; transform-origin: 0 50%; }
+  #tool .plug { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: var(--mine); color: var(--accent); }
+  #tool code { font-family: var(--mono); font-size: 14px; color: var(--soft); }
+  #tool .state { position: relative; width: 16px; height: 16px; margin-left: 4px; }
+  #tool .state svg { position: absolute; left: 0; top: 0; }
+  #lead { left: 550px; top: 262px; width: 760px; font-size: 18px; line-height: 1.5; }
+  #tail { left: 550px; top: 584px; width: 760px; font-size: 18px; line-height: 1.5; }
+  /* the film's card.html fills this box; its own <style> gives it the product's look */
+  #card { left: 550px; top: 312px; width: 760px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+
+  #composer { left: 550px; top: 800px; width: 760px; height: 150px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: 0 4px 20px rgba(22, 24, 29, 0.05); font-size: 18px; line-height: 1.45; }
+  #composer .ghost { color: var(--faint); }
+  #caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 1px; vertical-align: -0.16em; background: var(--ink); }
+  #composer .plus { left: 16px; bottom: 14px; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 9px; color: var(--soft); }
+  #composer .model { right: 62px; bottom: 20px; font-size: 14px; color: var(--soft); }
+  #send { right: 16px; bottom: 14px; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; color: var(--on-accent); transform-origin: 50% 50%; }
+  #send u { position: absolute; inset: 0; border-radius: inherit; background: var(--ink); transform-origin: 50% 50%; }
+  #send svg { position: relative; }
+
+  /* the narrow window: no sidebar, the name on a bar */
+  .reel #side, .reel #hello { display: none; }
+  .reel #top { display: flex; }
+  .reel #bubble { left: 16px; top: 68px; width: 468px; height: 124px; font-size: 16px; }
+  .reel #tool { left: 16px; top: 210px; height: 38px; }
+  .reel #lead { left: 16px; top: 266px; width: 468px; font-size: 17px; }
+  .reel #card { left: 16px; top: 334px; width: 468px; }
+  .reel #tail { left: 16px; top: 630px; width: 468px; font-size: 17px; }
+  .reel #composer { left: 16px; top: 708px; width: 468px; height: 176px; font-size: 17px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="side" class="abs"></div>
+  <div id="top" class="abs"></div>
+  <div id="hello" class="abs"></div>
+  <div id="bubble" class="abs"><i></i><span id="asked"></span></div>
+  <div id="tool" class="abs">
+    <span class="plug" id="plug"></span>
+    <b id="product"></b><code id="toolName"></code>
+    <span class="state">
+      <svg id="spin" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5a6.5 6.5 0 1 1-6.5 6.5" stroke="var(--faint)" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg id="done" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="var(--done)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
+  <div id="lead" class="abs"></div>
+  <div id="card" class="abs"></div>
+  <div id="tail" class="abs"></div>
+  <div id="composer" class="abs">
+    <span id="typed"></span><span id="caret"></span>
+    <div class="abs plus"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="abs model" id="model"></div>
+    <div id="send" class="abs"><u></u><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 7-7 7 7M12 19V5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  </div>
+</div>
+<script src="/.agents/skills/video/templates/kit.js"></script>
+<script type="module">
+import { unsourced } from './spec.js'
+
+const query = new URLSearchParams(location.search)
+const REEL = query.get('shape') === 'reel'
+// 1600 x 1000 at 2.25 (3600 x 2250, under the 3600 x 2400 render.mjs encodes), or the narrow 500 x 900 at 3
+const SCALE = REEL ? 3 : 2.25
+const { W, H, clamp, prog, spring, bump, $, show, hud } = REEL ? kit(1500, 2700) : kit(3600, 2250)
+const root = document.documentElement
+root.style.setProperty('--W', `${W}px`)
+root.style.setProperty('--H', `${H}px`)
+root.style.setProperty('--scale', SCALE)
+document.body.classList.toggle('reel', REEL)
+
+// the session sheet and the card, from the film's folder
+const folder = query.get('film')
+if (!folder) throw new Error('session.html: ?film=<folder> names the film whose session.json to draw')
+const at = (file) => new URL(`${folder.replace(/\/$/, '')}/${file}`, location.href)
+const session = await (await fetch(at('session.json'))).json()
+const LANG = query.get('lang') || Object.keys(session).find((k) => session[k]?.prompt)
+const P = session[LANG]
+if (!P?.prompt) throw new Error(`session.html: session.json has no language "${LANG}"`)
+const AT = session.at
+const DURATION = AT.answerEnd + 1.5
+root.lang = LANG
+for (const [k, v] of Object.entries(session.tokens ?? {})) root.style.setProperty(k, v)
+
+// card.html: a <template data-shape="wide"> and one "reel", whose [data-row] children are shown one
+// at a time, and any <style> it brings
+const cardDoc = new DOMParser().parseFromString(await (await fetch(at('card.html'))).text(), 'text/html')
+cardDoc.querySelectorAll('style').forEach((s) => document.head.append(s.cloneNode(true)))
+const shape = REEL ? 'reel' : 'wide'
+const template = cardDoc.querySelector(`template[data-shape="${shape}"]`)
+if (!template) throw new Error(`session.html: card.html has no <template data-shape="${shape}">`)
+$('card').append(template.content.cloneNode(true))
+const rows = [...$('card').querySelectorAll('[data-row]')]
+
+await Promise.all((session.fonts ?? []).map((f) => document.fonts.load(f)))
+await document.fonts.ready
+$('top').textContent = P.client
+$('model').textContent = P.model
+$('side').innerHTML = `<h1></h1><div class="new"><i><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></i><span></span></div>${P.chats.map((_, i) => `<p${i ? '' : ' class="on"'}></p>`).join('')}`
+$('side').querySelector('h1').textContent = P.client
+$('side').querySelector('.new span').textContent = P.fresh
+$('side').querySelectorAll('p').forEach((p, i) => { p.textContent = P.chats[i] })
+$('hello').textContent = P.hello
+$('bubble').firstElementChild.textContent = P.initial
+$('asked').textContent = P.prompt
+$('product').textContent = session.product.name
+$('toolName').textContent = session.tool
+// the product's mark on the tool chip: an SVG path in a 24 x 24 box, in its accent
+if (session.product.mark) $('plug').innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="${session.product.mark}"/></svg>`
+
+// The numbers rule, as in every style: a digit a viewer can read has an entry in session.json's
+// `sources`. The card's words count, in both shapes.
+const leafTexts = (node) => {
+  const out = []
+  const walk = document.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.textContent.trim()) out.push(n.textContent.trim())
+  return out
+}
+const cardTexts = [...cardDoc.querySelectorAll('template')].flatMap((tp) => leafTexts(tp.content))
+const texts = [P.client, P.model, P.hello, P.ghost, P.reply, P.fresh, ...P.chats, P.initial, P.prompt, P.lead, P.tail, session.product.name, session.tool, ...cardTexts]
+const digit = unsourced(texts.filter(Boolean), session.sources)
+if (digit) throw new Error(`session.html: "${digit}" has a number and no entry in session.json's sources (where does it come from?)`)
+
+// The card's height with k rows shown: what stands above the first row, then the bottom of row k.
+// Offsets are CSS pixels at 1x, under the stage's zoom; the 2 is the card's border.
+const heights = [rows.length ? rows[0].offsetTop : $('card').offsetHeight - 2, ...rows.map((r) => r.offsetTop + r.offsetHeight)].map((v) => v + 2)
+
+// an answer arrives word by word
+const said = (text, t, t0, t1) => text.split(' ').slice(0, Math.ceil(clamp(prog(t, t0, t1)) * text.split(' ').length)).join(' ')
+
+function seek(t) {
+  // the prompt is typed into the composer at the pace that fills its time
+  const n = Math.floor(clamp(prog(t, AT.promptStart, AT.promptEnd)) * P.prompt.length)
+  const before = t < AT.send
+  $('typed').textContent = before ? (n ? P.prompt.slice(0, n) : P.ghost) : P.reply
+  $('typed').className = before && n ? '' : 'ghost'
+  show($('caret'), before && (t < AT.promptStart ? Math.floor(t * 2.5) % 2 === 0 : n < P.prompt.length || Math.floor((t - AT.promptEnd) * 2.5) % 2 === 0))
+  // the press scales the button's ground and never its arrow
+  $('send').firstElementChild.style.transform = `scale(${1 - 0.5 * bump(t, AT.send, { freq: 4, damp: 0.5 })})`
+  show($('hello'), before)
+
+  // sent: it stands in the conversation, and the tool is called
+  show($('bubble'), !before)
+  show($('tool'), t >= AT.toolCall)
+  $('tool').style.transform = `scale(${t - AT.toolCall > 1.4 ? 1 : Math.max(0, spring(t, AT.toolCall, { freq: 2.6, damp: 0.72 }))})`
+  // the tool is back before the answer begins: nothing is written while it still turns
+  const back = t >= AT.result - 1.05
+  show($('spin'), !back)
+  show($('done'), back)
+  $('spin').style.transform = `rotate(${(t - AT.toolCall) * 400}deg)`
+
+  // the answer: a sentence, the card a row every 0.35 s, a sentence
+  $('lead').textContent = said(P.lead, t, AT.result - 0.9, AT.result - 0.1)
+  show($('lead'), t >= AT.result - 0.9)
+  const here = t < AT.result ? -1 : clamp(Math.floor((t - AT.result) / 0.35), 0, rows.length)
+  show($('card'), here >= 0)
+  $('card').style.height = `${heights[Math.max(0, here)]}px`
+  rows.forEach((r, i) => show(r, i < here))
+  $('tail').textContent = said(P.tail, t, AT.result + 1.3, AT.answerEnd)
+  show($('tail'), t >= AT.result + 1.3)
+}
+
+seek(0)
+window.film = { width: W, height: H, fps: 30, duration: DURATION, ready: Promise.resolve(), cuts: [], seek: async (t) => seek(t) }
+hud(window.film)
+</script>
+</body>
+</html>

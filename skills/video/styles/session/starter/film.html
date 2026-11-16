@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Session film</title>
+<style>
+  /* The film's tokens. A neutral placeholder set: the Designer role replaces these values (and the
+     three font stacks) with the brand's own; the engine reads nothing else. */
+  :root {
+    --ground: #EEF0F3; --window: #FFFFFF; --ink: #15171C; --on-ink: #FFFFFF; --muted: #9AA1AE;
+    --accent: #2F6BFF; --accent-soft: #A9C1FF;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif; --serif: Georgia, "Times New Roman", serif; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<!-- The take is a frame sequence beside this page: take.en.json and takes/en/f00001.jpg... Draw it
+     with ../session.html?film=starter, render that, and ingest it with scripts/take.mjs (STYLE.md,
+     "How a take is made"). Until the frames are there the film refuses to build and says so. -->
+<script src="/.agents/skills/video/templates/kit.js"></script>
+<script type="module">
+import { build } from '/.agents/skills/video/styles/session/engine.js'
+import spec from './spec.js'
+
+// ?format=reel is 9:16, ?lang=<code> another language of spec.copy, ?take=<name> another take
+const film = await build(spec)
+window.film = film
+kit(film.width, film.height).hud(film)
+</script>
+</body>
+</html>
