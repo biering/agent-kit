@@ -488,3 +488,83 @@ describe('the plugin and its wiring', () => {
     assert.match(read('rules/design-review.md'), /--msg "Design ready: <one line>"/)
   })
 })
+
+describe('after the review (KIT-11 round 2)', () => {
+  const locked = (stage, plan = {}) => ({ task: { id: 'W-1', stage }, plan: { approvedAt: NOW, locked: true, ...plan } })
+
+  it('only the stages a lost build sits in count as stuck; a healthy start never does', () => {
+    for (const stage of ['working', 'asks', 'nosummary']) assert.ok(stuck(locked(stage)), stage)
+    for (const stage of ['starting', 'queued', 'setup', 'plan', 'reviewing', 'stopped', 'failed', 'something-new']) assert.ok(!stuck(locked(stage)), stage)
+    assert.ok(!stuck(locked('working', { locked: false })), 'unlocked: the build has begun')
+    assert.ok(!stuck(locked('working', { built: NOW })), 'built')
+    assert.ok(!stuck(locked('working', { approvedAt: null })), 'not approved')
+  })
+
+  it('a slow, healthy start (queued, then starting, then built) is waited for, never repaired', async () => {
+    const d = planTask('web/2', 'WEB-2')
+    const steps = [
+      { stage: 'queued', plan: { approvedAt: NOW, locked: true } },
+      { stage: 'starting', plan: { approvedAt: NOW, locked: true } },
+      { stage: 'working', plan: { approvedAt: NOW, locked: false } },
+      { stage: 'working', plan: { approvedAt: NOW, locked: false, built: NOW } },
+    ]
+    const calls = []
+    let n = 0
+    const board = {
+      approve: (id) => (calls.push(['approve', id]), { ok: true }),
+      details: () => ({ ...d, task: { ...d.task, stage: steps[Math.min(n, 3)].stage }, plan: { ...d.plan, ...steps[Math.min(n++, 3)].plan } }),
+      stop: (id) => (calls.push(['stop', id]), { ok: true }),
+      delegate: (id) => (calls.push(['delegate', id]), { ok: true }),
+      tell: (id) => (calls.push(['tell', id]), { ok: true }),
+    }
+    let t = 0
+    const r = await approve({ id: 'web/2', kind: 'plan' }, { board, sleep: async () => {}, now: () => (t += 1000) })
+    assert.deepEqual(r, { ok: true, how: 'built' })
+    assert.deepEqual(calls, [['approve', 'web/2']])
+  })
+
+  it('a plan step with no written plan, or one already approved, is not offered', () => {
+    const list = ['1', '2', '3', '4'].map((n) => ({ id: `web/${n}`, state: 'blocked', stage: 'plan', title: n, msg: '' }))
+    const details = {
+      'web/1': planTask('web/1', 'WEB-1', { text: '', plan: { at: null } }),
+      'web/2': planTask('web/2', 'WEB-2', { text: '   ' }),
+      'web/3': planTask('web/3', 'WEB-3', { plan: { approvedAt: NOW } }),
+      'web/4': planTask('web/4', 'WEB-4'),
+    }
+    const items = collect({ board: memBoard({ list, details }), data: '/data', ...fakeIo(), now: NOW })
+    assert.deepEqual(items.map((i) => i.id), ['web/4'])
+  })
+
+  it('a new Design ready with the same note is a new round: newer age, new hash', () => {
+    const row = (msg) => [{ id: 'web/1', state: 'blocked', stage: 'working', title: 'S', msg }]
+    const details = { 'web/1': { task: { id: 'WEB-1', title: 'S', stage: 'working', description: 'Design review: yes' }, plan: null } }
+    const files = { '/data/tasks/web/1/closing-note.md': `old brief ${A}`, '/data/tasks/web/1/task.json': JSON.stringify({ at: NOW - 1000 }) }
+    const first = collect({ board: memBoard({ list: row('Design ready: round 1'), details }), data: '/data', ...fakeIo(files), now: NOW })[0]
+    const second = collect({ board: memBoard({ list: row('Design ready: round 2'), details }), data: '/data', ...fakeIo(files), now: NOW })[0]
+    assert.equal(first.at, NOW - 1000, 'the report time, newer than the note')
+    assert.notEqual(first.hash, second.hash)
+    assert.deepEqual(toNotify([second], { 'web/1': first.hash }).map((i) => i.id), ['web/1'])
+  })
+
+  it('links inside the brief are whole too, on lines of their own', () => {
+    const brief = `Two variants. The first (${A}) keeps one scroll; the second, ${B}, uses tabs.\nPick one.`
+    const lines = render({ items: [{ id: 'w/1', key: 'W-1', repo: 'w', kind: 'design', title: 'T', at: NOW, msg: '', planLink: '', reportLink: '', brief, links: [] }], sel: 0, now: NOW }, 40, 60)
+    const runs = []
+    lines.forEach((l, i) => {
+      if (!l.url) return
+      if (lines[i - 1]?.url === l.url) runs[runs.length - 1].push(l.t)
+      else runs.push([l.t])
+    })
+    assert.deepEqual(runs.map((r) => r.join('')), [A, B])
+    const text = lines.map((l) => l.t).join('\n')
+    assert.match(text, /Two variants\. The first/)
+    assert.match(text, /keeps one scroll; the second,/)
+    assert.match(text, /uses tabs\./)
+    assert.ok(!lines.some((l) => !l.url && /claude\.ai\/artifact/.test(l.t)), 'no broken copy of a link in the text')
+  })
+
+  it('a link inside a parenthesis gets the words before the bracket as its label', () => {
+    assert.equal(artifactLinks(`- Variant B, tabs (see ${B}).`)[0].label, 'Variant B, tabs')
+    assert.equal(artifactLinks(`- Variant A (${A})`)[0].label, 'Variant A')
+  })
+})

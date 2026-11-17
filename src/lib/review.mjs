@@ -62,6 +62,9 @@ function labelOf(before, after) {
   // A clause cut out of a parenthesis: from its closing bracket on.
   const close = label.lastIndexOf(')')
   if (close !== -1 && !label.slice(0, close).includes('(')) label = label.slice(close + 1).replace(/^[\s,;:\-–—]+/, '')
+  // A link inside a parenthesis ("Variant B (see <link>)"): the words before the bracket.
+  const open = label.lastIndexOf('(')
+  if (open !== -1 && !label.slice(open).includes(')')) label = label.slice(0, open).replace(/[\s:,;\-–—]+$/, '')
   return label.length > LABEL_MAX ? `${label.slice(0, LABEL_MAX - 1).trimEnd()}…` : label
 }
 
@@ -125,11 +128,21 @@ export function boardClient(bin, run) {
   }
 }
 
+/**
+ * The stages a lost build sits in. From the board's source (herdr-projects 1.2.12): approve sets the stage
+ * to `starting` (crates/flow/src/actions/plan.rs, approve_plan); the build waits as `queued` while the disk is
+ * full (leftovers/room.rs); it unlocks the worktree (`plan.locked` false) before it starts the agent or
+ * moves the stage on, and only then sets `plan.built` (plan/build.rs, start_build_by). So a healthy start
+ * is never "locked" in any stage but those two. A message between the yes and the start moves the task to
+ * `working` (actions/talk.rs, rearm) and the build runner quits; the agent's next turn can end it in
+ * `asks` or `nosummary`. Only those count as stuck: an unknown stage is never repaired.
+ */
+export const LOST = ['working', 'asks', 'nosummary']
+
 /** True when the plan was approved but its build never started (the stuck case). */
 export function stuck(details) {
   const p = details?.plan
-  const stage = details?.task?.stage
-  return Boolean(p?.approvedAt && !p?.built && p?.locked && !['starting', 'plan'].includes(stage))
+  return Boolean(p?.approvedAt && !p?.built && p?.locked && LOST.includes(details?.task?.stage))
 }
 
 /** The task folder on disk for a board id (`repo/n`). */
@@ -172,7 +185,9 @@ export function collect({ board, data, readFile, mtime, now = Date.now() }) {
       continue
     }
     if (planReady) {
+      // Only a written plan that still waits for its yes (the board's approvable plan: actions/plan.rs).
       const brief = d.plan?.text ?? ''
+      if (!d.plan?.at || !brief.trim() || d.plan?.approvedAt) continue
       if (!isDesign(base.description) && artifactLinks(brief).length === 0) continue
       items.push({ ...base, kind: 'plan', brief, at: d.plan?.at || d.plan?.asked })
       continue
@@ -186,11 +201,20 @@ export function collect({ board, data, readFile, mtime, now = Date.now() }) {
       brief = readFile(file)
       at = d.report.at || mtime(file)
     }
-    items.push({ ...base, kind: 'design', brief: brief || base.msg, at: at || now })
+    // The report is the newer word when the note was not rewritten (a send back, then Design ready again).
+    const reported = (() => {
+      try {
+        return JSON.parse(readFile(join(folder(data, row.id), 'task.json')) ?? '{}').at
+      } catch {
+        return null
+      }
+    })()
+    items.push({ ...base, kind: 'design', brief: brief || base.msg, at: Math.max(at || 0, reported || 0) || now })
   }
   for (const it of items) {
     it.links = artifactLinks(`${it.brief}\n${it.msg}`)
-    it.hash = briefHash(it.brief)
+    // The brief and the report together: a new "Design ready" with the same note is a new round.
+    it.hash = briefHash(`${it.brief}\n${it.msg}`)
   }
   return items.sort((a, b) => (a.at || 0) - (b.at || 0))
 }
@@ -459,9 +483,32 @@ function detailBlocks(it, state, W, now) {
     block.atomic = true
     blocks.push(block)
   }
-  const brief = [{ t: ' Brief', s: 'head' }]
-  for (const l of wrap(it.brief || '(no brief)', W - 1)) brief.push({ t: ` ${l}`, s: '' })
-  blocks.push(brief)
+  // The brief, with every artifact link in it on lines of its own, whole, as in Artifacts above.
+  let text = [{ t: ' Brief', s: 'head' }]
+  const words = (part) => {
+    for (const l of wrap(part, W - 1)) text.push({ t: ` ${l}`, s: '' })
+  }
+  for (const line of String(it.brief || '(no brief)').split('\n')) {
+    // split() with a capturing group keeps the links: text, link, text, link, …, text.
+    const parts = line.split(new RegExp(`(${ARTIFACT.source})`))
+    if (parts.length === 1) {
+      words(line)
+      continue
+    }
+    parts.forEach((part, i) => {
+      if (i % 2 === 0) {
+        const clean = part.replace(/^[\s).,;:]+|[\s(:]+$/g, '')
+        if (clean) words(clean)
+        return
+      }
+      blocks.push(text)
+      const link = urlLines(part, W).map((t) => ({ t, s: 'link', url: part }))
+      link.atomic = true
+      blocks.push(link)
+      text = []
+    })
+  }
+  blocks.push(text)
   return blocks
 }
 
