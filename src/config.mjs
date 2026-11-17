@@ -12,7 +12,7 @@
  *     "name": "maelstrom",                       // required
  *     "linear": { "team": "MAE", "workspace": "Maelstrom Lab", "owner": "Christoph",
  *                 "labels": ["needs-decision"] },             // existing queues to fold in
- *     "ceo": { "checkout": "../maelstrom-ceo", "launchd": "com.maelstrom.ceo", "hour": 8,
+ *     "ceo": { "checkout": "../maelstrom-ceo", "launchd": "com.maelstrom.ceo", "hour": 8, "node": "/opt/homebrew/bin/node",
  *              "layout": "ops/herdr-panel/layout.sh" },      // run on the new CEO pane
  *     "sessions": { "dir": "../maelstrom-worktrees", "agent": "claude" },
  *     "stats": { "repos": { "maelstrom": ".", "leverage": "../../leverage/leverage" } },
@@ -73,6 +73,8 @@ export const config = {
     checkout: at(raw.ceo?.checkout ?? `../${name}-ceo`),
     launchd: raw.ceo?.launchd ?? `com.${name}.ceo`,
     hour: raw.ceo?.hour ?? 8,
+    // The node the launchd job runs. null: /opt/homebrew/bin/node, else /usr/local/bin/node.
+    node: raw.ceo?.node ?? null,
     logs: join(homedir(), 'Library/Logs', `${name}-ceo`),
     agent: raw.ceo?.agent ?? `${name}-ceo`,
     // Where the CEO's operating manual lives (Leverage keeps agent bodies in skills).

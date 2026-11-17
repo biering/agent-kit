@@ -21,6 +21,7 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -29,6 +30,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from './config.mjs'
 import { AGENT, CEO_ARGS, main, prepareTree, scheduledPrompt, tree } from './lib/ceo.mjs'
+import { checkPlist, chooseNode, pathFor, plistText } from './lib/ceo-launchd.mjs'
 import * as herdr from './lib/herdr.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -44,6 +46,14 @@ const sh = (cmd, args, opts = {}) => execFileSync(cmd, args, { encoding: 'utf8',
 const which = (bin) => sh('/bin/zsh', ['-lc', `command -v ${bin}`])
 
 function install() {
+  // Fails before anything is prepared or written when there is no stable node.
+  let node
+  try {
+    node = chooseNode({ configured: config.ceo.node })
+  } catch (e) {
+    console.error(e.message)
+    process.exit(1)
+  }
   const claude = which('claude')
   prepareTree()
   if (!existsSync(treeScript)) {
@@ -54,30 +64,15 @@ function install() {
   mkdirSync(logDir, { recursive: true })
   writeFileSync(
     plist,
-    `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>${LABEL}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${process.execPath}</string>
-    <string>${treeScript}</string>
-    <string>ceo-schedule</string>
-    <string>run</string>
-  </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PATH</key><string>${dirname(claude)}:${dirname(process.execPath)}:${process.env.PATH}</string>
-    <key>HOME</key><string>${homedir()}</string>
-  </dict>
-  <key>StartCalendarInterval</key>
-  <dict><key>Hour</key><integer>${config.ceo.hour}</integer><key>Minute</key><integer>0</integer></dict>
-  <key>StandardOutPath</key><string>${join(logDir, 'launchd.log')}</string>
-  <key>StandardErrorPath</key><string>${join(logDir, 'launchd.log')}</string>
-</dict>
-</plist>
-`,
+    plistText({
+      label: LABEL,
+      node,
+      script: treeScript,
+      path: pathFor(claude),
+      home: homedir(),
+      hour: config.ceo.hour,
+      log: join(logDir, 'launchd.log'),
+    }),
   )
   spawnSync('launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { stdio: 'ignore' })
   sh('launchctl', ['bootstrap', `gui/${process.getuid()}`, plist])
@@ -103,6 +98,12 @@ function status() {
     { encoding: 'utf8' },
   )
   console.log(last.stdout.trim() || 'no runs logged yet')
+  if (!existsSync(plist)) return
+  const problems = checkPlist(readFileSync(plist, 'utf8'))
+  if (problems.length) {
+    for (const p of problems) console.log(`PROBLEM: ${p}`)
+    process.exitCode = 1
+  } else console.log('node and claude in the plist exist and run')
 }
 
 /**
