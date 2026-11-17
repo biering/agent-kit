@@ -10,6 +10,7 @@ agent in the repo.
 | `agent-kit linear setup` / `inbox` / `ask` / `task` / `issue` / … | Linear as the human-in-the-loop inbox: a "Human" label group (Blocker, Decision, Approval, Spend), a "Needs me" view filtered to the owner, one project per bet as the agents' queue |
 | `agent-kit herdr ceo` / `new <slug>` / `worker <slug> --brief f` / `list` / `sync` / `cleanup` | The CEO and every topic session as herdr panes, each in its own worktree, cleaned up when finished, and closed when their checkout is gone; the plugin re-syncs PR, CI and issue on every agent status change, at most once a minute |
 | `agent-kit herdr open-link <url>` | A ctrl+click on this repo's PR or Linear issue link in herdr: the session working on it, else the browser (the plugin's link handlers) |
+| `agent-kit review` / `review pane` / `approve <id>` / `back <id> <text>` / `annotate <id>` | The design review gate across repos: the herdr **Design review** pane (`prefix+y`), approve to build, send back (Design review below) |
 | `agent-kit herdr install-cursor-hooks` | Cursor chats report their state for the control panel |
 | `agent-kit ceo-schedule install` / `status` / `run` | The CEO's daily run (launchd), in its own checkout on `origin/main` |
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
@@ -245,6 +246,80 @@ beside it) because the design router needs it as a reference, not a skill.
 whole, it claims every web UI task and sets fonts, icons and invented proof that
 the repos' design systems and the taste kit rule out.
 
+## Design review
+
+Work that changes screens gets the owner's yes on its design before it is built
+([`rules/design-review.md`](rules/design-review.md)). The **Design review** pane brings those
+designs to him in herdr, across every repo on the work board
+([herdr-projects](https://github.com/eliasstravik/herdr-projects), used through its CLI only).
+
+```
+ Design review · 3 waiting
+ ────────────────────────────────────────────────
+ ▸ KIT-14      12m  design Settings screen redesign
+   MB-411       2h  plan   Onboarding, three steps
+   MB-405       1h  stuck  Tinybreath singing bowl
+ ────────────────────────────────────────────────
+ KIT-14 · agent-kit · design ready 12m ago
+ Artifacts
+ [1] Variant A, grouped
+ https://claude.ai/artifact/<id>
+ Brief
+ …
+ ────────────────────────────────────────────────
+ ⏎/p review in Plannotator  a approve + build
+ b send back  1-9 open link  o open all  …
+```
+
+**What waits there.**
+- **design**: the agent made its designs with its usual access and stopped with a
+  `Design ready: …` report. Its description has the line `Design review: yes`. The brief is its
+  closing note.
+- **plan**: the board's plan step (`plan.approve you`) with a design brief. Its description has the
+  marker line, or its plan links an artifact.
+- **stuck**: a plan was approved but its build never started (see "Approve" below).
+
+**Keys.**
+- `⏎`/`p` opens the brief in Plannotator (the annotate plugin), in a **new tab of the CEO's
+  workspace** (label `ceo`, of the task's repo; `AGENT_KIT_REVIEW_WORKSPACE` picks another). There,
+  `A` approves and `E` sends the comments back.
+- `a` approves (it asks first); `b` sends back a one-line comment.
+- `1`–`9` opens an artifact in the browser, `o` opens them all, and `y` then a digit copies one.
+- `s` skips a task until its brief changes (`S` shows skipped ones); `f` repairs a stuck one.
+- `g` opens the board, `r` refreshes, `?` lists every key.
+
+Artifact links are always shown whole: each on a line of its own, broken without anything added
+when the pane is narrower than the URL, and a terminal hyperlink either way. The pane refreshes
+when the board writes a task (it watches the board's `tasks/` folder) and every 30 s.
+
+**Approve.**
+- A design task gets one `tell`: build it now, in the same conversation.
+- A plan gets the board's `approve`. The pane then sends nothing until the build has started (the
+  task's `plan.built`), because a message in that window cancels the build and leaves the agent in
+  Claude's plan mode on a read-only worktree.
+- If the build still does not start, it repairs: `stop`, then `delegate --now --plan.approve none`,
+  which builds the approved plan with normal access.
+- An approve runs on its own, so closing the pane does not cut it off. Its progress shows on the row.
+- **Send back** is a `tell` with the owner's words (a design gets "revise, then stop at Design ready
+  again"; a plan goes back to its plan step).
+
+**Notifications.** A herdr notification arrives when a design becomes ready, even with the pane
+closed: the plugin's `pane.agent_status_changed` hook, at most one board read every 20 seconds.
+
+**Setup, once per machine.** The pane is its own plugin (`herdr-review/`, id `agent-kit.review`),
+not part of each repo's plugin, so it shows once for all repos. `terminal/install.sh` links it when
+herdr runs. By hand: `herdr plugin link <repo>/vendor/agent-kit/herdr-review`. The key `prefix+y`
+(the kit's herdr config) opens the pane beside the current one.
+
+- It needs no `agent-kit.config.json` entry.
+- It finds the board as the board does: `HERDR_PROJECTS_BIN`, `HERDR_PROJECTS_DATA_DIR`,
+  `HERDR_PROJECTS_HOME`.
+- It finds Plannotator through herdr's plugin list, or `PLANNOTATOR_TUI_BIN`.
+- Each repo's CEO manual adds one line that points to the rule.
+
+`agent-kit review list [--json]` prints the same list, and `approve`, `back`, `annotate` and `notify`
+are the pane's actions as commands.
+
 ## Rules
 
 Rules that apply to every app of a kind, vendored with the kit. Read the one that
@@ -252,6 +327,8 @@ matches the work.
 
 - [`rules/mobile-apps.md`](rules/mobile-apps.md): analytics consent (not ATT),
   the review prompt, onboarding.
+- [`rules/design-review.md`](rules/design-review.md): work that changes screens gets a design
+  review first (the marker line, the design stage, the brief, what approve and send back mean).
 - [`rules/how-we-win.md`](rules/how-we-win.md): the guiding principles for
   evaluating ideas, building, experimenting and deleting; every repo's CEO and
   idea scoring follow it.

@@ -103,6 +103,14 @@ type = "plugin_action"
 command = "maelstrom.panel.open"
 description = "Maelstrom panel on the left"
 
+# The Design review pane (agent-kit herdr-review): designs and plans waiting for your yes, across
+# repos, beside the current pane. Not prefix+r: that is herdr's resize mode.
+[[keys.command]]
+key = "prefix+y"
+type = "plugin_action"
+command = "agent-kit.review.open"
+description = "design review"
+
 # zoetrope (furkankly/zoetrope): the focused agent pane's session as a live
 # flow graph, in its own full-screen tab. The same key closes it.
 [[keys.command]]

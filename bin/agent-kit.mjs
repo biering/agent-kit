@@ -9,6 +9,7 @@
  *   agent-kit mail …          the agents' AgentMail inbox
  *   agent-kit daylog collect  one UTC day of a repo as a compact digest, with a per-product Stats block (daily-log skill)
  *   agent-kit migrations      check changed schema files against the data-schema rules
+ *   agent-kit review …        the design review gate: the herdr pane, approve to build, send back
  *   agent-kit sync <repo>     vendor this kit into a repo (run from the kit's checkout)
  *
  * Each command is a module in src/ that reads its own arguments; this file
@@ -22,6 +23,7 @@ const COMMANDS = {
   mail: '../src/agentmail.mjs',
   daylog: '../src/daylog.mjs',
   migrations: '../src/migrations.mjs',
+  review: '../src/review.mjs',
   sync: '../src/sync.mjs',
 }
 
