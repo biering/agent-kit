@@ -159,11 +159,11 @@ under `claude --agent`). A repo that gates every session wires it in its own
    Other keys: `linear.labels` folds labels another process already uses
    for "waits on the owner" into the inbox, `linear.states` names the state
    for each role (`ask`, `task`, `start`, `done`, `canceled`) where a team's
-   own rules place issues, `linear.close: false` leaves closing to people, `ceo.manual` moves the operating
+   own rules place issues, `linear.close: false` leaves closing to people, `ceo.node` pins the node the CEO's launchd job runs (default: `/opt/homebrew/bin/node`, else `/usr/local/bin/node`, Homebrew's version-independent symlinks; `ceo-schedule install` fails with a message if neither exists, and never uses the installing shell's node), `ceo.manual` moves the operating
    manual from `ops/CEO.md`, `ceo.layout` names a script `herdr ceo` runs on the new CEO pane (board, graph tab), and `bootstrap` is the repo's own preparation of a
    new checkout. Defaults follow from `name`: the CEO checkout `../<name>-ceo`, its herdr
    agent `<name>-ceo`, sessions in `../<name>-worktrees`, launchd label
-   `com.<name>.ceo` at 08:00, herdr plugin `<name>.ops`. `src/config.mjs` lists
+   `com.<name>.ceo` at 08:00, herdr plugin `<name>.ops`. The job's PATH is fixed (`/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`, plus the folder of `claude` when it lives elsewhere), not a copy of the installing shell's, and `ceo-schedule status` checks that the node and claude it names exist and run. `src/config.mjs` lists
    every key.
 2. From this checkout: `node bin/agent-kit.mjs sync <repo>`. It writes
    `<repo>/vendor/agent-kit/` and `<repo>/agent-kit.lock.json` (the commit).
