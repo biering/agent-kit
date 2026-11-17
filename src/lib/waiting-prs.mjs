@@ -16,7 +16,7 @@
  *   repo needs review the repo is in AGENT_KIT_REVIEW_REPOS (every PR there needs the owner's yes).
  * The owner's approval at the PR's head commit lifts the gate reasons; his "changes requested" puts the
  * PR back on the agent, so it leaves the list. A draft that would wait is listed as `draft`, so it
- * gets marked ready (unless its board task is still working on it).
+ * gets marked ready; if its board task still reads "working" the row says so, but it is listed all the same.
  */
 import { createHash } from 'node:crypto'
 
@@ -163,6 +163,9 @@ export function slugOf(remote = '') {
   return m ? `${m[1]}/${m[2]}` : null
 }
 
+/** gh lists at most this many files of a PR; at that count the list may be cut and is read in full. */
+const FILE_CAP = 100
+
 const PR_FIELDS = 'number,title,url,isDraft,reviewDecision,createdAt,updatedAt,author,reviews,reviewRequests,statusCheckRollup,body,headRefOid,baseRefName,files'
 
 const csv = (v) => String(v ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
@@ -192,7 +195,8 @@ export function judge(pr, repo, ctx) {
   const owner = (ctx.owner ?? '').toLowerCase()
   const author = String(pr.author?.login ?? '').toLowerCase()
   if (owner && author === owner) return null
-  if ((ctx.agents ?? []).length && !ctx.agents.map((a) => a.toLowerCase()).includes(author)) return null
+  // A PR by one of the repo's own code owners is theirs: nobody else's approval is what blocks it.
+  if ((ctx.codeowners ?? []).some((r) => r.owners.includes(author))) return null
   if (pr.reviewDecision === 'CHANGES_REQUESTED') return null
   const verdict = decisive(pr, { owner, skip })
   if (verdict?.state === 'CHANGES_REQUESTED') return null
@@ -214,8 +218,9 @@ export function judge(pr, repo, ctx) {
   const ci = ciState(pr.statusCheckRollup)
   const sentences = gateSentences(pr.body, owner) || gateSentences(ctx.report ?? '', owner)
   const draft = Boolean(pr.isDraft)
-  // A draft whose agent is still on it is work in progress; one left behind is waiting for a "ready".
-  if (draft && ctx.task && ['working', 'queued', 'starting'].includes(ctx.task.state) && ctx.task.stage !== 'done') return null
+  // A draft that waits for him is listed even while its task reads "working": the agent may have stopped to ask
+  // for him (its note says so) without the board's state moving. The row says what the board thinks.
+  const agentWorking = Boolean(draft && ctx.task && ['working', 'queued', 'starting'].includes(ctx.task.state) && ctx.task.stage !== 'done')
   const key = `${repo.name}#${pr.number}`
   return {
     kind: 'pr',
@@ -227,6 +232,7 @@ export function judge(pr, repo, ctx) {
     title: pr.title,
     url: pr.url,
     draft,
+    agentWorking,
     why,
     ci: ci.state,
     ciFailing: ci.failing,
@@ -280,6 +286,14 @@ export async function collectPrs({ gh, repos, remote, rows = [], readReport = ()
         }
         for (const pr of prs) {
           const task = byUrl.get(pr.url) ?? null
+          if ((pr.files ?? []).length >= FILE_CAP) {
+            try {
+              const all = (await gh(['api', '--paginate', `repos/${slug}/pulls/${pr.number}/files`, '--jq', '.[].filename'])).split('\n').filter(Boolean)
+              if (all.length) pr.files = all.map((path) => ({ path }))
+            } catch {
+              errors.push(`${repo.name}#${pr.number}: only the first ${FILE_CAP} files were read`)
+            }
+          }
           const files = (pr.files ?? []).map((f) => f.path)
           const deps = []
           // A repo with its own dependency check is trusted over the diff of one package.json.

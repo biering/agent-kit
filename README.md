@@ -345,8 +345,8 @@ PR in the browser, `y` then `1` copies its URL, and the approval stays on GitHub
  Approval stays on GitHub: open the PR and approve it there.
 ```
 
-**What waits.** A PR written by an agent (the account the board uses, `gh-user.json`), open, not draft,
-whose latest word is not "changes requested", and one of these holds (each is a "why" on its row):
+**What waits.** An open PR that is not by one of the repo's own code owners (so any agent account, not
+only the board's), whose latest word is not "changes requested", and one of these holds (each is a "why" on its row):
 - **review required**: GitHub says so (`reviewDecision` is `REVIEW_REQUIRED`: a ruleset or branch
   protection asks for a review and nobody gave it yet). This is how a repo like this kit shows up.
 - **gate path**: a changed file is under a rule of the repo's `CODEOWNERS` that names the owner (any
@@ -369,8 +369,8 @@ sentences when there are any. Those are read from the PR body, then from the tas
 and the like) and what follows it up to the blank line.
 
 **Drafts.** A draft PR that would wait for him is listed too, marked `draft` in the list and **DRAFT** in
-its header with "mark it ready", unless the board's task for it is still working. Those are the PRs an agent
-left as drafts although they wait for him.
+its header with "mark it ready", also when the board's task for it still reads "working" (the detail says so): an agent may have stopped
+to ask for him without the board's state moving. Those are the PRs left as drafts although they wait for him.
 
 **Live.** The pane loads the PRs on their own, so the designs never wait for GitHub (it says "loading
 from GitHub…"). It asks again when the board writes a task (at most every 20 s) and every 3 minutes, and

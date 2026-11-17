@@ -545,7 +545,7 @@ function prBlocks(it, state, W, now) {
   if (st?.line) for (const l of wrap(st.line, W - 1)) head.push({ t: ` ${l}`, s: 'ok' })
   blocks.push(head)
   if (it.draft)
-    blocks.push(wrap('It is still a draft, although it waits for you: the agent left it. Mark it ready for review (gh pr ready) or tell its agent.', W - 1).map((t) => ({ t: ` ${t}`, s: 'warn' })))
+    blocks.push(wrap(`It is still a draft, although it waits for you. Mark it ready for review (gh pr ready) or tell its agent.${it.agentWorking ? ' Its task still reads "working" on the board.' : ''}`, W - 1).map((t) => ({ t: ` ${t}`, s: 'warn' })))
   const link = [{ t: ' Pull request', s: 'dim' }, ...urlLines(it.url, W).map((t) => ({ t, s: 'link', url: it.url }))]
   link.atomic = true
   blocks.push(link)

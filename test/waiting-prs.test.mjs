@@ -149,17 +149,20 @@ describe('which PRs wait for the owner', () => {
     assert.match(why(pr({ ...gated, reviews: [review('CHANGES_REQUESTED', HEAD), review('APPROVED', HEAD, '2026-11-17T12:00:00Z')] }))?.[0] ?? 'gone', /gone/)
   })
 
-  it('only PRs the agents wrote (and never his own)', () => {
-    assert.equal(why(pr({ reviewDecision: 'REVIEW_REQUIRED', author: { login: 'someone' } })), undefined)
-    assert.equal(why(pr({ reviewDecision: 'REVIEW_REQUIRED', author: { login: 'robin' } }), ctx({ agents: [], owner: 'robin' })), undefined)
-    assert.ok(why(pr({ reviewDecision: 'REVIEW_REQUIRED', author: { login: 'someone' } }), ctx({ agents: [] })))
+  it('a PR from any agent account counts, never one by a code owner of the repo (his own)', () => {
+    assert.ok(why(pr({ reviewDecision: 'REVIEW_REQUIRED', author: { login: 'another-agent' } })), 'not only the board’s own login')
+    assert.deepEqual(why(pr({ reviewDecision: 'REVIEW_REQUIRED', files: [{ path: 'apps/care/a.ts' }], author: { login: 'another-agent' } })).length, 2)
+    assert.equal(why(pr({ reviewDecision: 'REVIEW_REQUIRED', author: { login: 'robin' } })), undefined, 'a code owner’s own PR')
+    assert.equal(why(pr({ reviewDecision: 'REVIEW_REQUIRED', author: { login: 'robin' } }), ctx({ codeowners: [], owner: 'robin' })), undefined, 'the named owner’s own PR')
   })
 
-  it('a draft that waits is flagged, unless its agent is still working on it', () => {
+  it('a draft that waits is flagged, also while its task still reads working (the row says so)', () => {
     const draft = pr({ isDraft: true, reviewDecision: 'REVIEW_REQUIRED' })
     assert.equal(judge(draft, repo, ctx()).draft, true, 'no task: left behind')
     assert.equal(judge(draft, repo, ctx({ task: { id: 'web/1', state: 'idle', stage: 'after' } })).draft, true)
-    assert.equal(judge(draft, repo, ctx({ task: { id: 'web/1', state: 'working', stage: 'working' } })), null, 'still being built')
+    const busy = judge(draft, repo, ctx({ task: { id: 'web/1', state: 'working', stage: 'working' } }))
+    assert.deepEqual([busy.draft, busy.agentWorking], [true, true], 'its note may say it waits for him, whatever the board state')
+    assert.equal(judge(draft, repo, ctx()).agentWorking, false)
     assert.equal(judge(pr({ isDraft: true }), repo, ctx()), null, 'a draft that would not wait is not flagged')
   })
 
@@ -209,13 +212,30 @@ describe('collecting across repos', () => {
     assert.ok(calls.every((c) => !c.includes('--draft')), 'drafts are asked for too: they get flagged')
   })
 
-  it('a board task on the PR decides whether a draft is still being worked on', async () => {
+  it('a draft is listed with its board task, whether the task is idle or still working', async () => {
     const gh = async (args) => (args[0] === 'pr' ? JSON.stringify([pr({ isDraft: true, reviewDecision: 'REVIEW_REQUIRED' })]) : (() => { throw new Error('none') })())
     const idle = await collectPrs({ ...base, repos: [base.repos[0]], gh, rows: [{ id: 'web/1', pr: URL1, state: 'idle', stage: 'after' }] })
     assert.equal(idle.items[0].draft, true)
     assert.equal(idle.items[0].task, 'web/1')
     const busy = await collectPrs({ ...base, repos: [base.repos[0]], gh, rows: [{ id: 'web/1', pr: URL1, state: 'working', stage: 'working' }] })
-    assert.deepEqual(busy.items, [])
+    assert.deepEqual([busy.items[0].draft, busy.items[0].agentWorking], [true, true])
+  })
+
+  it('reads the full file list of a PR gh cut at 100 files, and says when it cannot', async () => {
+    const hundred = Array.from({ length: 100 }, (_, i) => ({ path: `src/f${i}.ts` }))
+    const make = (full) => async (args) => {
+      if (args[0] === 'pr') return JSON.stringify([pr({ files: hundred })])
+      if (args.at(-3)?.includes('/files')) {
+        if (!full) throw new Error('boom')
+        return [...hundred.map((f) => f.path), 'apps/care/late.ts'].join('\n')
+      }
+      if (args.at(-1).includes('CODEOWNERS')) return '/apps/care/ @robin\n'
+      throw new Error('none')
+    }
+    const ok = await collectPrs({ ...base, repos: [base.repos[0]], gh: make(true) })
+    assert.match(ok.items[0].why.join(), /gate path: apps\/care\/late\.ts/, 'a gate path past the 100th file')
+    const cut = await collectPrs({ ...base, repos: [base.repos[0]], gh: make(false) })
+    assert.deepEqual(cut.errors, ['web#7: only the first 100 files were read'])
   })
 
   it('AGENT_KIT_REVIEW_REPOS puts every PR of a repo on the list', async () => {
@@ -272,6 +292,11 @@ describe('the screen: PRs next to designs', () => {
     assert.match(t, /DRAFT/)
     assert.match(t, /Mark it ready/)
     assert.match(t, / draft /)
+  })
+
+  it('a draft whose task still reads working says so in its detail', () => {
+    const it = judge(pr({ isDraft: true, reviewDecision: 'REVIEW_REQUIRED' }), repo, ctx({ task: { id: 'web/1', state: 'working', stage: 'working' } }))
+    assert.match(text({ items: [it], sel: 0 }, 120).replace(/\s+/g, ' '), /still reads "working" on the board/)
   })
 
   it('says when the PR section is still loading or incomplete, and "nothing" only when both are empty', () => {

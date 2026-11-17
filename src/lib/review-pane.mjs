@@ -187,7 +187,7 @@ const writeJson = (p, v) => {
 /** Run the pane until q. deps come from src/review.mjs. waitingPrs() is async: { items, errors }. */
 export async function runPane({ waiting, waitingPrs, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack, board }) {
   const out = process.stdout
-  const s = { items: [], sel: 0, scroll: 0, mode: 'list', input: '', status: '', showSkipped: false, skipped: 0 }
+  const s = { items: [], sel: 0, scroll: 0, mode: 'list', input: '', status: '', showSkipped: false, skipped: 0, prNote: waitingPrs ? 'PRs: loading from GitHub…' : '' }
   let statuses = {}
   const opener = process.platform === 'darwin' ? ['open'] : ['xdg-open']
   const copier = process.platform === 'darwin' ? ['pbcopy'] : ['xclip', '-selection', 'clipboard']
