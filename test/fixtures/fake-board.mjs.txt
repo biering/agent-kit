@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+// A stand-in for the herdr-projects CLI (test/review.test.mjs copies it to board.mjs and runs it): answers list --json and details from
+// board.json beside it, logs every call to calls.log, and plays approve / stop / delegate on that state.
+// board.json: { list: [...], details: { id: {...} }, onApprove: 'build' | 'stuck' | 'fail' | 'nothing' }
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const dir = process.env.FAKE_BOARD_DIR || dirname(fileURLToPath(import.meta.url))
+const file = join(dir, 'board.json')
+const state = JSON.parse(readFileSync(file, 'utf8'))
+const [cmd, id, ...rest] = process.argv.slice(2)
+appendFileSync(join(dir, 'calls.log'), `${JSON.stringify([cmd, id, ...rest])}\n`)
+const d = state.details?.[id]
+const save = () => writeFileSync(file, JSON.stringify(state, null, 2))
+const fail = (msg) => {
+  console.error(msg)
+  process.exit(1)
+}
+
+switch (cmd) {
+  case 'list':
+    console.log(JSON.stringify(state.list ?? []))
+    break
+  case 'details':
+    if (!d) fail(`no task ${id}`)
+    console.log(JSON.stringify(d))
+    break
+  case 'approve':
+    if (!d) fail(`no task ${id}`)
+    if (state.onApprove === 'fail') fail('refused')
+    d.plan.approvedAt = Date.now()
+    if (state.onApprove === 'build') Object.assign(d.plan, { built: Date.now(), locked: false }), (d.task.stage = 'working')
+    else if (state.onApprove === 'stuck') d.task.stage = 'working'
+    else d.task.stage = 'starting'
+    save()
+    break
+  case 'tell':
+  case 'retry':
+    if (!d) fail(`no task ${id}`)
+    break
+  case 'stop':
+    if (!d) fail(`no task ${id}`)
+    d.task.stage = 'stopped'
+    if (d.plan) d.plan.locked = false
+    save()
+    break
+  case 'delegate':
+    if (!d) fail(`no task ${id}`)
+    if (d.plan?.approvedAt) Object.assign(d.plan, { built: Date.now(), locked: false })
+    d.task.stage = 'working'
+    save()
+    break
+  default:
+    fail(`fake board: ${cmd}?`)
+}

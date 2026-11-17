@@ -22,6 +22,10 @@ names (see App UI).
 
 ## What holds everywhere
 
+- **The owner sees the design before it is built.** A task that changes screens, or whose
+  description has the line `Design review: yes`, stops at a design review first: private artifacts,
+  each linked as its whole URL, a short brief, and a `Design ready` report (the kit's
+  `rules/design-review.md`). The build starts on his yes.
 - **The idea comes from the subject.** A page built from category defaults (a centred headline,
   a label above it, three icon cards, a soft gradient) looks like every other generated page.
   Find what belongs to this product and no competitor, and build from that.

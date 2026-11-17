@@ -12,6 +12,10 @@ and this skill or the repo config is what you fix.
 
 The loop is for work headed to a PR. A one-line answer or a throwaway experiment does not need it.
 
+**UI work gets a design review first.** Work that changes screens, or a task whose description has
+the line `Design review: yes`, starts with a design stage: publish the designs, write the brief and stop at
+`Design ready`. Code starts only once the owner approves (the kit's `rules/design-review.md`).
+
 ## 0. Read the repo's version of each step
 
 1. Root `AGENTS.md`, then the owning app's `AGENTS.md`, then `docs/agent-kit/dev-loop.md` if the
