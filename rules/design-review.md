@@ -2,7 +2,7 @@
 
 Work that changes what a user sees (a new screen, a redesign, a new flow, a landing page) gets the
 owner's yes on its design before it is built. The design comes to the owner in herdr, in the
-**Design review** pane (README, "Design review"), where he opens the artifacts, comments, and approves.
+**Waiting for you** pane (README, "Design review"), where he opens the artifacts, comments, and approves.
 His approval starts the build.
 
 ## 1. Flag the task (the CEO, or whoever puts the work on the board)

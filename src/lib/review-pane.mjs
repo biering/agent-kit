@@ -1,5 +1,5 @@
 /**
- * The "Design review" pane: the terminal part of `agent-kit review pane` (src/review.mjs). The rules and
+ * The "Waiting for you" pane (designs and PRs): the terminal part of `agent-kit review pane` (src/review.mjs). The rules and
  * the screen are in review.mjs; this file reads keys, draws, and watches the board's task folder, so the
  * list stays current while agents work. No dependencies: raw mode and ANSI, like the other kit panes.
  */
@@ -112,12 +112,20 @@ export function onKey(s, key, act, page = 10) {
       return say('Refreshed.', 'dim')
     case 'S':
       s.showSkipped = !s.showSkipped
-      act.refresh()
+      act.refresh(true)
       return
     case 'g':
       return act.board()
   }
   if (!it) return
+  if (it.kind === 'pr') {
+    // A PR opens in the browser; nothing approves, sends back or repairs from here.
+    if (key === 'enter' || key === 'p') {
+      act.open(it.url)
+      return say(`${it.key}: opened in the browser. Approve it on GitHub.`)
+    }
+    if (key === 'a' || key === 'b' || key === 'f') return say('A PR is approved on GitHub, not here: ⏎ opens it.', 'warn')
+  }
   if (key === 'enter' || key === 'p') {
     const r = act.review(it)
     return r.ok ? say(`${it.key}: open for review in a new tab.`) : say(r.error, 'warn')
@@ -176,19 +184,43 @@ const writeJson = (p, v) => {
   writeFileSync(p, `${JSON.stringify(v, null, 2)}\n`)
 }
 
-/** Run the pane until q. deps come from src/review.mjs. */
-export async function runPane({ waiting, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack, board }) {
+/** Run the pane until q. deps come from src/review.mjs. waitingPrs() is async: { items, errors }. */
+export async function runPane({ waiting, waitingPrs, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack, board }) {
   const out = process.stdout
   const s = { items: [], sel: 0, scroll: 0, mode: 'list', input: '', status: '', showSkipped: false, skipped: 0 }
   let statuses = {}
   const opener = process.platform === 'darwin' ? ['open'] : ['xdg-open']
   const copier = process.platform === 'darwin' ? ['pbcopy'] : ['xclip', '-selection', 'clipboard']
 
+  // The PR section comes from GitHub, which takes seconds: it loads on its own, and the designs never wait for it.
+  let prs = []
+  let prsAt = 0
+  let prsBusy = false
+  const prNote = (errors = []) =>
+    prsBusy && !prsAt ? 'PRs: loading from GitHub…' : errors.length ? `PRs incomplete: ${errors.join('; ')}` : ''
+  const loadPrs = async () => {
+    if (prsBusy) return
+    prsBusy = true
+    s.prNote = prNote()
+    try {
+      const r = await waitingPrs()
+      prs = r.items
+      prsAt = Date.now()
+      prsBusy = false
+      s.prNote = prNote(r.errors)
+    } catch (e) {
+      // Keep the last list; an unreachable GitHub is not "no PR waits".
+      prsBusy = false
+      s.prNote = `PRs not read: ${String(e.message ?? e).split('\n')[0]}`
+    }
+    refresh()
+    draw()
+  }
   const refresh = () => {
     const keep = s.items[s.sel]?.id
     let all = []
     try {
-      all = waiting()
+      all = [...waiting(), ...prs]
     } catch (e) {
       // Keep what was shown; an unreachable board is not an empty one.
       Object.assign(s, { status: e.message, statusStyle: 'warn' })
@@ -238,7 +270,11 @@ export async function runPane({ waiting, data, STATE, statusFile, skipsFile, app
       refresh()
     },
     board: () => spawnSync('herdr', ['plugin', 'action', 'invoke', 'open', '--plugin', 'herdr-projects'], { stdio: 'ignore' }),
-    refresh,
+    // `local`: only the board's list again; GitHub is asked for the PRs unless it is.
+    refresh: (local) => {
+      refresh()
+      if (!local) loadPrs()
+    },
     quit: () => {
       cleanup()
       process.exit(0)
@@ -259,6 +295,7 @@ export async function runPane({ waiting, data, STATE, statusFile, skipsFile, app
 
   refresh()
   draw()
+  loadPrs()
   if (process.stdin.isTTY) process.stdin.setRawMode(true)
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (chunk) => {
@@ -274,6 +311,8 @@ export async function runPane({ waiting, data, STATE, statusFile, skipsFile, app
     timer = setTimeout(() => {
       refresh()
       draw()
+      // A task changed: its PR may have too. GitHub is asked at most every 20 s.
+      if (Date.now() - prsAt > 20 * 1000) loadPrs()
     }, 400)
   }
   try {
@@ -285,6 +324,8 @@ export async function runPane({ waiting, data, STATE, statusFile, skipsFile, app
     refresh()
     draw()
   }, 30 * 1000)
+  // GitHub changes without the board knowing (a review, a push): ask again every few minutes.
+  setInterval(loadPrs, 3 * 60 * 1000)
   // Ages tick and an approve's progress shows (its status file) without a board call.
   setInterval(() => {
     readStatuses()
