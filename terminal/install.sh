@@ -51,7 +51,7 @@ rm -f "$tmp"
 theme=$(cat "$themes/current" 2>/dev/null || echo hazard)
 "$themes/switch" "$theme"
 
-# The Design review pane (agent-kit README, "Design review"): one plugin per machine, from this copy of
+# The Waiting for you pane (designs and PRs; agent-kit README, "Design review"): one plugin per machine, from this copy of
 # the kit. Linked only when herdr runs and does not know it yet, so a second install changes nothing.
 review="$(cd "$here/.." && pwd)/herdr-review"
 if [ -f "$review/herdr-plugin.toml" ] && command -v herdr >/dev/null 2>&1 && herdr status server 2>/dev/null | grep -q 'running'; then

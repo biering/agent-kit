@@ -357,7 +357,10 @@ export function urlLines(url, width) {
   return out
 }
 
-const KIND = { design: 'design', plan: 'plan', stuck: 'stuck' }
+const KIND = { design: 'design', plan: 'plan', stuck: 'stuck', pr: 'PR' }
+
+/** The CI state of a PR, in a word. */
+const CI = { passing: 'CI green', failing: 'CI failing', pending: 'CI running', none: 'no CI' }
 const cut = (s, n) => (s.length <= n ? s : `${s.slice(0, Math.max(0, n - 1))}…`)
 
 /** The keys, in the order the footer shows them. */
@@ -376,12 +379,25 @@ export const KEYS = [
   ['q', 'quit'],
 ]
 
+/** The keys for a PR: it opens in the browser, nothing approves from here (approval stays on GitHub). */
+export const PR_KEYS = [
+  ['⏎/1/o', 'open the PR in the browser'],
+  ['y1', 'copy the URL'],
+  ['s', 'skip'],
+  ['S', 'skipped'],
+  ['r', 'refresh'],
+  ['g', 'board'],
+  ['?', 'keys'],
+  ['q', 'quit'],
+]
+
 /**
  * The pane as lines: [{ t: text, s: style, url? }], `rows` of them at most, none longer than `cols`.
  * Styles: head, sel, dim, link, warn, ok, ''. A line with `url` is (part of) that link.
  *
  * state: { items, sel, scroll, now, mode: 'list'|'confirm'|'input'|'help', input, status, statusOf(id),
- *          skipped (count hidden), showSkipped }
+ *          skipped (count hidden), showSkipped, prNote (why the PR section is not complete: loading, errors) }
+ * items: designs first (kind design, plan, stuck), then PRs (kind pr), each group under its own heading.
  */
 export function render(state, cols, rows) {
   const W = Math.max(20, cols)
@@ -391,18 +407,25 @@ export function render(state, cols, rows) {
   const top = []
   const count = items.length
   const hidden = state.skipped ? ` · ${state.skipped} skipped` : ''
-  top.push({ t: cut(` Design review · ${count} waiting${hidden}${state.showSkipped ? ' (showing skipped)' : ''}`, W), s: 'head' })
+  const nPr = items.filter((it) => it.kind === 'pr').length
+  const counts = `${count - nPr} to approve${nPr || state.prNote ? ` · ${nPr} PR${nPr === 1 ? '' : 's'}` : ''}`
+  top.push({ t: cut(` Waiting for you · ${counts}${hidden}${state.showSkipped ? ' (showing skipped)' : ''}`, W), s: 'head' })
   top.push(sep)
-  if (!count) top.push({ t: cut(' Nothing waits for a design decision.', W), s: 'dim' })
+  if (!count) top.push({ t: cut(state.prNote ? ' No designs wait for you.' : ' Nothing waits for you: no design and no PR.', W), s: 'dim' })
   const listRows = Math.min(count, Math.max(1, Math.min(6, Math.floor(H / 4))))
   const first = Math.min(Math.max(0, sel - listRows + 1), Math.max(0, count - listRows))
   for (let i = first; i < first + listRows && i < count; i++) {
     const it = items[i]
+    // A heading where a group starts: the designs, then the PRs.
+    if (i === first || (it.kind === 'pr') !== (items[i - 1].kind === 'pr'))
+      top.push({ t: cut(it.kind === 'pr' ? ' PRs to approve (on GitHub)' : ' Designs to approve', W), s: 'dim' })
     const st = state.statusOf?.(it.id)
-    const head = `${i === sel ? '▸' : ' '} ${it.key.padEnd(8)} ${age(it.at, now).padStart(6)}  ${(st?.short || KIND[it.kind]).padEnd(6)} `
-    top.push({ t: cut(head + it.title, W), s: i === sel ? 'sel' : '' })
+    const tag = st?.short || (it.kind === 'pr' ? (it.draft ? 'draft' : KIND.pr) : KIND[it.kind])
+    const head = `${i === sel ? '▸' : ' '} ${it.key.padEnd(it.kind === 'pr' ? 12 : 8)} ${age(it.at, now).padStart(7)}  ${tag.padEnd(6)} `
+    top.push({ t: cut(head + it.title, W), s: i === sel ? 'sel' : it.kind === 'pr' && it.draft ? 'warn' : '' })
   }
   if (count > listRows) top.push({ t: cut(` ${first + 1}-${Math.min(count, first + listRows)} of ${count} (↑↓)`, W), s: 'dim' })
+  if (state.prNote) top.push({ t: cut(` ${state.prNote}`, W), s: 'warn' })
   top.push(sep)
 
   const foot = [sep]
@@ -411,7 +434,7 @@ export function render(state, cols, rows) {
     foot.push({ t: cut(' Send back (Enter sends, Esc cancels):', W), s: 'warn' })
     for (const l of wrap(`> ${state.input ?? ''}▏`, W)) foot.push({ t: l, s: '' })
   } else {
-    const parts = KEYS.map(([k, v]) => `${k} ${v}`)
+    const parts = (items[sel]?.kind === 'pr' ? PR_KEYS : KEYS).map(([k, v]) => `${k} ${v}`)
     let line = ''
     for (const p of parts) {
       if (line && line.length + 2 + p.length > W - 1) {
@@ -458,6 +481,7 @@ export function render(state, cols, rows) {
 
 function detailBlocks(it, state, W, now) {
   if (!it) return []
+  if (it.kind === 'pr') return prBlocks(it, state, W, now)
   const blocks = []
   const st = state.statusOf?.(it.id)
   const what = { design: 'design ready', plan: 'plan ready', stuck: 'approved, not building' }[it.kind]
@@ -512,11 +536,36 @@ function detailBlocks(it, state, W, now) {
   return blocks
 }
 
+/** The detail of a PR: the whole URL, who and why, the gate-reviewer's sentences, CI. Nothing here approves. */
+function prBlocks(it, state, W, now) {
+  const blocks = []
+  const st = state.statusOf?.(it.id)
+  const head = [{ t: cut(` ${it.key} · ${it.repo} · open ${age(it.at, now)}${it.draft ? ' · DRAFT' : ''}`, W), s: it.draft ? 'warn' : 'head' }]
+  for (const l of wrap(it.title, W - 1)) head.push({ t: ` ${l}`, s: '' })
+  if (st?.line) for (const l of wrap(st.line, W - 1)) head.push({ t: ` ${l}`, s: 'ok' })
+  blocks.push(head)
+  if (it.draft)
+    blocks.push(wrap(`It is still a draft, although it waits for you. Mark it ready for review (gh pr ready) or tell its agent.${it.agentWorking ? ' Its task still reads "working" on the board.' : ''}`, W - 1).map((t) => ({ t: ` ${t}`, s: 'warn' })))
+  const link = [{ t: ' Pull request', s: 'dim' }, ...urlLines(it.url, W).map((t) => ({ t, s: 'link', url: it.url }))]
+  link.atomic = true
+  blocks.push(link)
+  blocks.push([{ t: ' Why it needs you', s: 'head' }, ...it.why.flatMap((w) => wrap(`- ${w}`, W - 1).map((t) => ({ t: ` ${t}`, s: '' })))])
+  const ci = [{ t: cut(` ${CI[it.ci] ?? it.ci}${it.ciFailing?.length ? `: ${it.ciFailing.join(', ')}` : ''}`, W), s: it.ci === 'failing' ? 'warn' : it.ci === 'passing' ? 'ok' : 'dim' }]
+  blocks.push(ci)
+  blocks.push([
+    { t: ' What to decide', s: 'head' },
+    ...wrap(it.sentences || 'No gate-reviewer sentences in the PR body or the task report. Open the PR.', W - 1).map((t) => ({ t: ` ${t}`, s: it.sentences ? '' : 'dim' })),
+  ])
+  blocks.push([{ t: cut(' Approval stays on GitHub: open the PR and approve it there.', W), s: 'dim' }])
+  return blocks
+}
+
 function helpBlocks(W) {
   const lines = [{ t: ' Keys', s: 'head' }]
   const help = [
     ['↑↓ j k', 'choose a task'],
     ['J K PgDn PgUp space', 'scroll the details'],
+    ['PRs', '⏎, 1 or o open the pull request in the browser, y then 1 copies its URL. Nothing approves from here: approval stays on GitHub'],
     ['⏎ or p', 'open the brief for review in Plannotator, in a new tab of the CEO workspace: A approves, E sends the comments back'],
     ['a', 'approve and start the build (asks first)'],
     ['b', 'send back with a one-line comment'],

@@ -10,7 +10,7 @@ agent in the repo.
 | `agent-kit linear setup` / `inbox` / `ask` / `task` / `issue` / … | Linear as the human-in-the-loop inbox: a "Human" label group (Blocker, Decision, Approval, Spend), a "Needs me" view filtered to the owner, one project per bet as the agents' queue |
 | `agent-kit herdr ceo` / `new <slug>` / `worker <slug> --brief f` / `list` / `sync` / `cleanup` | The CEO and every topic session as herdr panes, each in its own worktree, cleaned up when finished, and closed when their checkout is gone; the plugin re-syncs PR, CI and issue on every agent status change, at most once a minute |
 | `agent-kit herdr open-link <url>` | A ctrl+click on this repo's PR or Linear issue link in herdr: the session working on it, else the browser (the plugin's link handlers) |
-| `agent-kit review` / `review pane` / `approve <id>` / `back <id> <text>` / `annotate <id>` | The design review gate across repos: the herdr **Design review** pane (`prefix+y`), approve to build, send back (Design review below) |
+| `agent-kit review` / `review pane` / `prs` / `approve <id>` / `back <id> <text>` / `annotate <id>` | Everything that waits for the owner, across repos: the herdr **Waiting for you** pane (`prefix+y`) with designs to approve (approve to build, send back) and PRs to approve on GitHub (Design review and Waiting for you below) |
 | `agent-kit herdr install-cursor-hooks` | Cursor chats report their state for the control panel |
 | `agent-kit ceo-schedule install` / `status` / `run` | The CEO's daily run (launchd), in its own checkout on `origin/main` |
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
@@ -249,16 +249,19 @@ the repos' design systems and the taste kit rule out.
 ## Design review
 
 Work that changes screens gets the owner's yes on its design before it is built
-([`rules/design-review.md`](rules/design-review.md)). The **Design review** pane brings those
-designs to him in herdr, across every repo on the work board
+([`rules/design-review.md`](rules/design-review.md)). The **Waiting for you** pane brings those
+designs to him in herdr, and the PRs that wait for his review (next section), across every repo on the work board
 ([herdr-projects](https://github.com/eliasstravik/herdr-projects), used through its CLI only).
 
 ```
- Design review · 3 waiting
+ Waiting for you · 3 to approve · 1 PR
  ────────────────────────────────────────────────
+  Designs to approve
  ▸ KIT-14      12m  design Settings screen redesign
    MB-411       2h  plan   Onboarding, three steps
    MB-405       1h  stuck  Tinybreath singing bowl
+  PRs to approve (on GitHub)
+   app#88       3h  PR     feat(app): refund button
  ────────────────────────────────────────────────
  KIT-14 · agent-kit · design ready 12m ago
  Artifacts
@@ -317,8 +320,67 @@ herdr runs. By hand: `herdr plugin link <repo>/vendor/agent-kit/herdr-review`. T
 - It finds Plannotator through herdr's plugin list, or `PLANNOTATOR_TUI_BIN`.
 - Each repo's CEO manual adds one line that points to the rule.
 
-`agent-kit review list [--json]` prints the same list, and `approve`, `back`, `annotate` and `notify`
-are the pane's actions as commands.
+`agent-kit review list [--json]` prints the same list (designs, then PRs; `--json` is `{ designs, prs, errors }`),
+`agent-kit review prs [--json]` only the PRs, and `approve`, `back`, `annotate` and `notify` are the
+pane's actions as commands.
+
+## Waiting for you: PRs
+
+The same pane has a second section, **PRs to approve (on GitHub)**: the open pull requests, in every repo
+the work board knows (its `repos.json`, each repo's `origin` remote, asked through `gh`), where the
+owner's approval is what blocks the merge. Nothing approves from the pane: `⏎` (or `1`, `o`) opens the
+PR in the browser, `y` then `1` copies its URL, and the approval stays on GitHub.
+
+```
+ app#88 · app · open 3h
+ feat(app): refund button
+ Pull request
+ https://github.com/<owner>/app/pull/88
+ Why it needs you
+  - gate path: scripts/stripe-prices.mjs
+  - new dependency: zod
+ CI green
+ What to decide
+ Adds a refund button. Money could go out twice. Revert the PR.
+ Approval stays on GitHub: open the PR and approve it there.
+```
+
+**What waits.** An open PR that is not by one of the repo's own code owners (so any agent account, not
+only the board's), whose latest word is not "changes requested", and one of these holds (each is a "why" on its row):
+- **review required**: GitHub says so (`reviewDecision` is `REVIEW_REQUIRED`: a ruleset or branch
+  protection asks for a review and nobody gave it yet). This is how a repo like this kit shows up.
+- **gate path**: a changed file is under a rule of the repo's `CODEOWNERS` that names the owner (any
+  other account than the PR's author and the agents; `AGENT_KIT_REVIEW_OWNER` names him). A catch-all
+  rule (`*`) is a default owner, not a gate, and does not count; the last matching rule wins, as on GitHub.
+- **new dependency**: a changed `package.json` gains a runtime dependency (`dependencies`,
+  `peerDependencies`) it did not have before (the head against the base branch). A repo that posts its own
+  `new dependency` check or status is trusted over this: red, it waits; green, it does not.
+- **repo needs your review**: the repo is in `AGENT_KIT_REVIEW_REPOS` (comma list of names or
+  `owner/name`): every PR there needs him.
+
+His approval **at the PR's head commit** lifts the gate reasons; a push after it puts the PR back. A PR
+that merges on green CI and the board review alone never shows up.
+
+**What each row shows.** The full PR URL (never shortened: its own line, broken hard only when the pane is
+narrower, a terminal hyperlink either way), the title, the repo, how long it has been open, why it needs him,
+the CI state (green, running, failing with the failing checks' names, none), and the gate-reviewer's three
+sentences when there are any. Those are read from the PR body, then from the task's closing note: a
+`for <owner>:` line (the `for …:` line of a `GATE ADVICE` verdict, or three sentences after `for you:`
+and the like) and what follows it up to the blank line.
+
+**Drafts.** A draft PR that would wait for him is listed too, marked `draft` in the list and **DRAFT** in
+its header with "mark it ready", also when the board's task for it still reads "working" (the detail says so): an agent may have stopped
+to ask for him without the board's state moving. Those are the PRs left as drafts although they wait for him.
+
+**Live.** The pane loads the PRs on their own, so the designs never wait for GitHub (it says "loading
+from GitHub…"). It asks again when the board writes a task (at most every 20 s) and every 3 minutes, and
+`r` asks now. A repo `gh` cannot read is named in the pane ("PRs incomplete: …"), never shown as "no PR
+waits"; the last list stays on screen. `s` skips a PR until its head or its reasons change. There is no
+herdr notification for PRs (that would be a GitHub call on every agent status change).
+
+**Limits.** The new-dependency check reads one `package.json` against its base, so it does not know the
+repo's other packages (the repo's own check does). A rename is judged by its new path. `gh` must be
+logged in on the machine that runs the pane.
 
 ## Rules
 

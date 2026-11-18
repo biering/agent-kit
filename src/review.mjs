@@ -2,8 +2,9 @@
 /**
  * The design review gate in herdr (rules/design-review.md, README "Design review").
  *
- *   agent-kit review [list] [--json]       every task waiting for a design decision, across repos
- *   agent-kit review pane                  the "Design review" pane (the plugin runs it)
+ *   agent-kit review [list] [--json]       everything that waits for you: designs to approve and PRs to approve
+ *   agent-kit review prs [--json]          only the PRs (open, not draft, where your approval blocks), across repos
+ *   agent-kit review pane                  the "Waiting for you" pane (the plugin runs it)
  *   agent-kit review open-pane             open that pane beside the focused one, or focus it
  *   agent-kit review approve <id> [--notes "…"]   approve and see the build start (repairs a stuck one)
  *   agent-kit review back <id> <text…>     send the design back with these words
@@ -19,6 +20,8 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { herdr, notify } from './lib/herdr.mjs'
 import {
   approve,
@@ -31,6 +34,7 @@ import {
   sendBack,
   toNotify,
 } from './lib/review.mjs'
+import { collectPrs } from './lib/waiting-prs.mjs'
 
 const PLUGIN = 'agent-kit.review'
 const env = process.env
@@ -90,6 +94,23 @@ const board = boardClient(boardBin(env, home, existsSync), (bin, a) =>
   spawnSync(bin, a, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }),
 )
 const waiting = () => collect({ board, data, readFile, mtime })
+const run = promisify(execFile)
+const gh = async (a) => (await run('gh', a, { maxBuffer: 32 * 1024 * 1024, timeout: 60 * 1000 })).stdout
+const git = (root) => {
+  const r = spawnSync('git', ['-C', root, 'remote', 'get-url', 'origin'], { encoding: 'utf8' })
+  return r.status === 0 ? r.stdout : ''
+}
+/** The task folder's closing note and report: where a gate-reviewer's sentences may be. */
+function taskReport(id) {
+  const dir = join(data, 'tasks', ...String(id).split('/'))
+  return [readFile(join(dir, 'closing-note.md')), ...['report.md', 'report.txt'].map((f) => readFile(join(dir, 'artifacts', 'report', f)))].filter(Boolean).join('\n\n')
+}
+/** The PRs that wait for the owner, across the repos the board knows (its repos.json: name → checkout). */
+async function waitingPrs() {
+  const repos = Object.entries(readJson(join(data, 'repos.json'), {})).map(([name, root]) => ({ name, root }))
+  const agent = readJson(join(data, 'gh-user.json'), {}).login
+  return collectPrs({ gh, repos, remote: git, rows: board.list(), readReport: taskReport, env, agents: agent ? [agent] : [] })
+}
 /** The waiting list, or exit with why the board could not be read. */
 const waitingOrDie = () => {
   try {
@@ -158,14 +179,42 @@ function cmdBack() {
   console.log(`${it.key}: sent back.`)
 }
 
-function cmdList() {
-  const items = waitingOrDie()
-  if (flag('json')) return console.log(JSON.stringify(items, null, 2))
-  if (!items.length) return console.log('Nothing waits for a design decision.')
+/** The PRs, or exit with why GitHub could not be read for every repo. */
+async function prsOrDie() {
+  try {
+    return await waitingPrs()
+  } catch (e) {
+    return die(e.message)
+  }
+}
+const printItems = (items) => {
   for (const it of items) {
     console.log(`${it.key}  ${it.kind}  ${it.title}`)
-    for (const l of it.links) console.log(`  ${l.label ? `${l.label}: ` : ''}${l.url}`)
+    if (it.kind === 'pr') {
+      console.log(`  ${it.url}`)
+      console.log(`  ${it.draft ? 'DRAFT, mark it ready. ' : ''}why: ${it.why.join('; ')}. ${{ passing: 'CI green', failing: 'CI failing', pending: 'CI running', none: 'no CI' }[it.ci]}.`)
+      if (it.sentences) console.log(`  ${it.sentences}`)
+    } else for (const l of it.links) console.log(`  ${l.label ? `${l.label}: ` : ''}${l.url}`)
   }
+}
+
+async function cmdList() {
+  const designs = waitingOrDie()
+  const prs = await prsOrDie()
+  if (flag('json')) return console.log(JSON.stringify({ designs, prs: prs.items, errors: prs.errors }, null, 2))
+  if (!designs.length && !prs.items.length) console.log(prs.errors.length ? 'Nothing waits for you that could be read.' : 'Nothing waits for you: no design and no PR.')
+  if (designs.length) console.log('Designs to approve\n'), printItems(designs), console.log()
+  if (prs.items.length) console.log('PRs to approve (on GitHub)\n'), printItems(prs.items)
+  for (const e of prs.errors) console.error(`PRs incomplete: ${e}`)
+}
+
+async function cmdPrs() {
+  const { items, errors } = await prsOrDie()
+  if (flag('json')) return console.log(JSON.stringify({ items, errors }, null, 2))
+  if (!items.length && errors.length) die(`PRs not read: ${errors.join('; ')}`)
+  if (!items.length) console.log('No PR waits for your review.')
+  printItems(items)
+  for (const e of errors) console.error(`incomplete: ${e}`)
 }
 
 /** The annotate plugin's Plannotator: PLANNOTATOR_TUI_BIN, else from herdr's plugin list, else on PATH. */
@@ -223,7 +272,7 @@ function cmdDoc() {
   const what = fromAnnotation(readJson(result, null))
   if (what.action === 'approve') {
     approveDetached(it.id, what.notes)
-    return pause(`${it.key}: approved. The build starts; the Design review pane shows how it goes.`)
+    return pause(`${it.key}: approved. The build starts; the Waiting for you pane shows how it goes.`)
   }
   if (what.action === 'back') {
     const b = sendBack(board, it, what.text)
@@ -277,11 +326,12 @@ function cmdNotify() {
 
 async function cmdPane() {
   const { runPane } = await import('./lib/review-pane.mjs')
-  await runPane({ waiting, board, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack })
+  await runPane({ waiting, waitingPrs, board, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack })
 }
 
 const commands = {
   list: cmdList,
+  prs: cmdPrs,
   pane: cmdPane,
   'open-pane': cmdOpenPane,
   approve: cmdApprove,

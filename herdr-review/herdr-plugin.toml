@@ -1,25 +1,26 @@
-# The Design review pane (agent-kit README, "Design review"): every task on the work board that waits
-# for the owner's design decision, across repos, with approve-to-build. One per machine, not per repo:
+# The "Waiting for you" pane (agent-kit README, "Design review" and "Waiting for you"): the designs on the
+# work board that wait for the owner's decision (with approve-to-build) and the PRs that wait for his review
+# on GitHub (to open, not to approve), across repos. One per machine, not per repo:
 # link it once, from the kit's checkout or any repo's vendored copy:
 #   herdr plugin link "<repo>/vendor/agent-kit/herdr-review"
 # Commands run from this directory, without a shell: argv only.
 id = "agent-kit.review"
-name = "Design review"
-version = "0.1.0"
+name = "Waiting for you"
+version = "0.2.0"
 min_herdr_version = "0.9.0"
-description = "Designs and plans waiting for your review, across repos: open the artifacts, approve to build, or send back"
+description = "Designs and PRs waiting for you, across repos: open the artifacts, approve a design to build or send it back, open a PR to approve it on GitHub"
 platforms = ["macos", "linux"]
 
 # prefix+y in the kit's herdr config: the pane beside the focused one (or focus it when it is open).
 [[actions]]
 id = "open"
-title = "Open the Design review pane"
+title = "Open the Waiting for you pane"
 contexts = ["workspace", "pane"]
 command = ["node", "../bin/agent-kit.mjs", "review", "open-pane"]
 
 [[panes]]
 id = "pane"
-title = "Design review"
+title = "Waiting for you"
 placement = "split"
 command = ["/bin/sh", "-c", "cd \"${HERDR_PLUGIN_ROOT:?not launched by herdr}\" && exec node ../bin/agent-kit.mjs review pane"]
 

@@ -200,7 +200,7 @@ describe('the screen', () => {
         if (parts.length) assert.equal(parts.map((l) => l.t).join(''), url, `rows ${rows}: ${url} whole or absent`)
       }
     }
-    const later = render({ items: [it0], sel: 0, scroll: 8, now: NOW }, 48, 16)
+    const later = render({ items: [it0], sel: 0, scroll: 10, now: NOW }, 48, 16)
     assert.ok(later.some((l) => l.url === C))
   })
 
@@ -219,7 +219,8 @@ describe('the screen', () => {
   it('lists the kind, age and key, and asks before an approve', () => {
     const lines = render({ items: [item(), item({ id: 'web/2', key: 'WEB-2', kind: 'stuck' })], sel: 0, now: NOW, mode: 'confirm' }, 60, 40)
     const text = lines.map((l) => l.t).join('\n')
-    assert.match(text, /Design review · 2 waiting/)
+    assert.match(text, /Waiting for you · 2 to approve/)
+    assert.match(text, /Designs to approve/)
     assert.match(text, /▸ WEB-1 +12m {2}design/)
     assert.match(text, /WEB-2 .* stuck/)
     assert.match(text, /Approve WEB-1 and start the build\? y \/ n/)
@@ -418,8 +419,9 @@ describe('agent-kit review (the CLI against a fake board)', () => {
     const { run } = setup(t, board())
     const r = run('list', '--json')
     assert.equal(r.status, 0, r.stderr)
-    const items = JSON.parse(r.stdout)
+    const { designs: items, prs } = JSON.parse(r.stdout)
     assert.deepEqual(items.map((i) => i.key).sort(), ['WEB-1', 'WEB-2'])
+    assert.deepEqual(prs, [], 'no repo on the board, no PR')
     assert.equal(items.find((i) => i.key === 'WEB-1').links[0].url, A)
     assert.match(run('list').stdout, new RegExp(`Variant A: ${A}`))
   })
