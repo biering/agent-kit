@@ -40,6 +40,38 @@ Adjectives selling instead of describing.
 - DE: "nicht nur …, sondern auch", "Es geht nicht darum, … sondern …"
 - One per document can be earned; formulaic repetition is the tell. Fix: say Y directly.
 
+### "Not X, it's Y" (house ban)
+Negation-then-assert: "It's not a tool, it's a teammate", "The problem isn't money. It's time.",
+"Das ist kein Tool, das ist ein Kollege." Banned outright in user-facing copy, closers and hooks
+especially: it is the line readers now recognise as generated. Fix: delete the negation, state Y.
+The scanner flags it as `not-x-its-y`; a factual correction ("It's not ready yet, we ship in May")
+is not the pattern and does not match.
+
+### "Nobody tells you" (house ban)
+"Nobody tells you", "nobody talks about", "nobody prepares you for", "here's what nobody sees",
+"Was dir niemand sagt". It claims a secret the reader has usually heard. Banned in hooks and
+openers. Fix: name the specific thing ("Our first 40 orders took 11 hours to pack"). Literal use
+("nobody came to the first meetup") does not match.
+
+### Cut words
+Verbs and adjectives that sell instead of saying, from the cut list of Tobi Adonadon's /closer
+skill: *unlock, game-changer, elevate, seamless, delve, journey, supercharge, leverage*. Cut every
+one from user-facing copy and say what actually happens instead ("finds the three cheapest banks"
+beats "unlock better rates"). The scanner flags them as `cut-word` (game-changer, seamlessly and
+delve under their older categories) and skips the literal senses:
+
+| Word | Flagged | Not flagged |
+|---|---|---|
+| unlock | unlock your potential, unlock growth | unlock the door, unlock your phone |
+| elevate | elevate your brand | elevate the patient's legs |
+| journey | your fitness journey, customer journey, embark on a journey, it's been a journey | the train journey, a three-hour journey, our long journey home |
+| leverage | leverage AI, leveraging our data (the verb) | financial leverage, the leverage ratio, use leverage, a company called Leverage |
+| seamless | seamless experience | seamless steel pipe, seamless tights |
+| supercharge | supercharge your workflow | a supercharged V8 engine |
+
+"Customer journey" is a term of the trade in UX docs and German marketing; in internal docs it
+is a false positive, in a landing page it is a cut word.
+
 ### Copula avoidance
 "is/are" dressed up.
 - EN: "serves as", "functions as", "represents a", "constitutes a"
@@ -73,7 +105,7 @@ A comma + present participle bolting unearned analysis onto a fact: ", highlight
 "I hope this helps", "Great question", "als KI-Sprachmodell", knowledge-cutoff disclaimers, leftover cite markers (`oaicite`, `[cite: 1]`). Always cut — these are transcript residue, not prose.
 
 ### AI vocabulary
-High-frequency post-2022 words that spike together: EN *delve, garner, tapestry, interplay, multifaceted, paramount, burgeoning, foster, leverage (as verb), utilize, navigate (metaphorical)*. DE *das volle Potenzial ausschöpfen, die Weichen stellen, Hand in Hand, des Weiteren, darüber hinaus* (as paragraph glue). One occurrence is a word; a cluster is a fingerprint.
+High-frequency post-2022 words that spike together: EN *delve, garner, tapestry, interplay, multifaceted, paramount, burgeoning, foster, leverage (as verb), utilize, navigate (metaphorical)* (and the cut words above). DE *das volle Potenzial ausschöpfen, die Weichen stellen, Hand in Hand, des Weiteren, darüber hinaus* (as paragraph glue). One occurrence is a word; a cluster is a fingerprint.
 
 ## 2. Structure tells (document level)
 
@@ -99,7 +131,17 @@ High-frequency post-2022 words that spike together: EN *delve, garner, tapestry,
 - **Challenges/outlook formula**: "Despite its successes, X faces challenges…" ending optimistically ("Trotz aller Herausforderungen blickt X positiv in die Zukunft").
 - **Every paragraph ends with a punch**. Let some paragraphs just stop.
 
-## 3. Preservation — never "fix" these
+## 3. No specifics (copy level)
+
+Generated copy is generic because it carries no fact a reader could act on. Human copy that sells
+names the day, the time, the price, the place, how many are left, and why now: "Six seats,
+Saturday 9am, EUR 45" against "Join our amazing workshop experience". Before a rewrite, list the
+concrete facts the text has and the ones it should have, and put the real ones first. Never
+invent one to fill the gap: mark it `[PLACEHOLDER: price]` and ask. `scripts/ship_check.py` lists
+what it finds and flags copy with none (advice, not a gate: a changelog line may rightly have no
+number).
+
+## 4. Preservation — never "fix" these
 
 - **Facts are sacred**: numbers, prices, dates, names, URLs, legal terms, quotes, code, CLI commands, § references. A rewrite that changes a fact failed, whatever it sounds like.
 - **Required hedges**: legal/medical/financial qualifiers ("kein Anlageberatung", "in der Regel", "vorbehaltlich"), negations, and scope words ("nur", "mindestens") stay — cutting them changes meaning, and German legal copy (Impressum, AGB, Datenschutz) is entirely off-limits.

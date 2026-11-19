@@ -25,9 +25,9 @@ calls it in step 5 and keeps no slop catalog of its own.
    the product does not do. Never invent a number, a customer count, an award or a percentage; if
    the exciting version needs a number, ask for it.
 4. **Facts, hedges and legal text stay verbatim**, per the preservation contract in the `unslop`
-   skill (`references/patterns.md`, section 3). Legal pages (imprint, privacy, terms, withdrawal)
-   are off-limits, and so are compliance and award claims: edit the sentence around them, never
-   the claim.
+   skill (`references/patterns.md`, section 4, Preservation). Legal pages (imprint, privacy,
+   terms, withdrawal) are off-limits, and so are compliance and award claims: edit the sentence
+   around them, never the claim.
 
 ## Workflow
 
@@ -62,7 +62,8 @@ bare word budget; the repo note holds the repo's string.
 
 ### 3. Judge, in this order
 
-Read `references/one-liner.md` before judging or generating any short line.
+Read `references/one-liner.md` before judging or generating any short line, and
+`references/hooks.md` before writing the opening line of a post, reel, carousel or email.
 
 1. **Non-ambiguous.** Ten readers picture the same product. Test it: name two other products the
    line could describe. If you can, it fails. This outranks everything, because nobody gets
@@ -101,7 +102,11 @@ then the repo's checks from the repo note.
 
 - `references/one-liner.md`: the 5-word discipline, banned moves, anatomy, angles, worked
   examples. Read it on every short-line task.
+- `references/hooks.md`: ten storytelling patterns for an opening line, with templates, when to
+  use each, and the house bans that override them. It lives here, not in `unslop`, because
+  choosing what the first line says is this skill's job; `unslop` owns the bans it cites.
 - `references/surfaces.md`: budget, job and failure mode per surface; the locale-pair rules.
+  Social, ad and email limits per platform are in `unslop`'s `references/platform-limits.md`.
 - `references/rubric.md`: six criteria, two hard gates.
 - `scripts/copy_scan.py`: deterministic checks (`--mode line|i18n`, `--json`).
 - Sibling skills: `unslop` (slop and fact preservation), and whatever the repo names for search

@@ -18,6 +18,30 @@
       "name": "german-fact-preservation",
       "prompt": "Unslop diesen Absatz für unseren Wissensbereich, er klingt generisch. Zahlen und Fakten dürfen sich auf keinen Fall ändern:\n\nEs ist allgemein bekannt, dass die Grunderwerbsteuer eine entscheidende Rolle beim Immobilienkauf spielt. Sie beträgt je nach Bundesland zwischen 3,5 % (Bayern) und 6,5 % (z. B. NRW, Schleswig-Holstein). Bei einem Kaufpreis von 400.000 € sind das in der Regel zwischen 14.000 € und 26.000 €. Darüber hinaus bietet unser Grunderwerbsteuer-Rechner unter leverage.immo/tools/grunderwerbsteuer-rechner eine nahtlose Möglichkeit, das volle Potenzial deiner Kalkulation auszuschöpfen. Hinweis: Dies stellt keine Steuerberatung dar.",
       "expected_output": "A rewrite that removes the slop (es ist allgemein bekannt, entscheidende Rolle, darüber hinaus bietet, nahtlos, volle Potenzial ausschöpfen) but preserves EXACTLY: 3,5 %, 6,5 %, Bayern, NRW, Schleswig-Holstein, 400.000 €, 14.000 €, 26.000 €, the URL, the hedge 'in der Regel', and the legal disclaimer 'keine Steuerberatung'."
+    },
+    {
+      "id": 3,
+      "name": "english-cut-words-literal-guard",
+      "prompt": "Audit only, don't rewrite. This is the intro of our property-finance landing page (the company is called Leverage):\n\nUnlock your path to ownership and elevate your investing journey. With Leverage, you compare 400 banks in one search. Financial leverage raises your return on equity, and our calculator shows the leverage ratio before you sign. Supercharge your search today with our seamless app.",
+      "expected_output": "An audit that flags the cut words in their selling sense (Unlock your path, elevate your, investing journey, Supercharge, seamless) with concrete fixes, keeps 'With Leverage' (company name), 'Financial leverage' and 'the leverage ratio' (finance nouns) as explicit false positives, notes '400 banks' as the one real specific that should lead, and does not rewrite the text."
+    },
+    {
+      "id": 4,
+      "name": "specifics-first-placeholder",
+      "prompt": "Make this Instagram caption for our pottery workshop less generic and ready to post. Facts: Saturday 22 November, 9am, Kreuzberg studio, 6 seats, clay and firing included.\n\nJoin us for an amazing pottery experience! It's not just a class, it's a journey into creativity. Nobody tells you how relaxing clay can be. Spots are limited, so don't miss out!",
+      "expected_output": "A rewrite whose first 125 characters carry the real specifics (Saturday 22 November, 9am, Kreuzberg, 6 seats), that keeps every given fact verbatim, removes 'not just a class, it's a journey', 'Nobody tells you', and 'don't miss out', and marks the missing price as [PLACEHOLDER: price] (or asks for it) instead of inventing one; it reports the ship_check result for --platform instagram."
+    },
+    {
+      "id": 5,
+      "name": "platform-unknown-and-limits",
+      "prompt": "Check these Google Ads before I upload them, and also this short promo line I haven't decided where to post yet.\n\nHeadline: Compare 400 banks in one search today\nHeadline: Mortgage in 3 minutes\nDescription: See your rate from 400 banks before you talk to anyone, free and without a credit check.\n\nPromo line: The smartest way to find a mortgage that actually fits the way you live, work and plan your future, without the stress.",
+      "expected_output": "For the ads: headline 1 flagged as over the 30-character Google Ads limit with its length, headline 2 and the description within limits (90). For the promo line: says the platform is unknown, checks it against the 125-character fold and reports it over, flags it as having no specifics, and asks which platform it is for. No invented numbers."
+    },
+    {
+      "id": 6,
+      "name": "voice-file-learns-from-edit",
+      "prompt": "Here's your draft for our newsletter intro and my edit of it. Remember what I changed for next time.\n\nYour draft: Big news! We're thrilled to announce that our new export feature is a real game-changer for your workflow.\n\nMy edit: New this week: export any report to CSV in one click.",
+      "expected_output": "Appends to the repo's voice file (docs/agent-kit/voice.md or the path in agent-kit.config.json, created from references/voice-template.md if absent, never a global file): 'game-changer', 'thrilled to announce' and 'Big news!' under Never says, and a dated Learned rule along the lines of 'lead with what changed and the concrete action, no announcement framing', with Why quoting the edit. Says which rules were logged."
     }
   ]
 }

@@ -49,9 +49,10 @@ under `claude --agent`). A repo that gates every session wires it in its own
    `loop` is read by the `dev-loop` skill, not the CLI: `verify` is the local
    check before a PR, `docs` the extra one when docs or skills changed, `gate`
    an optional script that reports what the branch still owes (`null` when
-   hooks do that job). Two more blocks belong to skills: `carousel` (the brands
-   folder, where Playwright lives) and `ads` (the landing-page register and the
-   URL pattern per brand, for `ads-landingpage`).
+   hooks do that job). Three more blocks belong to skills: `carousel` (the brands
+   folder, where Playwright lives), `ads` (the landing-page register and the
+   URL pattern per brand, for `ads-landingpage`) and `unslop` (`voice`, the
+   repo's voice file, default `docs/agent-kit/voice.md`).
 
    `daylog` is read by `agent-kit daylog collect` and the `daily-log` skill:
 
@@ -215,7 +216,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Review | `review-code`, `review-api`, `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
-| Write | `copywriting`, `unslop` (AI-sounding prose, German and English), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest, led by a per-product Stats block when configured) |
+| Write | `copywriting`, `unslop` (runs on every user-facing text before it ships: AI-sounding prose in German and English, specifics first, platform limits, a voice file per repo that learns from edits), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest, led by a per-product Stats block when configured) |
 | Market | `aso`, `app-screenshots` (six layout templates: hero object, tilted device, panorama, feature callout, before and after, honest proof; sourced rules), `video` (a video studio: seven roles, six styles including agent films, measured QA, voice-over, X player cards, and `record.mjs` for explainers of the real app), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ads-landingpage` |
 | Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |

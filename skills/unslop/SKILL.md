@@ -1,7 +1,7 @@
 ---
 name: unslop
 description: >-
-  Find and remove AI-slop patterns (stock phrases, em dashes, rule of three, promo gloss) in German and English prose, keeping facts and voice. Use for unslop, humanize, 'sounds like ChatGPT', 'klingt generisch', and unasked on prose you drafted.
+  Runs on every user-facing text before it ships (posts, ads, emails, landing and app copy, docs): removes AI-slop patterns (stock phrases, cut words, em dashes, promo gloss) in German and English, puts real specifics first, checks platform limits, keeps facts and voice. Use for unslop, humanize, 'sounds like ChatGPT', 'klingt generisch', and unasked on any text you drafted for people to read.
 ---
 
 # Unslop
@@ -20,57 +20,109 @@ benchmark marked its rewrite pipeline "no-ship" for over-editing):
 
 ## Workflow
 
+Run it on every user-facing text before it ships, whoever drafted it: a post, an ad, an email, a
+landing section, an app string, release notes. Six steps, in this order.
+
+### 0. Read the voice file
+
+The repo's voice file says how this product sounds and what it never says. Path: `unslop.voice`
+in `agent-kit.config.json`, else `docs/agent-kit/voice.md`. No file yet? Work without it, and
+create it from `references/voice-template.md` the first time step 6 has something to record.
+Its "Learned rules" override the defaults in this skill; the carve-outs below and the repo's
+`AGENTS.md` override it.
+
 ### 1. Scan (deterministic, free)
 
 ```bash
 python3 <unslop>/scripts/slop_scan.py <file-or-->   # add --json for tooling
 ```
 
-Stdlib-only, DE/EN auto-detected, masks code/quotes/blockquotes so
-documentation about slop never flags itself. Findings are *candidates*, not
-verdicts.
+Stdlib-only, DE/EN auto-detected, masks code/quotes/blockquotes so documentation about slop never
+flags itself. It reads the voice file's "Never says" list too (`--voice PATH`, or `--voice none`).
+Findings are *candidates*, not verdicts.
 
-### 2. Judge (the actual audit)
+### 2. Specifics first
 
-Read `references/patterns.md` for the full bilingual catalog. The scanner
-only covers the deterministic subset; judgment tells (preview/recap symmetry,
-soulless neutrality, elegant variation, unearned analysis) are yours to spot.
-For each scanner finding plus your own, decide in context:
+Generic copy has no fact a reader can act on. List the concrete facts the text **has** and the
+ones it **should have** for its job: a number, a date or day, a time, a price, a place, how many
+are left, a reason to act now. Then:
 
-- **Real slop:** the words carry no information a knowledgeable author would
-  write. Report with the quote, the category, and the concrete fix.
-- **False positive:** literal domain use (a company named like a stock word,
-  such as Leverage, is never flagged), quoted material, genre convention
-  (bold-label bullets in reference docs, a content skeleton the repo checks,
-  changelog structure), or a required legal hedge. Say why it's exempt.
+- Put the real ones first: into the opening line, before any fold.
+- Flag copy that has none ("no specifics: the reader learns nothing they could act on").
+- **Never invent one.** A missing fact becomes `[PLACEHOLDER: price]` (or date, place, count) and a
+  question to the user. A placeholder left in the text blocks shipping.
 
-Output an audit as: quoted issue → category → suggested replacement, grouped
-by severity (clear slop vs. judgment call). Never silently edit during an
-audit.
+`scripts/ship_check.py` (step 4) lists what it finds; judging what the text *should* have is yours.
+Not every text needs a number: a changelog line or an error message can be specific without one.
 
-### 3. Rewrite (only when asked)
+### 3. Judge (the actual audit)
 
-Before touching the text, extract the constraint list: every number, name,
-date, URL, claim, hedge, and negation. Rewrite paragraph by paragraph against
-`references/patterns.md` § Preservation, then validate:
+Read `references/patterns.md` for the full bilingual catalog. The scanner only covers the
+deterministic subset; judgment tells (preview/recap symmetry, soulless neutrality, elegant
+variation, unearned analysis) are yours to spot. For each scanner finding plus your own, decide in
+context:
+
+- **Real slop:** the words carry no information a knowledgeable author would write. Report with
+  the quote, the category, and the concrete fix.
+- **False positive:** literal domain use (a company named like a stock word, such as Leverage, is
+  never flagged; a train journey is a journey), quoted material, genre convention (bold-label
+  bullets in reference docs, a content skeleton the repo checks, changelog structure), or a
+  required legal hedge. Say why it's exempt.
+
+Output an audit as: quoted issue → category → suggested replacement, grouped by severity (clear
+slop vs. judgment call). Never silently edit during an audit.
+
+### 4. Check the limits
+
+When the text goes to a platform, check every field against `references/platform-limits.md`:
+
+```bash
+python3 <unslop>/scripts/ship_check.py --platform instagram caption.txt
+python3 <unslop>/scripts/ship_check.py --platform google-ads ads.txt   # Headline:/Description: lines
+```
+
+Platforms: instagram, linkedin, x, tiktok, reels, email, cold-email, google-ads, meta-ads. Exit 1
+means a field is over its limit or a placeholder is left. **Platform unknown:** check against the
+125-character fold and say so in the delivery, with a line asking which platform it is for.
+
+### 5. Rewrite (only when asked)
+
+Before touching the text, extract the constraint list: every number, name, date, URL, claim,
+hedge, and negation. Rewrite paragraph by paragraph against `references/patterns.md` §
+Preservation and the voice file, then validate:
 
 - diff the constraint list against the rewrite: 100% must survive;
-- rerun the scanner on the result: new findings mean another pass;
-- score against `references/rubric.md`: pass at 32/40, and remember
-  criterion 5 punishes sterilized corporate-neutral as hard as AI tells.
+- rerun the scanner and `ship_check.py` on the result: new findings mean another pass;
+- score against `references/rubric.md`: pass at 32/40, and remember criterion 5 punishes
+  sterilized corporate-neutral as hard as AI tells.
 
-Show the rewrite with a short list of what changed and why. If the original
-was fine, say so: "no changes needed" is a valid, good outcome.
+Show the rewrite with a short list of what changed and why. If the original was fine, say so: "no
+changes needed" is a valid, good outcome.
+
+### 6. Learn from the user's edits
+
+When the user edits a draft, rejects a phrase, or says "always", "never", "I don't like" or "that's
+perfect", append it to the voice file in the same turn:
+
+- a phrase they cut or banned → a bullet under **Never says** (the scanner flags it from then on);
+- a phrase or move they keep or add → **Says**;
+- a correction with a reason → a rule under **Learned rules** (`### YYYY-MM-DD: title`, then
+  `**Rule:**`, `**Why:**`, `**Applies to:**`). When they silently rewrite a draft, infer the rule
+  from the diff and say which rule you logged.
+
+Skip one-off edits to a single piece and anything the file already says. Every ten or so rules,
+merge duplicates and drop reversed ones; keep the file under about 120 lines. The file belongs to
+the repo, never to a global location: each product has its own voice.
 
 ## Boundary with `copywriting`
 
 This skill removes machine fingerprints from prose that already says the right thing. Deciding
-what a line should say (a one-liner, a hero headline, a CTA, which of five candidates ships)
+what a line should say (a one-liner, a hero headline, a CTA, which hook pattern opens a post,
+which of five candidates ships)
 belongs to `copywriting`, which runs this skill as its prose pass. When the user asks for a new
 line rather than a cleaner one, hand over.
 
 ## Carve-outs
-
 
 Every repo has its own in `docs/agent-kit/unslop.md` (and its `AGENTS.md`). Read them before an
 audit. These hold everywhere:
@@ -92,9 +144,18 @@ audit. These hold everywhere:
 
 ## References
 
-- `references/patterns.md`: bilingual pattern catalog with fixes and the
-  preservation contract. Read it on every audit.
+- `references/patterns.md`: bilingual pattern catalog with fixes, the cut words, the
+  specifics rule and the preservation contract. Read it on every audit.
+- `references/platform-limits.md`: the per-platform field limits and the unknown-platform rule.
+- `references/voice-template.md`: the starting voice file and its rule format.
 - `references/rubric.md`: 8-criterion scoring for rewrites.
+- `scripts/slop_scan.py` (phrases, structure, voice bans) and `scripts/ship_check.py`
+  (specifics, placeholders, platform limits).
+- Opening lines: the `copywriting` skill's `references/hooks.md` holds ten storytelling hook
+  patterns; the house bans there (no "nobody tells you", no "not X, it's Y", no em dashes) come
+  from this catalog.
+- The cut list, the specifics-first order and the platform limits follow Tobi Adonadon's /closer
+  skill (tobiadonadon.com, 2026-11), in our own rules.
 - Upstream research: theclaymethod/unslop (MIT; English-only, 3-layer
   scanners, eval-first) and Wikipedia's "Signs of AI writing". Consult them when
   extending the catalog, and add new patterns to both `patterns.md` and
