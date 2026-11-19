@@ -36,7 +36,8 @@ ones are where a skimmer stops.
   the frame. One word or phrase may be emphasised, never two.
 - **One strong brand colour** across the set, or two grounds of one family alternating. Same
   headline position and type size on every frame.
-- **The device is composed, not parked:** tilted 6° to 12°, oversized, cut by the frame edge.
+- **The device is composed, not parked:** oversized, cut by the frame edge, tilted 6° to 12° when
+  it moves alone, 1° to 3° when real UI lifted off it carries the motion.
 - **A hero object carries the idea** where the app has one (and owns the art): bigger than life,
   allowed to cross into frame 2 so the set opens as one picture.
 - **Frame 1 sells the outcome; every later frame shows one feature.**
@@ -184,7 +185,7 @@ node .agents/skills/app-screenshots/scripts/compose-set.mjs --spec <screenshots>
 - Placements are in artboard units (each frame 430 wide, about 934 tall), centre `x`/`y`, so one
   spec renders every size. Templates fill in sensible placements; override only to nudge.
 - Every headline gets one type size across the set (`"headlineSize": "set"`), the largest at which
-  all of them fit three lines.
+  all of them fit their lines (`"headlineLines"`, three by default); a hero may size its own.
 - A device is cut by its own frame; only objects and grounds cross a seam, because the store
   draws a gap between frames.
 - `"copy": "bottom"` mirrors the template's default heights, so the picture moves up.
@@ -196,6 +197,9 @@ node .agents/skills/app-screenshots/scripts/compose-set.mjs --spec <screenshots>
 - **Warned:** a device that bleeds across a seam.
 - `--sheet` writes the whole set as the product page shows it (rounded, with gaps, so the
   panorama is judged with its seams) and again with every word removed.
+- `--crops <png>` writes every callout's crop on one sheet. Measure crops on the full-size
+  capture and check this sheet first: a crop placed by eye from a preview misses by tens of
+  pixels and lifts the wrong half of a button.
 
 Then **look at the sheet** and fix the top three problems before rendering the final set: the
 design skill's taste guide (`design`, `references/taste/GUIDE.md`, "Look") applies here too.

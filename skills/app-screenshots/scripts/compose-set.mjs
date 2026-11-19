@@ -88,6 +88,12 @@ export const DEFAULTS = {
 /** A device turned further than this is hard to read; objects may turn as they like. */
 export const MAX_DEVICE_TILT = 15
 
+/** How the emphasised word of a headline is set, for the set or one frame. */
+export const EMPHASES = ['colour', 'pill']
+
+/** What a sticker may carry before its text. */
+export const STICKER_ICONS = ['check']
+
 /** WCAG's minimum for large text and graphics, which is what every word and mark on a frame is. */
 export const MIN_CONTRAST = 3
 
@@ -201,7 +207,7 @@ function placementErrors(p, at, need) {
   }
   if (isNum(p.width) && p.width <= 0) errors.push(`${at}.width must be positive`)
   if (need === 'screen' && isNum(p.rotate) && Math.abs(p.rotate) > MAX_DEVICE_TILT) {
-    errors.push(`${at}.rotate is ${p.rotate}°; a device turned more than ${MAX_DEVICE_TILT}° is hard to read (6° to 12° looks deliberate)`)
+    errors.push(`${at}.rotate is ${p.rotate}°; a device turned more than ${MAX_DEVICE_TILT}° is hard to read (1° to 3° under lifted callouts, 6° to 12° alone)`)
   }
   return errors
 }
@@ -229,8 +235,9 @@ export function validateSetSpec(spec) {
   for (const key of ['background', 'ink', 'font']) {
     if (!isText(spec[key])) errors.push(`"${key}" is required`)
   }
-  if (spec.emphasis !== undefined && !['colour', 'pill'].includes(spec.emphasis)) errors.push('"emphasis" must be "colour" or "pill"')
+  if (spec.emphasis !== undefined && !EMPHASES.includes(spec.emphasis)) errors.push('"emphasis" must be "colour" or "pill"')
   if (spec.headlineSize !== undefined && !['set', 'frame'].includes(spec.headlineSize)) errors.push('"headlineSize" must be "set" or "frame"')
+  if (spec.headlineLines !== undefined && ![1, 2, 3].includes(spec.headlineLines)) errors.push('"headlineLines" must be 1, 2 or 3')
   if (!Array.isArray(spec.frames) || spec.frames.length === 0) return [...errors, '"frames" must be a non-empty array']
   if (spec.frames.length > MAX_FRAMES) errors.push(`${spec.frames.length} frames; Apple takes at most ${MAX_FRAMES}`)
 
@@ -259,6 +266,11 @@ export function validateSetSpec(spec) {
       errors.push(...copyErrors(frame.sub, { at, field: 'sub' }))
     }
     if (frame.copy !== undefined && !['top', 'bottom'].includes(frame.copy)) errors.push(`${at}: "copy" must be "top" or "bottom"`)
+    if (frame.emphasis !== undefined && !EMPHASES.includes(frame.emphasis)) errors.push(`${at}: "emphasis" must be "colour" or "pill"`)
+    if (frame.headlineLines !== undefined && ![1, 2, 3].includes(frame.headlineLines)) errors.push(`${at}: "headlineLines" must be 1, 2 or 3`)
+    if (frame.headlineSize !== undefined && frame.headlineSize !== 'frame') {
+      errors.push(`${at}: a frame's "headlineSize" can only be "frame" (sized on its own, like a hero)`)
+    }
     if (frame.align !== undefined && !['center', 'left'].includes(frame.align)) errors.push(`${at}: "align" must be "center" or "left"`)
 
     errors.push(...placementErrors(frame.device, `${at}.device`, frame.template === 'proof' ? undefined : 'screen'))
@@ -285,6 +297,14 @@ export function validateSetSpec(spec) {
       if (!Array.isArray(crop) || crop.length !== 4 || !crop.every((v) => Number.isInteger(v) && v >= 0)) {
         errors.push(`${at}: callouts[${ci}] needs "crop": [x, y, w, h] in capture pixels`)
       }
+      const point = c?.at
+      if (point !== undefined && !(Array.isArray(point) && point.length === 2 && point.every(isNum))) {
+        errors.push(`${at}: callouts[${ci}].at must be [x, y], the callout's centre in artboard units`)
+      }
+      // A piece of another capture has no place on this device to start from.
+      if (c?.screen !== undefined && (!isText(c.screen) || point === undefined)) {
+        errors.push(`${at}: callouts[${ci}] cut from another "screen" needs "at": [x, y]`)
+      }
     }
     if (t === 'before-after') {
       errors.push(...placementErrors(frame.before ?? {}, `${at}.before`, 'screen'))
@@ -309,6 +329,9 @@ export function validateSetSpec(spec) {
       if (!isText(s?.text)) errors.push(`${at}: stickers[${si}] needs "text"`)
       else errors.push(...copyErrors(s.text, { at, field: 'sticker', sourced: isText(s.source) }))
       errors.push(...placementErrors({ x: s?.x, y: s?.y, rotate: s?.rotate }, `${at}.stickers[${si}]`))
+      if (s?.icon !== undefined && !STICKER_ICONS.includes(s.icon)) {
+        errors.push(`${at}: stickers[${si}].icon must be one of ${STICKER_ICONS.join(', ')}`)
+      }
     }
   }
   return errors
@@ -510,20 +533,34 @@ const measureLine = (font, style) => (toks, px) => headlineLine(font, toks, px, 
  * coordinates are strip pixels.
  */
 /** The headline's measure and size range at one size, in pixels. */
-function headlineLimits(s, size) {
-  return { maxWidth: size.w - 64 * s, maxFont: Math.round(58 * s), minFont: Math.round(30 * s), maxLines: 3 }
+/**
+ * The most lines a headline may take: the frame's own `headlineLines`, the
+ * set's, else three. Two keeps a phrase whole ("Swipe right, / it's done")
+ * where three would break it wherever the width runs out.
+ */
+const linesOf = (spec, frame) => frame.headlineLines ?? spec.headlineLines ?? 3
+
+function headlineLimits(s, size, maxLines = 3) {
+  return { maxWidth: size.w - 64 * s, maxFont: Math.round(58 * s), minFont: Math.round(30 * s), maxLines }
 }
 
 /**
  * One headline size for the whole set: the largest size at which every
- * headline fits in three lines. Frames whose headlines differ in length then
- * differ in line count, not in type size, which is what makes a set read as one.
+ * headline fits in its lines (three unless `headlineLines` says fewer). Frames
+ * whose headlines differ in length then differ in line count, not in type
+ * size, which is what makes a set read as one.
  */
 export function setHeadlineSize(frames, ctx) {
   const { s, size, font, spec } = ctx
+  // A frame with its own size (the hero, set larger than the rest) does not set the others'.
+  const shared = frames.filter((frame) => frame.headlineSize !== 'frame')
+  if (shared.length === 0) return undefined
   return Math.min(
-    ...frames.map((frame) =>
-      fitTokens(tokens(frame.headline), measureLine(font, styleOf(spec, frame)), { ...headlineLimits(s, size), prefer: 1 }).fontSize,
+    ...shared.map((frame) =>
+      fitTokens(tokens(frame.headline), measureLine(font, styleOf(spec, frame)), {
+        ...headlineLimits(s, size, linesOf(spec, frame)),
+        prefer: 1,
+      }).fontSize,
     ),
   )
 }
@@ -532,11 +569,11 @@ function copyBlock(frame, ctx, frameLeft) {
   const { s, size, font, bodyFont, spec } = ctx
   const style = styleOf(spec, frame)
   const margin = 32 * s
-  const limits = headlineLimits(s, size)
+  const limits = headlineLimits(s, size, linesOf(spec, frame))
   const { maxWidth } = limits
   const toks = tokens(frame.headline)
   // At the set's size: the fewest lines that fit. Per frame: fitted on its own.
-  const { lines, fontSize } = ctx.setPx
+  const { lines, fontSize } = ctx.setPx && frame.headlineSize !== 'frame'
     ? fitTokens(toks, measureLine(font, style), { ...limits, maxFont: ctx.setPx, minFont: ctx.setPx, prefer: 0 })
     : fitTokens(toks, measureLine(font, style), limits)
   const lead = fontSize * 1.0
@@ -569,14 +606,16 @@ function copyBlock(frame, ctx, frameLeft) {
 
 function styleOf(spec, frame) {
   const ink = frame.ink ?? spec.ink
+  // A frame may set its own emphasis: the hero's word on a pill, the rest in a colour.
+  const emphasis = frame.emphasis ?? spec.emphasis ?? 'colour'
   return {
     ink,
     subInk: frame.subInk ?? spec.subInk ?? ink,
     accent: frame.accent ?? spec.accent ?? ink,
-    emphasis: spec.emphasis ?? 'colour',
+    emphasis,
     pill: frame.pill ?? spec.pill ?? spec.accent ?? ink,
-    emphasisInk: frame.pillInk ?? spec.pillInk ?? (spec.emphasis === 'pill' ? (frame.background ?? spec.background) : ink),
-    pillRotate: spec.pillRotate ?? -3,
+    emphasisInk: frame.pillInk ?? spec.pillInk ?? (emphasis === 'pill' ? (frame.background ?? spec.background) : ink),
+    pillRotate: frame.pillRotate ?? spec.pillRotate ?? -3,
   }
 }
 
@@ -698,17 +737,28 @@ function stickerSvg(st, ctx, frameLeft, defaults) {
   const fill = st.fill ?? defaults.fill
   const ink = st.ink ?? defaults.ink
   const o = outline(bodyFont, st.text, px, ink)
-  const w = o.width + px * 1.3
+  // A check before the text: the chip states a condition the app holds (a filter, a rule).
+  const icon = st.icon === 'check' ? px * 0.9 : 0
+  const gap = icon ? px * 0.4 : 0
+  const w = o.width + icon + gap + px * 1.3
   const h = px * 2.1
   const cx = frameLeft + st.x * s
   const cy = st.y * s
   const blur = px * 0.35
+  const textCx = cx + (icon + gap) / 2
+  let mark = ''
+  if (icon) {
+    const ix = cx - w / 2 + px * 0.65
+    mark =
+      `<path d="M${ix.toFixed(1)} ${cy.toFixed(1)} l${(icon * 0.33).toFixed(1)} ${(icon * 0.33).toFixed(1)} l${(icon * 0.62).toFixed(1)} ${(-icon * 0.66).toFixed(1)}" ` +
+      `fill="none" stroke="${st.iconInk ?? ink}" stroke-width="${(px * 0.17).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`
+  }
   return {
     svg:
       `<g transform="rotate(${st.rotate ?? 0} ${cx.toFixed(1)} ${cy.toFixed(1)})">` +
       `<rect x="${(cx - w / 2).toFixed(1)}" y="${(cy - h / 2 + blur * 0.8).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${(h / 2).toFixed(1)}" fill="#000" fill-opacity="0.18" filter="url(#chip)"/>` +
       `<rect x="${(cx - w / 2).toFixed(1)}" y="${(cy - h / 2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${(h / 2).toFixed(1)}" fill="${fill}"/>` +
-      `${o.svg(cx, cy + px * 0.36)}</g>`,
+      `${mark}${o.svg(textCx, cy + px * 0.36)}</g>`,
     blur,
   }
 }
@@ -835,14 +885,15 @@ export async function renderStrip(spec, sizeKey, { base, sharp, font, bodyFont, 
         const [x, y, w, h] = c.crop
         const scale = c.scale ?? 1.3
         const [dx, dy] = c.shift ?? [0, 0]
-        const [ccx, ccy] = onDevice(dev, [x + w / 2, y + h / 2], cx, cy, frame.device.rotate ?? 0, k)
+        // Where the crop sits on the device, or a free place on the artboard.
+        const [ccx, ccy] = c.at ? at({ x: c.at[0], y: c.at[1] }) : onDevice(dev, [x + w / 2, y + h / 2], cx, cy, frame.device.rotate ?? 0, k)
         const cw = Math.round(w * k * scale)
         const ch = Math.round(h * k * scale)
         const r = Math.round((c.radius ?? 14) * s)
         const blur = Math.round(14 * s)
         const pad = blur * 3
         const mask = Buffer.from(`<svg width="${cw}" height="${ch}"><rect width="${cw}" height="${ch}" rx="${r}" fill="#fff"/></svg>`)
-        const cut = await sharp(path.resolve(base, frame.device.screen))
+        const cut = await sharp(path.resolve(base, c.screen ?? frame.device.screen))
           .extract({ left: x, top: y, width: w, height: h })
           .resize(cw, ch)
           .composite([{ input: mask, blend: 'dest-in' }])
@@ -1010,13 +1061,51 @@ export async function writeSetSheet(spec, file, context) {
 }
 
 /**
+ * Every callout's crop, cut from its capture and stacked on one sheet at half
+ * size. Crop boxes are written by hand in capture pixels, and a box judged on
+ * a scaled-down preview misses by tens of pixels: this is where that shows,
+ * before anything is placed.
+ */
+export async function writeCropSheet(spec, file, { base, sharp }) {
+  const tiles = []
+  const g = 24
+  let top = g
+  let width = 0
+  for (const [i, frame] of spec.frames.entries()) {
+    for (const [ci, c] of (frame.callouts ?? []).entries()) {
+      const screen = c.screen ?? frame.device?.screen
+      if (!screen) continue
+      const [x, y, w, h] = c.crop
+      const meta = await sharp(path.resolve(base, screen)).metadata()
+      if (x + w > meta.width || y + h > meta.height) {
+        throw new Error(`frame ${i + 1}: callout ${ci + 1} crop [${c.crop.join(', ')}] leaves its ${meta.width}x${meta.height} capture`)
+      }
+      const tw = Math.max(1, Math.round(w / 2))
+      const th = Math.max(1, Math.round(h / 2))
+      const tile = await sharp(path.resolve(base, screen)).extract({ left: x, top: y, width: w, height: h }).resize(tw, th).png().toBuffer()
+      tiles.push({ input: tile, top, left: g })
+      top += th + g
+      width = Math.max(width, tw)
+    }
+  }
+  if (tiles.length === 0) throw new Error('no callouts to show; --crops needs at least one "callouts" entry')
+  mkdirSync(path.dirname(file), { recursive: true })
+  // A loud ground, so a crop that caught the wrong background shows at its edge.
+  await sharp({ create: { width: width + g * 2, height: top, channels: 3, background: '#E0407A' } })
+    .composite(tiles)
+    .png()
+    .toFile(file)
+  return file
+}
+
+/**
  * Compose every size a set spec asks for, and the review sheet when asked.
  *
  * @param {string} specPath
  * @param {{ sharp: Function, createFont: (data: Buffer) => any }} [deps]
  * @param {{ sheet?: string }} [options]
  */
-export async function composeSet(specPath, deps, { sheet } = {}) {
+export async function composeSet(specPath, deps, { sheet, crops } = {}) {
   const { spec, base } = readSpec(specPath)
   const errors = validateSetSpec(spec)
   if (errors.length > 0) throw new Error(`${specPath}:\n  ${errors.join('\n  ')}`)
@@ -1024,6 +1113,7 @@ export async function composeSet(specPath, deps, { sheet } = {}) {
   const font = readFont(base, spec.font, createFont)
   const bodyFont = spec.bodyFont ? readFont(base, spec.bodyFont, createFont) : font
   const context = { base, sharp, font, bodyFont }
+  if (crops) await writeCropSheet(spec, path.resolve(crops), context)
   const sets = []
   const warnings = new Set()
   for (const size of wantedSizes(spec, ['6.9'])) {
@@ -1043,15 +1133,17 @@ export async function main(argv) {
   const flag = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined)
   const specPath = flag('--spec')
   if (!specPath) {
-    console.error('usage: compose-set.mjs --spec <set.json> [--sheet <review.png>]')
+    console.error('usage: compose-set.mjs --spec <set.json> [--sheet <review.png>] [--crops <crops.png>]')
     return 2
   }
   const sheet = flag('--sheet')
+  const crops = flag('--crops')
   try {
-    const { sets, warnings } = await composeSet(specPath, undefined, { sheet })
+    const { sets, warnings } = await composeSet(specPath, undefined, { sheet, crops })
     console.log(formatSets(sets, SIZES))
     for (const w of warnings) console.log(`warning: ${w}`)
     if (sheet) console.log(`review sheet: ${sheet} (top: as the product page shows it; bottom: copy hidden)\n`)
+    if (crops) console.log(`crop sheet: ${crops} (every callout's crop at half size; check each edge)\n`)
     return 0
   } catch (error) {
     console.error(error.message)
