@@ -9,7 +9,8 @@ Three checks, in the order the skill runs them:
 2. Placeholders. Any [PLACEHOLDER ...] or [TODO ...] left in the text.
 3. Platform limits from references/platform-limits.md. With no --platform the
    125-character fold applies (Instagram and Meta Ads, the tightest feed fold),
-   and the output says so.
+   and the output says so. --platform none skips limits: for a landing page,
+   docs or an app string, which have no fold (copywriting owns their budgets).
 
 Input is plain text. Fields are lines that start with a label:
   Subject: / Preview:         (email, cold-email)
@@ -47,6 +48,7 @@ LIMITS = {
                    ("body", "word-range", (50, 90), "body: 50 to 90 words")],
     "google-ads": [("headline", "chars", 30, "each headline max 30 chars"),
                    ("description", "chars", 90, "each description max 90 chars")],
+    "none": [],
     "unknown": [("body", "fold", 125, "platform unknown: checked against the 125-char fold, the tightest feed fold; name the platform for its own limits")],
 }
 ALIASES = {"twitter": "x", "ig": "instagram", "meta": "meta-ads", "facebook": "meta-ads",
@@ -61,8 +63,9 @@ SPECIFICS = [
     ("price", r"(?:[€$£]\s?\d+(?:[.,]\d+)*|\d+(?:[.,]\d+)*\s?(?:€|\$|£|eur|euro|usd|dollars?|chf)\b)"),
     ("time", r"\b\d{1,2}(?::\d{2})?\s?(?:am|pm|uhr)\b|\b\d{1,2}:\d{2}\b"),
     ("date", r"\b\d{1,2}\.\s?\d{1,2}\.(?:\d{2,4})?|\b\d{4}-\d{2}-\d{2}\b|\b(?:jan(?:uary|uar)?|feb(?:ruary|ruar)?|mar(?:ch)?|märz|apr(?:il)?|may|mai|june?|juni|july?|juli|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?|dez(?:ember)?)\b\.?\s?\d{0,2}"),
-    ("weekday", r"\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tonight|tomorrow|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|heute|morgen)\b"),
-    ("number", r"\b\d+(?:[.,]\d+)?\s?%?|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|twelve|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\b"),
+    # "today" and "tomorrow" are urgency words, not facts: they do not count.
+    ("weekday", r"\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\b"),
+    ("number", r"\b\d+(?:[.,]\d+)?\s?%?|\b(?:two|three|four|five|six|seven|eight|nine|ten|twelve|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\b"),
 ]
 
 
@@ -167,6 +170,8 @@ def main() -> None:
         print(f"== {args.file} [{r['platform']}]")
         if r["specifics"]:
             print("  specifics: " + ", ".join(f"{s['value']} ({s['kind']})" for s in r["specifics"]))
+        elif r["placeholders"]:
+            print("  no-specifics  none yet beyond the placeholders below")
         else:
             print("  no-specifics  no number, price, date, weekday or time: add the real one or mark [PLACEHOLDER]")
         for p in r["placeholders"]:

@@ -84,7 +84,7 @@ LITERAL_JOURNEY = re.compile(r"\b(?:train|bus|car|flight|road|rail|boat|ferry|co
 DE_PHRASES = [
     ("throat-clearing", r"(?:tauchen wir (?:ein|gemeinsam)|lassen sie uns (?:einen blick|eintauchen)|werfen wir einen blick|schnallen sie sich an|willkommen in der welt)"),
     ("emphasis-crutch", r"(?:lassen sie das (?:kurz )?(?:sacken|wirken)|nicht mehr wegzudenken|das muss man sich (?:mal )?vorstellen)"),
-    ("significance-inflation", r"(?:spiel(?:t|en)\b.{0,50}?eine (?:entscheidende|zentrale|wichtige|maßgebliche|immer größere) rolle|meilenstein|von unschätzbarem wert|wahrer game.?changer|auf ein neues level)"),
+    ("significance-inflation", r"(?:spiel(?:t|en)\b.{0,50}?eine (?:entscheidende|zentrale|wichtige|maßgebliche|immer größere) rolle|eine (?:entscheidende|zentrale|maßgebliche|immer größere) rolle\b.{0,50}?spiel(?:t|en)\b|meilenstein|von unschätzbarem wert|wahrer game.?changer|auf ein neues level)"),
     ("promotional", r"(?:revolutionier|bahnbrechend|erstklassig|maßgeschneidert|nahtlos|ganzheitlich|innovativ(?:e|er|es|en)? lösung|einzigartig(?:e|es)? erlebnis)"),
     ("filler", r"(?:in der heutigen (?:digitalen |schnelllebigen |modernen )?(?:welt|zeit)|es ist (?:wichtig|entscheidend|unerlässlich)(?:,| zu (?:beachten|betonen|verstehen))|im (?:heutigen|modernen) zeitalter|in zeiten von|am ende des tages|nicht zuletzt)"),
     ("meta-scaffold", r"(?:zusammenfassend lässt sich sagen|abschließend lässt sich (?:festhalten|sagen)|zusammenfassend kann (?:man|gesagt werden)|wie eingangs erwähnt|fazit\s*:)"),
@@ -94,7 +94,7 @@ DE_PHRASES = [
     ("nobody-tells-you", r"\b(?:was dir )?(?:niemand|keiner) (?:sagt dir|sagt|erzählt dir|spricht über|redet über|bereitet dich)\b"),
     ("rhetorical-setup", r"(?:doch was (?:bedeutet|heißt) das (?:konkret|genau|für sie|für dich)|die antwort (?:lautet|ist einfach)|warum (?:ist das wichtig|das wichtig ist)\??\s|sie fragen sich(?:jetzt)? vielleicht)"),
     ("generic-conclusion", r"(?:die zukunft (?:sieht rosig aus|bleibt spannend)|es bleibt spannend|eines ist (?:sicher|klar)|der schlüssel (?:zum erfolg )?liegt)"),
-    ("ai-vocabulary", r"(?:das volle potenzial (?:aus(?:zu)?schöpfen|entfalten)|potenzial(?:e)? (?:voll )?aus(?:zu)?schöpfen|die weichen (?:für die zukunft )?stellen|hand in hand|des weiteren|darüber hinaus bietet)"),
+    ("ai-vocabulary", r"(?:das volle potenzial\b.{0,40}?(?:aus(?:zu)?schöpfen|entfalten)|potenzial(?:e)? (?:voll )?aus(?:zu)?schöpfen|die weichen (?:für die zukunft )?stellen|hand in hand|des weiteren|darüber hinaus bietet)"),
     ("chatbot-artifact", r"(?:ich hoffe, das hilft|gerne helfe ich|als (?:ki|sprachmodell)|lassen sie es mich wissen)"),
 ]
 

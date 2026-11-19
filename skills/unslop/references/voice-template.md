@@ -7,6 +7,7 @@ about 120 lines: each product has its own voice. -->
 
 ## Sounds like
 
+<!-- set these for the repo when you create the file; drop the lines that do not apply -->
 - Sentences: short, one claim each.
 - Address: Du (or Sie; never switch).
 - Emoji: never.
@@ -18,8 +19,8 @@ about 120 lines: each product has its own voice. -->
 
 ## Never says
 
-<!-- one phrase per bullet; slop_scan.py flags each as voice-ban. A note goes after " -- ". -->
-- game-changer -- 2026-11-19, cut from the launch post
+<!-- one phrase per bullet; slop_scan.py flags each as voice-ban. A note goes after " -- ",
+for example:  - thrilled to announce -- YYYY-MM-DD, cut from the newsletter intro -->
 
 ## Learned rules
 

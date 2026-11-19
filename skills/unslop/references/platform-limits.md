@@ -25,7 +25,8 @@ is wrong, fix it here and in `LIMITS` in the script in the same edit.
 Check against the **125-character fold** (Instagram and Meta Ads, the tightest feed fold) and say
 in the delivery that you did, and that naming the platform gives its own limits. Copy that works
 in 125 chars works on LinkedIn and X too; the reverse does not hold. For an email with no
-platform named, use `email`.
+platform named, use `email`. Text that never sits behind a fold (a landing section, docs, an app
+string) takes `--platform none`: the script then checks specifics and placeholders only.
 
 ## Input format for the script
 

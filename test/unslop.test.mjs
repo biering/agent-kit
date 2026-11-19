@@ -53,6 +53,15 @@ describe('slop_scan cut words', { skip }, () => {
   })
 })
 
+describe('slop_scan German', { skip }, () => {
+  it('finds a split "Rolle spielt" and a split "Potenzial ausschöpfen"', () => {
+    const text = 'Die Steuer, die beim Kauf eine entscheidende Rolle für viele Käufer spielt, ist hoch. Der Rechner hilft, das volle Potenzial deiner Kalkulation auszuschöpfen.'
+    const found = scan(text, ['--voice', 'none', '--lang', 'de']).map((f) => f.category)
+    assert.ok(found.includes('significance-inflation'), found)
+    assert.ok(found.includes('ai-vocabulary'), found)
+  })
+})
+
 describe('slop_scan voice file', { skip }, () => {
   it('flags "Never says" phrases from the repo voice file, found through agent-kit.config.json', () => {
     const repo = mkdtempSync(path.join(tmpdir(), 'unslop-'))
@@ -70,7 +79,11 @@ describe('slop_scan voice file', { skip }, () => {
   it('uses docs/agent-kit/voice.md when no path is configured, and skips it with --voice none', () => {
     const repo = mkdtempSync(path.join(tmpdir(), 'unslop-'))
     mkdirSync(path.join(repo, 'docs', 'agent-kit'), { recursive: true })
-    writeFileSync(path.join(repo, 'docs', 'agent-kit', 'voice.md'), readFileSync(path.join(SKILL, 'references', 'voice-template.md')))
+    const template = readFileSync(path.join(SKILL, 'references', 'voice-template.md'), 'utf8')
+    const voice = path.join(repo, 'docs', 'agent-kit', 'voice.md')
+    writeFileSync(voice, template)
+    assert.equal(scan('Thrilled to announce a game-changer.', [], repo).filter((f) => f.category === 'voice-ban').length, 0, 'the template bans nothing')
+    writeFileSync(voice, template.replace('## Never says\n', '## Never says\n\n- game-changer -- 2026-11-19, cut from the launch post\n'))
     assert.equal(scan('A game-changer.', [], repo).filter((f) => f.category === 'voice-ban').length, 1)
     assert.equal(scan('A game-changer.', ['--voice', 'none'], repo).filter((f) => f.category === 'voice-ban').length, 0)
   })
@@ -89,6 +102,16 @@ describe('ship_check', { skip }, () => {
     const vague = check('Join our amazing workshop experience!', 'instagram')
     assert.equal(vague.no_specifics, true)
     assert.equal(vague.status, 0, 'no specifics is advice, not a gate')
+  })
+
+  it('does not count urgency words as specifics', () => {
+    assert.equal(check('Book today, one click, start tomorrow.', 'instagram').no_specifics, true)
+  })
+
+  it('skips limits with --platform none, for text with no fold', () => {
+    const r = check(`Our analysis covers 400 banks. ${'More words here. '.repeat(20)}`, 'none')
+    assert.equal(r.status, 0)
+    assert.deepEqual(r.limits, [])
   })
 
   it('fails on a placeholder left in the text', () => {

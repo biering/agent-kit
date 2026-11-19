@@ -84,6 +84,8 @@ python3 <unslop>/scripts/ship_check.py --platform google-ads ads.txt   # Headlin
 Platforms: instagram, linkedin, x, tiktok, reels, email, cold-email, google-ads, meta-ads. Exit 1
 means a field is over its limit or a placeholder is left. **Platform unknown:** check against the
 125-character fold and say so in the delivery, with a line asking which platform it is for.
+Text with no fold (a landing section, docs, an app string) takes `--platform none`: specifics and
+placeholders only; `copywriting`'s `references/surfaces.md` holds its length budgets.
 
 ### 5. Rewrite (only when asked)
 
@@ -110,7 +112,9 @@ perfect", append it to the voice file in the same turn:
   `**Rule:**`, `**Why:**`, `**Applies to:**`). When they silently rewrite a draft, infer the rule
   from the diff and say which rule you logged.
 
-Skip one-off edits to a single piece and anything the file already says. Every ten or so rules,
+Skip one-off edits to a single piece (unless the user asks you to remember them) and anything
+the file already says. `Applies to` may name several surfaces; when unsure, scope it to the
+surface the edit came from and ask whether it holds wider. Every ten or so rules,
 merge duplicates and drop reversed ones; keep the file under about 120 lines. The file belongs to
 the repo, never to a global location: each product has its own voice.
 
