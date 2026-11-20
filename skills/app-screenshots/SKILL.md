@@ -280,8 +280,9 @@ relative to the package that holds that file:
 - **A screenshot failure does not change the exit code**
   ([eas-cli#3689](https://github.com/expo/eas-cli/issues/3689)). A push that prints success can
   have uploaded nothing. Confirm with `eas metadata:pull`, which writes the live set back.
-- The required `6.3` class most likely maps to `APP_IPHONE_61`; that is unverified, so push and
-  pull to confirm. Duo has no display type in eas-cli yet and goes up by hand.
+- The required `6.3` class (1206x2622) goes in `APP_IPHONE_61`: App Store Connect accepted and
+  processed a set there (November 2026, first through its API). Declare it beside `APP_IPHONE_67`
+  and read the sets back after a push. Duo has no display type in eas-cli yet and goes up by hand.
 - **`eas metadata:lint` does not check that the listing's URLs resolve.** A dead `supportUrl` is
   a guideline 1.5 rejection: run the repo's URL check before pushing.
 
