@@ -92,16 +92,29 @@ came from.
 Copy [templates/brief.md](templates/brief.md) to where the repo doc keeps briefs. Fill the 17
 elements from [elements.md](references/elements.md) with what the avatar already wants to hear,
 in the words the research found. The awareness level and the format decide how many elements the
-ad can carry; an element the format cannot carry is `n/a: <reason>`, never left blank. Cite each
-premise a line relies on as `[P1]`. Then:
+ad can carry. When the two disagree, the smaller wins. An element the ad does not carry is
+`n/a: <reason>`, never left blank. Cite the premise each clause relies on as `[P1]`; a cite covers
+its own clause only.
+
+The copy hook (element 5) is written here, with `copywriting`: its one-liner rules, and the hook
+patterns in its references when it has them. Write at least five candidates across two angles,
+score them, and put the winner in the brief. Keep the runners-up for the batch. Then:
 
 ```bash
 node <skill>/scripts/brief_check.mjs <brief.md>
 ```
 
-It fails an empty element, a premise without a source or date, a number, an urgency word or a
-proof word in an element that cites no premise, an impulse element with nothing behind it, and
-a deadline that has passed. Fix the brief, not the check.
+It fails an empty element; a premise without a source or a date, or one whose source is existing
+copy or hearsay; a number, an urgency word or a proof word in a clause that cites no premise;
+urgency whose premise holds no end date; anchoring or risk reversal with nothing behind it; and a
+deadline that has passed. It cannot tell whether the cited premise supports the clause. That is
+your job, and the launch checks'. Fix the brief, not the check.
+
+**When facts are missing,** write `missing: <what, and who can answer>` in the field. The check
+then fails on purpose. Stop there and reply with three things: the brief as it stands, the
+check's output, and the questions, each naming the source that would answer it. Do not write
+the ad around the gap. No repo doc and no existing copy to follow: write in the language of the
+request, ask for the form of address, and use the one in the request until the user answers.
 
 ### 4. Write: fit the brief into a proven reference
 
@@ -111,10 +124,9 @@ proof, offer, CTA), with their length in seconds or words. Write the brief's poi
 blocks. **The brief decides what is said; the reference only the order and the rhythm.** Never
 copy its words, visuals, characters or brand.
 
-Hooks, headlines and CTAs come from `copywriting` (its one-liner rules, and the hook patterns in
-its references when it has them): at least five hook candidates across two angles per concept,
-scored, top three shown. Then `unslop` over every string, then the platform's limits
-([production.md](references/production.md)).
+Write the result into the brief's `Script:` field, so the check reads what ships. Headlines and
+CTAs come from `copywriting` the same way as the hook. Then `unslop` over every string, then the
+platform's limits ([production.md](references/production.md)).
 
 ### 5. Batch: a risk portfolio
 

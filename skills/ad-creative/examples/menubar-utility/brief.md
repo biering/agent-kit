@@ -58,7 +58,7 @@ the coupon date is in the past after 2026-12-07, which the check then reports, a
 
 - Risk reversal: try it for 7 days free [P2], and if you buy, you have 30 days to ask for your money back [P5]
 - Gain now: 30 % off with the launch coupon [P6]
-- Loss later: the coupon ends on 2026-12-07 [P6]; after that it is 12 EUR [P1], and until then every call is one more chance for the pop-up
+- Loss later: the coupon ends on 2026-12-07 [P6]; after that it is 12 EUR [P1]. Every call without it is one more chance for the pop-up
 
 ## Writing
 
@@ -89,3 +89,4 @@ the coupon date is in the past after 2026-12-07, which the check then reports, a
 - [ ] Sizes, safe zones and text limits checked for this placement (production.md)
 - [ ] Captions burned in; the ad makes sense with the sound off
 - [ ] Every string went through unslop; the landing page repeats the ad's promise
+- [ ] A retargeting audience holds only visitors who consented; the ad stops when its offer ends

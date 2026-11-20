@@ -23,7 +23,10 @@ of whether anyone was misled.
 | Hidden advertising | UWG Anhang Nr. 11 | an advertorial or a fake organic post is marked as an ad |
 | Cures | UWG Anhang Nr. 17 | never claim it cures or relieves an illness |
 | "Free" | UWG Anhang Nr. 20 | "free" only when it costs nothing; a trial that turns into a subscription says so |
+| Numbers and results | UWG § 5 | a user count, a rating, "saves an hour" is a claim about the product: measured, dated, and the definition said ("downloads" are not "users", and neither are "happy users") |
 | Reviews | UWG Anhang Nr. 23b and 23c | no fake reviews or endorsements, no misrepresented real ones, no "verified buyers" without checking |
+| Coupons and launch prices | UWG § 5, § 5a | say where the code works (direct sale or a store, which may not take it) and stop the ad when the offer ends, at the time and in the time zone the coupon record holds |
+| Retargeting audiences | GDPR Art. 6, § 25 TDDDG (formerly TTDSG) *(not fetched)* | a list of site visitors exists only with the visitors' consent to the pixel; a brand without a consent banner has no retargeting (`ads-landingpage`, tracking) |
 | Price reductions | [PAngV § 11](https://www.gesetze-im-internet.de/pangv_2022/__11.html), Dir. 98/6/EC Art. 6a | "was 29, now 19" or "-30 %" is measured against the lowest price of the 30 days before the reduction (CJEU C-330/23, 2024-09-26, [press release](https://curia.europa.eu/jcms/upload/docs/application/pdf/2024-09/cp240152en.pdf)) |
 | Health claims | [HWG § 1](https://www.gesetze-im-internet.de/heilmwerbg/__1.html), [§ 3](https://www.gesetze-im-internet.de/heilmwerbg/__3.html); MDR (EU) 2017/745 Art. 2(1) | a claim about recognising, removing or relieving a disease brings the ad under the HWG, and software with a medical purpose is a medical device: never claim one |
 | Ads are identifiable | DSA (EU) 2022/2065 Art. 26 *(unverified text)* | the platform labels the ad; never dress it as news or a user's post |
@@ -47,7 +50,7 @@ Each line maps to a launch check in the brief ([templates/brief.md](../templates
 
 1. **Facts.** Every fact in the creative is a premise with a source, re-read on launch day.
 2. **Urgency.** Only a real, sourced end date. No stock (software has none), no timer, no
-   "last chance". After the date, the ad stops or changes.
+   "last chance". The ad is scheduled to stop when the offer ends, and says where the code works.
 3. **Proof.** No invented number, review, rating, testimonial or result. A real quote needs the
    author's consent; an example figure says it is an example.
 4. **Third parties.** No real character, game, film, celebrity, creator or brand, no lookalike,
@@ -61,3 +64,4 @@ Each line maps to a launch check in the brief ([templates/brief.md](../templates
    is free; a subscription says it is one.
 9. **Platform.** The placement's own policy pages above, read for this ad.
 10. **Landing page.** It repeats the ad's promise and holds the same facts (`ads-landingpage`).
+11. **Audience.** A retargeting audience is built only from visitors who consented to the pixel.

@@ -23,7 +23,7 @@ describe('brief_check', () => {
   it('fails the empty template on every element', () => {
     const { errors } = check(read('skills/ad-creative/templates/brief.md'))
     for (const [section, names] of ELEMENTS) {
-      for (const name of names) assert.ok(errors.includes(`${section}: ${name} is empty (write it, or "n/a: <reason>")`), `${name} not reported`)
+      for (const name of names) assert.ok(errors.some((e) => e.startsWith(`${section}: ${name} is empty`)), `${name} not reported`)
     }
     assert.ok(errors.some((e) => /Premises: P1 is empty/.test(e)))
   })
@@ -34,21 +34,66 @@ describe('brief_check', () => {
     assert.deepEqual(check(replaceLine(example(), 'Conditions', '- Conditions: n/a: product-aware audience')).errors, [])
   })
 
+  it('counts "missing: ..." and "TBD: ..." as empty', () => {
+    for (const value of ['missing: no reviews read yet', 'TBD: ask the owner', 'fehlt: Preisquelle']) {
+      assert.match(check(replaceLine(example(), 'USP', `- USP: ${value}`)).errors.join(), /Value sale: USP is empty/)
+    }
+  })
+
   it('fails a premise without a source or date', () => {
     const noSource = example().replace('| `site/legal/refund.md` |', '| |')
     assert.match(check(noSource).errors.join(), /P5 has no source/)
     const noDate = example().replace('| `site/legal/refund.md` | 2026-11-20 |', '| `site/legal/refund.md` | today |')
     assert.match(check(noDate).errors.join(), /P5 needs an as-of date/)
+    const copy = example().replace('| `site/legal/refund.md` |', '| our landing page headline |')
+    assert.match(check(copy).errors.join(), /P5: "our landing page headline" is not a source/)
+    const future = example().replace('| `site/legal/refund.md` | 2026-11-20 |', '| `site/legal/refund.md` | 2027-01-01 |')
+    assert.match(check(future).errors.join(), /P5 is dated 2027-01-01, after today/)
   })
 
   it('fails a number, urgency or proof without a cited premise', () => {
     const number = replaceLine(example(), 'Identification', '- Identification: you lose 20 minutes before every call')
-    assert.match(check(number).errors.join(), /Identification: states a number/)
+    assert.match(check(number).errors.join(), /Identification: a number without a premise/)
     const urgency = replaceLine(example(), 'Topic', '- Topic: last chance before the price goes up')
-    assert.match(check(urgency).errors.join(), /Topic: urgency without citing/)
+    assert.match(check(urgency).errors.join(), /Topic: urgency without the premise/)
     const proof = replaceLine(example(), 'Point of contact', '- Point of contact: thousands of users say they forgot Do Not Disturb')
     assert.match(check(proof).errors.join(), /Point of contact: proof/)
-    assert.deepEqual(check(replaceLine(example(), 'Topic', '- Topic: the client review where a message popped up')).errors, [])
+  })
+
+  it('checks each clause, so one cite does not cover a second claim', () => {
+    const second = replaceLine(example(), 'USP', '- USP: you set it up once [P3]; loved by thousands of freelancers')
+    assert.match(check(second).errors.join(), /USP: proof .*loved by thousands/)
+    const feature = example().replace('  - dream: present to a client', '  - dream: 10x faster for a client')
+    assert.match(check(feature).errors.join(), /Features: a number without a premise.*10x/)
+  })
+
+  it('fails urgency that cites a premise without an end date', () => {
+    const fake = replaceLine(example(), 'Copy hook', '- Copy hook: Nur noch heute 50 % Rabatt [P1]')
+    assert.match(check(fake).errors.join(), /Copy hook: urgency, but no cited premise holds an end date/)
+  })
+
+  it('does not flag words that only contain a trigger', () => {
+    const benign = replaceLine(example(), 'Topic', '- Topic: the client review, unlimited sending, a benutzerfreundlich Kundencall, Schlafmodus, nur noch ein Klick bis zum Call')
+    const { errors, warnings } = check(benign)
+    assert.deepEqual(errors, [])
+    assert.deepEqual(warnings, [])
+  })
+
+  it('checks the CTA and the script, which are what ships', () => {
+    const cta = example().replace('- CTA: Try it free', '- CTA: Nur heute! 50 % Rabatt, 10.000 Nutzer')
+    const errors = check(cta).errors.join()
+    assert.match(errors, /Writing: CTA: urgency/)
+    assert.match(errors, /Writing: CTA: proof/)
+    const script = example().replace('- CTA: Try it free', '- CTA: Try it free\n- Script: Rated by thousands. Try it.')
+    assert.match(check(script).errors.join(), /Writing: Script: proof/)
+    const blocks = example().replace('- Mini-blocks: hook', '- Mini-blocks: countdown 0-3 s; hook')
+    assert.match(check(blocks).errors.join(), /Writing: Mini-blocks: urgency/)
+  })
+
+  it('warns on health claims and questions that assert a condition', () => {
+    const { warnings } = check(replaceLine(example(), 'Copy hook', '- Copy hook: Got ADHD? It cures your procrastination.'))
+    assert.match(warnings.join(), /personal attributes/)
+    assert.match(warnings.join(), /health claim/)
   })
 
   it('fails a cite to a premise that does not exist', () => {
@@ -56,13 +101,21 @@ describe('brief_check', () => {
   })
 
   it('fails impulse elements and anchoring with nothing behind them', () => {
-    const errors = check(replaceLine(example(), 'Gain now', '- Gain now: a better week starting today')).errors.join()
-    assert.match(errors, /Gain now: cites no premise/)
+    assert.match(check(replaceLine(example(), 'Risk reversal', '- Risk reversal: nothing to lose')).errors.join(), /Risk reversal: cites no premise/)
+    assert.match(check(replaceLine(example(), 'Anchoring', '- Anchoring: cheaper than a coffee')).errors.join(), /Anchoring: cites no premise/)
+    assert.match(check(replaceLine(example(), 'Gain now', '- Gain now: a better week starting today')).errors.join(), /Gain now: urgency/)
+  })
+
+  it('lets loss later be the problem repeating, when there is no deadline', () => {
+    const honest = replaceLine(example(), 'Loss later', '- Loss later: every call without it is one more chance for the pop-up')
+    assert.deepEqual(check(honest).errors, [])
   })
 
   it('fails a deadline that has passed, not a past date that is history', () => {
     assert.deepEqual(check(example(), { today: '2026-12-07' }).errors, [])
-    assert.deepEqual(check(example(), { today: '2026-12-08' }).errors, ['Impulse sale: Loss later: the deadline 2026-12-07 has passed (today 2026-12-08)'])
+    const late = check(example(), { today: '2026-12-08' }).errors
+    assert.ok(late.includes('Impulse sale: Loss later: the date 2026-12-07 has passed (today 2026-12-08)'), late.join())
+    assert.ok(late.includes('Impulse sale: Gain now: the date 2026-12-07 has passed (today 2026-12-08)'), late.join())
   })
 
   it('needs every feature tagged with its lever', () => {
@@ -75,6 +128,9 @@ describe('brief_check', () => {
     assert.match(check(replaceLine(example(), 'Ad format', '- Ad format: hologram')).errors.join(), /Ad format "hologram"/)
     assert.match(check(replaceLine(example(), 'Risk', '- Risk: yolo')).errors.join(), /Risk "yolo"/)
     assert.match(check(replaceLine(example(), "Buyer's words", '- Buyer\'s words: "I always forget"')).errors.join(), /need the link/)
+    assert.match(check(replaceLine(example(), "Buyer's words", '- Buyer\'s words: "I always forget" [P3]')).errors.join(), /need the link/)
+    const annotated = replaceLine(replaceLine(example(), 'Awareness', '- Awareness: problem-aware (from reviews)'), 'Risk', '- Risk: moderate (one bet)')
+    assert.deepEqual(check(annotated).errors, [])
   })
 
   it('warns when a short format is asked to carry everything', () => {
@@ -86,6 +142,8 @@ describe('brief_check', () => {
   it('refuses launch until every check is ticked', () => {
     assert.match(check(example(), { launch: true }).errors.join(), /Launch checks: not ticked/)
     assert.deepEqual(check(example().replaceAll('- [ ]', '- [x]'), { launch: true }).errors, [])
+    const stale = check(example().replaceAll('- [ ]', '- [x]'), { launch: true, today: '2026-11-30' }).errors.join()
+    assert.match(stale, /P1 was read 2026-11-20; read it again before launch/)
   })
 
   it('runs from the command line with exit codes', () => {

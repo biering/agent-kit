@@ -66,8 +66,8 @@ citing the premises it relies on (`[P1]`).
 
 15. **Risk reversal.** Why not buying is the bigger risk: the trial, the refund, the free tier,
     framed against the time the product needs to prove itself. Only what the premises hold.
-16. **Gain now.** What they get by acting now: a real coupon, a launch price, a bonus, the hour
-    they save this week. Sourced.
+16. **Gain now.** What they get by acting now: a real coupon, a launch price, a bonus (each a
+    premise with its end date), or, without an offer, what the first use gives them.
 17. **Loss later.** What waiting costs: a real end date (sourced), or, without one, the problem
     repeating every week. Never a timer, a stock count or a "last chance" that is not true.
 
@@ -78,10 +78,10 @@ already; making them again wastes the seconds the ad has.
 
 | Awareness | Who | The ad makes | Elements usually carried |
 |---|---|---|---|
-| Unaware, problem-aware | cold feed | all four | 1 to 17, compressed |
-| Solution-aware | knows the category (a wallpaper app, a clipboard manager) | content, value, impulse | 1, 4, 5, 10, 12, 13, 15 to 17 |
-| Product-aware | visited, comparing, retargeting | value, impulse | 4, 5, 12, 13, 15 to 17 |
-| Most aware | trial users, cart leavers | impulse | 5, 15 to 17 |
+| `unaware`, `problem-aware` | cold feed | all four | 1 to 17, compressed |
+| `solution-aware` | knows the category (a wallpaper app, a clipboard manager) | content, value, impulse | 1, 4, 5, 10, 12, 13, 15 to 17 |
+| `product-aware` | visited, comparing, retargeting | value, impulse | 1, 4, 5, 12, 13, 15 to 17 |
+| `most-aware` | trial users, cart leavers | impulse | 1, 5, 15 to 17 |
 
 A known category collapses the hope sale: nobody needs a mechanism explained to buy a wallpaper.
 Show the product being the thing they already want.
@@ -90,16 +90,21 @@ Show the product being the thing they already want.
 
 Elements a format cannot carry are `n/a: <reason>` in the brief and move to the landing page,
 which has the room. A brief that marks the hope sale `n/a` for a cold audience is a brief for the
-wrong format.
+wrong format. When the awareness table and this one disagree, the smaller wins: a product-aware
+reader in a 6-second video gets the five elements the format holds, not seven.
 
-| Format | Room | Carries | Leaves out |
+Element 1 (the format) is always carried. The `Ad format` value is what `brief_check.mjs` reads;
+it warns when a brief fills more elements than the count.
+
+| Ad format | Room | Carries | Count |
 |---|---|---|---|
-| 6-second video | about 15 spoken words | 4 visual hook, 5 copy hook, 12 USP, CTA; for warm readers 16 or 17 if real | the hope sale, features, anchoring |
-| Static image | one headline on the image, primary text above it | 4, 5 (the image headline), 12 or 10; the text above: 6, 7, one feature, 15 | mechanisms 8, 9, 11 |
-| Post of 280 characters | five short lines | 5 (first line), 6 or 7, 10 in one sentence, one sourced proof, CTA | 8, 9, 11, 14 |
-| 15 to 30 s video | about 40 to 80 spoken words | 1 to 5, 7, 8, 10, 12, one feature, 15, CTA | 9, 11, 14, 16, 17 often |
-| 30 to 90 s video | a full script | 1 to 17 | nothing, for a cold reader |
-| Search ad | headlines of 30 characters, descriptions of 90 | the query is the hook: 10, 12, 13, 15, 16 | 1 to 9 |
+| `video-6s` | about 15 spoken words | 1, 4 visual hook, 5 copy hook, 12 USP, CTA; for warm readers 16 or 17 if real | 5 |
+| `post` (280 characters) | five short lines | 1, 5 (first line), 6 or 7, 10 in one sentence, one sourced proof in 12 or 13, CTA | 6 |
+| `search` | headlines of 30 characters, descriptions of 90 | 1; the query is the hook: 10, 12, 13, 15, 16 | 6 |
+| `static` | one headline on the image, primary text above it | 1, 4, 5 (the image headline), 12 or 10; the text above: 6, 7, one feature, 15 | 8 |
+| `video-15-30s` | about 40 to 80 spoken words | 1 to 5, 7, 8, 10, 12, one feature, 15, CTA | 11 |
+| `carousel` | 2 to 6 cards and a caption | 1 to 5 on the first card, then one element per card; the caption carries 6 and 15 | 12 |
+| `video-30-90s` | a full script | 1 to 17 | 17 |
 
 Word counts assume a normal speaking pace and are rules of thumb, not measurements.
 
@@ -186,5 +191,5 @@ What the example does **not** do, though the article would: no countdown, no "on
 left", no famous face or game look, no invented "10,000 users", no "less stress" outcome, and no
 "Are you a freelancer with ADHD?".
 
-For a 6-second retargeting cut of the same ad: elements 4, 5, 12 and 17 only, plus the CTA; the
-rest is `n/a: product-aware audience, 6-second format`.
+For a 6-second retargeting cut of the same ad (`video-6s`, `product-aware`): elements 1, 4, 5, 12
+and 17 only, plus the CTA. The rest is `n/a: product-aware audience, 6-second format`.

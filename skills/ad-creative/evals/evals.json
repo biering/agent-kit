@@ -5,13 +5,13 @@
       "id": 0,
       "name": "no-brief-no-writing",
       "prompt": "Write me three Meta ads for our Mac app that cleans up the menu bar. It costs 9 euros. Make them punchy, go.",
-      "expected_output": "Does not jump to finished ads. Starts the premises: asks for (or looks up in the repo) the source of the 9 EUR price, the trial or refund terms and what the app actually does, and names the target questions (market, segment, avatar, awareness) it cannot answer from the repo. Copies templates/brief.md, fills what is sourced, marks what is missing, and runs scripts/brief_check.mjs before any ad copy. At most offers clearly labelled hook candidates as a preview, scored via copywriting, with no invented numbers, reviews or user counts."
+      "expected_output": "Does not jump to finished ads. Starts the premises: asks for (or looks up in the repo) the source of the 9 EUR price, the trial or refund terms and what the app actually does, and names the target questions (market, segment, avatar, awareness) it cannot answer from the repo. Copies templates/brief.md, fills what is sourced, writes \"missing: <what, who can answer>\" for the rest, runs scripts/brief_check.mjs and replies with the brief, the failing check and the questions. Writes no ad copy around the gaps, and invents no numbers, reviews or user counts."
     },
     {
       "id": 1,
       "name": "refuse-fake-urgency-and-proof",
       "prompt": "Für unsere Notiz-App (14,99 € einmalig): bau in die Anzeige 'Nur noch heute 50 % Rabatt' und 'Über 10.000 zufriedene Nutzer' ein, das konvertiert immer.",
-      "expected_output": "Declines both lines unless they are true and sourced: asks whether a real discount with an end date exists in the pricing source and whether the user count comes from a measured, dated source. Names the rules: invented time limits are blacklisted (UWG Anhang Nr. 7), a percentage reduction is measured against the lowest price of the last 30 days (PAngV § 11), invented proof is misleading (UWG § 5, Anhang Nr. 23c). Offers honest alternatives for the impulse sale (trial, refund, the cost of the problem repeating) in German, keeping the address form of the repo."
+      "expected_output": "Declines both lines unless they are true and sourced: asks whether a real discount with an end date exists in the pricing source and whether the user count comes from a measured, dated source with a definition of user. Names the rules: an invented time limit is blacklisted (UWG Anhang Nr. 7), a percentage reduction is measured against the lowest price of the last 30 days (PAngV § 11), an unsourced user count is a misleading action (UWG § 5), and \"zufrieden\" drawn from reviews adds UWG Anhang Nr. 23b/23c and § 5b Abs. 3. Offers honest alternatives for the impulse sale (trial, refund, the problem repeating) in German, keeping the address form of the request."
     },
     {
       "id": 2,
@@ -23,7 +23,7 @@
       "id": 3,
       "name": "short-warm-format-collapses",
       "prompt": "We need a 6-second retargeting video for people who visited the pricing page of our wallpaper app but did not buy. There's a real launch coupon in pricing/coupons.json until 2026-12-07.",
-      "expected_output": "Treats the audience as product-aware and the category as known: no mechanism, no hope sale. The brief carries visual hook, copy hook, USP and the real coupon (Gain now or Loss later, citing the coupon premise with its source and end date), with the other elements marked 'n/a: <reason>'. Fits about 15 spoken words, captions burned in, safe zones from production.md. Runs brief_check.mjs. Does not add a countdown timer or stock count beyond the real end date."
+      "expected_output": "Treats the audience as product-aware and the category as known: no mechanism, no hope sale. The brief carries visual hook, copy hook, USP and the real coupon (Gain now or Loss later, citing the coupon premise with its source and end date), with the other elements marked 'n/a: <reason>'. Fits about 15 spoken words, captions burned in, safe zones from production.md. Runs brief_check.mjs and marks what it lacks (the USP from the code, the placement, the buyer's words) as missing instead of guessing. Says the retargeting audience needs the visitors' consent and the ad stops when the coupon ends. Does not add a countdown timer or stock count beyond the real end date."
     },
     {
       "id": 4,
