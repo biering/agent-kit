@@ -7,7 +7,7 @@ names, analytics projects and dashboards are the repo's (repo doc); this file is
 
 | Parameter | Value |
 |---|---|
-| `utm_source` | the network: `meta`, `google`, `linkedin`, `tiktok` |
+| `utm_source` | the network: `meta`, `google`, `linkedin`, `tiktok`, `x`, `reddit` |
 | `utm_medium` | `paid_social` (feed) or `cpc` (search). Only these two spellings |
 | `utm_campaign` | `<slug>_<yyyy>_<mm>_<goal>`, e.g. `excel_2026_10_signup` |
 | `utm_content` | the creative or angle, e.g. `excel_video_a`; in Meta `{{ad.name}}` |
