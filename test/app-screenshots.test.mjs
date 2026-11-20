@@ -108,6 +108,27 @@ describe('set spec', () => {
     spec.frames = Array.from({ length: 11 }, () => spec.frames[0])
     assert.match(validateSetSpec(spec).join(), /at most 10/)
   })
+
+  it('takes a frame\'s own emphasis, line count and size, and refuses unknown ones', () => {
+    const hero = { template: 'tilted-device', headline: 'Find. *Swipe.* Done.', emphasis: 'pill', headlineLines: 3, headlineSize: 'frame', device: { screen: 'a.png' } }
+    assert.deepEqual(errorsFor(hero), [])
+    assert.match(errorsFor({ ...hero, emphasis: 'underline' }).join(), /"emphasis" must be "colour" or "pill"/)
+    assert.match(errorsFor({ ...hero, headlineLines: 4 }).join(), /"headlineLines" must be 1, 2 or 3/)
+    assert.match(errorsFor({ ...hero, headlineSize: 'set' }).join(), /can only be "frame"/)
+    assert.match(validateSetSpec({ ...withFrame(hero), headlineLines: 0 }).join(), /"headlineLines" must be 1, 2 or 3/)
+  })
+
+  it('places a callout freely, cuts one from another capture only with a place, and knows one sticker icon', () => {
+    const frame = { template: 'feature-callout', headline: 'Ship it', device: { screen: 'a.png' } }
+    const callout = (c) => errorsFor({ ...frame, callouts: [{ crop: [0, 0, 10, 10], ...c }] }).join()
+    assert.equal(callout({ at: [215, 300] }), '')
+    assert.equal(callout({ at: [215, 300], screen: 'b.png' }), '')
+    assert.match(callout({ screen: 'b.png' }), /needs "at"/)
+    assert.match(callout({ at: [215] }), /must be \[x, y\]/)
+    const sticker = (s) => errorsFor({ ...frame, callouts: [{ crop: [0, 0, 10, 10] }], stickers: [{ text: 'Vacant only', x: 100, y: 200, ...s }] }).join()
+    assert.equal(sticker({ icon: 'check' }), '')
+    assert.match(sticker({ icon: 'star' }), /icon must be one of check/)
+  })
 })
 
 describe('honesty', () => {
@@ -261,5 +282,38 @@ describe('render', () => {
     const notCapture = { ...bottom, frames: [{ ...bottom.frames[4], device: { screen: abs('preview.png') } }] }
     writeFileSync(file, JSON.stringify(notCapture))
     await assert.rejects(composeSet(file, deps), /not a portrait iPhone capture/)
+
+    // A two-tone set with a hero sized on its own, a callout from another capture, a check
+    // sticker, and the crop sheet.
+    const withCallouts = spec.frames.find((f) => f.callouts)
+    const other = spec.frames.find((f) => f.device && f.device.screen !== withCallouts.device.screen).device.screen
+    const twoTone = {
+      ...spec,
+      out: path.join(out, 'two-tone'),
+      headlineLines: 2,
+      frames: [
+        { ...spec.frames[0], emphasis: 'pill', headlineLines: 3, headlineSize: 'frame' },
+        {
+          ...withCallouts,
+          // the two-tone headline: a grey lead-in that still clears 3:1, the point in the dark ink
+          emphasis: 'colour',
+          ink: '#5E6B64',
+          accent: '#13201A',
+          callouts: [...withCallouts.callouts, { crop: [100, 100, 200, 200], screen: other, at: [330, 260], radius: 40 }],
+          stickers: [{ text: 'Vacant only', icon: 'check', x: 140, y: 300 }],
+        },
+      ],
+    }
+    writeFileSync(file, JSON.stringify(twoTone))
+    const crops = path.join(out, 'crops.png')
+    const made = await composeSet(file, deps, { crops })
+    assert.equal(made.sets[0].frames.length, 2)
+    const sheet = await deps.sharp(crops).metadata()
+    assert.ok(sheet.height > 200)
+
+    // A crop outside its capture is caught on the crop sheet, before any frame is drawn.
+    const outside = { ...twoTone, frames: [{ ...twoTone.frames[1], callouts: [{ crop: [1100, 2500, 300, 300] }] }] }
+    writeFileSync(file, JSON.stringify(outside))
+    await assert.rejects(composeSet(file, deps, { crops }), /leaves its 1206x2622 capture/)
   })
 })

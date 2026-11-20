@@ -77,9 +77,11 @@ The outcome headline, one large object, and a tilted device behind it.
 One oversized device, turned and cut by the frame's edge. The default "it
 looks designed" frame.
 
-- 6° to 12° reads as deliberate; under 4° reads as a mistake; over 15° makes
-  the screen hard to read, and is refused for every device (objects may turn as
-  they like).
+- A device alone, with nothing lifted off it, reads as deliberate at 6° to 12°;
+  under 4° it reads as a mistake. A device under lifted callouts is different:
+  the callouts carry the motion, and the screen stays readable at 1° to 3°;
+  more than that and the set looks thrown rather than composed. Over 15° makes the screen hard to read, and is refused
+  for every device (objects may turn as they like).
 - The device is cut by its own frame and never shows a sliver in the neighbour.
   `device.bleed: true` lets it cross, and the compositor warns, because the
   store draws a gap between frames that would cut the screen in half.
@@ -105,7 +107,14 @@ An upright device with the one element that *is* the feature cut from the real
 capture, enlarged and lifted off the screen.
 
 - `callouts: [{ "crop": [x, y, w, h], "scale": 1.2, "shift": [dx, dy], "rotate": -3 }]`,
-  crop in capture pixels, shift in artboard units.
+  crop in capture pixels, shift in artboard units. `"at": [x, y]` places the
+  callout's centre anywhere on the frame instead (artboard units), and
+  `"screen"` cuts it from another capture than the device's, with `at`: the
+  green check of the deck lifted onto the calculation it made. `radius` rounds
+  it (half its width for a round button).
+- Measure crops on the full-size capture (find the card's edges in its pixels),
+  never on a scaled preview, and run `--crops <png>`: every crop stacked on a
+  loud ground, so a box that caught the wrong background shows at its edge.
 - The callout is a piece of the real screen, never redrawn UI (guideline 2.3.3).
 - Defaults: device at (215, 680), 310 wide, upright.
 
@@ -147,16 +156,27 @@ alone.
 Any frame takes `stickers: [{ "text", "x", "y", "rotate", "fill", "ink", "source" }]`:
 short floating chips over the scene, the "6 stops away" or "+$439" kind. Text
 with money, a percentage, a multiplier, a user count or a rating needs a
-`source`. Use them for state that is really in the app; two per frame at most.
+`source`. Use them for state that is really in the app; two per frame at most,
+except a set of conditions the app holds (a search's filters), which reads as
+one group. `"icon": "check"` (with `iconInk`) puts a check before the text, for
+exactly that: a rule the app applies.
 
 ## Set-level settings
 
 - `emphasis: "pill" | "colour"`: the emphasised word on a filled, slightly
-  turned pill (`pill`, `pillInk`, `pillRotate`), or in the `accent` colour.
+  turned pill (`pill`, `pillInk`, `pillRotate`), or in the `accent` colour. A
+  frame may set its own: the hero's word on a pill, the rest in a colour. A
+  quiet two-tone headline is `"emphasis": "colour"` with a grey `ink` and the
+  dark ink as `accent`: the lead-in recedes, the point carries (the grey must
+  still clear 3:1).
 - `headlineSize: "set" | "frame"`: `set` (the default) gives every headline the
-  same type size, the largest at which every headline fits three lines. Frames
+  same type size, the largest at which every headline fits its lines. Frames
   then differ in line count, not in type size, which is what makes a set read
-  as one.
+  as one. A single frame with `"headlineSize": "frame"` (the hero) is sized on
+  its own and does not set the others'.
+- `headlineLines: 1 | 2 | 3` (set or frame, default 3): the most lines a
+  headline takes. Two keeps a phrase whole ("Swipe right, / it's done") where
+  three breaks it wherever the width runs out.
 - `font`, `bodyFont`: `.ttf` files; set as outlines, so the render does not
   depend on an installed font.
 
