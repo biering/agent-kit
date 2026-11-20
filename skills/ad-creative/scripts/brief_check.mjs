@@ -16,7 +16,8 @@
  *   - anchoring or risk reversal that cites no premise;
  *   - a deadline in gain now or loss later (or in the premises they cite) that has passed;
  *   - a feature not tagged with its lever (odds, dream, effort, time);
- *   - an empty writing or batch field; urgency or proof in the mini-blocks, the CTA or the script
+ *   - an empty writing or batch field; urgency or proof in the mini-blocks, the CTA or the script,
+ *     and a number in the CTA or the script (timings belong in the mini-blocks),
  *     without a premise;
  *   - with --launch, an unticked launch check.
  * Warns (exit 0) on likely health claims, a question that asserts the reader's condition, and a
@@ -55,17 +56,29 @@ const ISO = /\b(\d{4}-\d{2}-\d{2})\b/g
 const DATE = /\b\d{4}-\d{2}-\d{2}\b/ // ISO without the global flag, for .test()
 const NUMBER = /\d/
 const words = (list) => new RegExp(`(?:^|[^\\p{L}])(?:${list.join('|')})(?![\\p{L}])`, 'iu')
+const WEEKDAYS = 'monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|midnight|the weekend|month end'
+const WOCHENTAGE = 'montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|morgen|mitternacht|monatsende|ende des monats|zum wochenende'
+// A bare "today" or "customers" is ordinary prose; these are the phrasings that sell time or scarcity.
 export const URGENCY = words([
-  'limited', 'only today', 'today only', 'today', 'tonight', 'this week', 'last chance', 'ends?', 'ending', 'expires?',
-  'hurry', 'running out', '\\d+ left', 'left in stock', 'sold out', 'deadline', 'countdown', 'while stocks last',
-  'price goes up', 'until', 'nur heute', 'heute', 'diese woche', 'ab morgen', 'begrenzt', 'letzte chance', 'endet',
-  'läuft ab', 'nur noch \\d+', 'ausverkauft', 'solange der vorrat reicht', 'frist', 'bald teurer',
+  'limited', 'only today', 'today only', 'ends today', 'tonight only', '(?:this|the) week only', 'only this week',
+  "today'?s price", 'last chance', 'ends?', 'ending', 'expires?', 'hurry', 'running out', 'sold out', 'deadline',
+  'countdown', 'while (?:stocks|supplies|it) lasts?', 'price goes up', 'until', `(?:by|before|until) (?:${WEEKDAYS})`,
+  'for a short time', 'short time only', 'now or never', "before (?:it'?s|it is|they'?re|they are) gone", 'almost gone',
+  'gone soon', "don'?t miss(?: out)?", 'act (?:now|fast)', 'only \\d+ (?:\\w+ )?(?:left|remaining)', '\\d+ (?:\\w+ )?left',
+  'left in stock', 'few (?:\\w+ )?left', 'only a few', 'selling fast', 'nur noch wenige', 'wenige (?:\\w+ )?übrig',
+  'nur heute', 'noch heute', 'heute nur', 'heute zum', 'nur diese woche', 'diese woche nur', 'ab morgen', 'begrenzt',
+  'letzte chance', 'endet', 'läuft ab', 'nur noch \\d+', 'noch \\d+ (?:\\w+ )?(?:verfügbar|übrig)', 'ausverkauft',
+  'solange der vorrat reicht', 'frist', 'bald teurer', 'nur für kurze zeit', 'für kurze zeit', 'kurze zeit',
+  `bis (?:${WOCHENTAGE})`, 'jetzt oder nie', 'nicht verpassen', 'verpasse? (?:es )?nicht', 'schnell sein', 'fast weg',
+  'nur solange',
 ])
 export const PROOF = words([
-  // plural "reviews": "a client review" is a meeting, "4,000 reviews" is proof
-  'reviews', 'rated', 'ratings?', 'stars', 'five-star', '5-star', 'users', 'customers', 'downloads', 'testimonials?',
-  '#1', 'best-?selling', 'bestseller', 'trusted by', 'loved by', 'thousands', 'millions', 'bewertungen', 'nutzer',
-  'nutzerinnen', 'kunden', 'kundinnen', 'sterne', 'tausende', 'millionen', 'zufriedene?n?',
+  // plural "reviews": "a client review" is a meeting, "4,000 reviews" is proof. "users" and "customers"
+  // count only with a quantity or a verdict in front: "your customers see" is not a claim.
+  'reviews', 'rated', 'ratings?', 'stars', 'five-star', '5-star', 'testimonials?', '#1', 'best-?selling', 'bestseller',
+  'trusted by', 'loved by', 'thousands', 'millions', 'bewertungen', 'sterne', 'tausende', 'millionen', 'zufriedene?n?',
+  '(?:happy|satisfied|loyal|our|many|countless|\\d[\\d.,]*\\s?\\+?|over|more than|hundreds of)\\s+(?:users|customers|downloads|people)',
+  '(?:unsere|viele|über|mehr als|hunderte|\\d[\\d.,]*\\s?\\+?)\\s+(?:nutzer(?:innen)?|kund(?:en|innen)|downloads|menschen)',
 ])
 const HEALTH = words([
   'cure[sd]?', 'heals?', 'therapy', 'therapeutic', 'diagnos\\w*', 'anxiety', 'depression', 'insomnia', 'adhd', 'burnout',
@@ -83,7 +96,7 @@ const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86_40
 export function sections(text) {
   const out = {}
   let current = null
-  for (const line of strip(text).split('\n')) {
+  for (const line of strip(text).replace(/\r\n?/g, '\n').split('\n')) {
     const heading = line.match(/^##\s+(.+?)\s*$/)
     if (heading) {
       current = heading[1]
@@ -240,7 +253,8 @@ export function checkBrief(brief, { launch = false, today = new Date().toISOStri
   if (!parts.Writing) errors.push('Writing: section missing')
   const why = { 'Reference ad': 'it gives the order and the rhythm', 'Mini-blocks': 'the reference cut into blocks by job', CTA: 'one wording, repeated by the landing page' }
   for (const [name, reason] of Object.entries(why)) if (empty(text(writing[name]))) errors.push(`Writing: ${name} is empty (${reason})`)
-  for (const name of ['Mini-blocks', 'CTA', 'Script']) if (writing[name] && !empty(text(writing[name]))) claimCheck(writing[name], `Writing: ${name}`, { numbers: name === 'CTA' })
+  // Mini-blocks carry timings ("0-3 s"), so their digits are not claims; the CTA and the script are what ships.
+  for (const name of ['Mini-blocks', 'CTA', 'Script']) if (writing[name] && !empty(text(writing[name]))) claimCheck(writing[name], `Writing: ${name}`, { numbers: name !== 'Mini-blocks' })
 
   const batch = fields(parts.Batch)
   if (!parts.Batch) errors.push('Batch: section missing')
@@ -262,7 +276,7 @@ if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToP
   const args = process.argv.slice(2)
   const todayIndex = args.indexOf('--today')
   const today = todayIndex >= 0 ? args[todayIndex + 1] : undefined
-  const file = args.find((arg, index) => !arg.startsWith('--') && index !== todayIndex + 1)
+  const file = args.find((arg, index) => !arg.startsWith('--') && (todayIndex < 0 || index !== todayIndex + 1))
   if (!file || (todayIndex >= 0 && !/^\d{4}-\d{2}-\d{2}$/.test(today ?? ''))) {
     console.error('usage: brief_check.mjs <brief.md> [--launch] [--today YYYY-MM-DD] [--json]')
     process.exit(2)

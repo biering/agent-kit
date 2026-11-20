@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
@@ -103,7 +105,7 @@ describe('brief_check', () => {
   it('fails impulse elements and anchoring with nothing behind them', () => {
     assert.match(check(replaceLine(example(), 'Risk reversal', '- Risk reversal: nothing to lose')).errors.join(), /Risk reversal: cites no premise/)
     assert.match(check(replaceLine(example(), 'Anchoring', '- Anchoring: cheaper than a coffee')).errors.join(), /Anchoring: cites no premise/)
-    assert.match(check(replaceLine(example(), 'Gain now', '- Gain now: a better week starting today')).errors.join(), /Gain now: urgency/)
+    assert.match(check(replaceLine(example(), 'Gain now', '- Gain now: half price, today only')).errors.join(), /Gain now: urgency/)
   })
 
   it('lets loss later be the problem repeating, when there is no deadline', () => {
@@ -151,6 +153,54 @@ describe('brief_check', () => {
     const file = fileURLToPath(new URL(EXAMPLE, root))
     assert.match(execFileSync('node', [script, file, '--today', TODAY], { encoding: 'utf8' }), /brief_check: OK/)
     assert.throws(() => execFileSync('node', [script, file, '--today', TODAY, '--launch'], { stdio: 'pipe' }), /status 1|Command failed/)
+  })
+
+  it('takes the file first or last, with or without --today, as SKILL.md writes it', () => {
+    // Without --today the check uses the real date, so this copy has no offer that can expire.
+    const dir = mkdtempSync(path.join(process.env.TMPDIR ?? tmpdir(), 'brief-check-'))
+    const file = path.join(dir, 'brief.md')
+    const timeless = replaceLine(replaceLine(example(), 'Gain now', '- Gain now: n/a: no offer running'), 'Loss later', '- Loss later: every call without it is one more chance for the pop-up')
+    writeFileSync(file, timeless)
+    const script = fileURLToPath(new URL('skills/ad-creative/scripts/brief_check.mjs', root))
+    const run = (...args) => spawnSync('node', [script, ...args], { encoding: 'utf8' })
+    for (const args of [[file], [file, '--json'], ['--json', file]]) {
+      const result = run(...args)
+      assert.equal(result.status, 0, `${args.join(' ')}: ${result.stdout}${result.stderr}`)
+    }
+    for (const args of [[file, '--launch'], ['--launch', file], [file, '--launch', '--today', TODAY], ['--today', TODAY, file, '--launch']]) {
+      const result = run(...args)
+      assert.equal(result.status, 1, `${args.join(' ')}: ${result.stderr}`)
+      assert.match(result.stdout, /Launch checks: not ticked/)
+    }
+    assert.equal(run('--today', TODAY).status, 2)
+    assert.equal(run(file, '--today', 'soon').status, 2)
+  })
+
+  it('reads a brief saved with Windows line endings', () => {
+    assert.deepEqual(check(example().replace(/\n/g, '\r\n')).errors, [])
+  })
+
+  it('catches invented urgency and stock in the script, the CTA and the hook', () => {
+    const cases = [
+      ['- CTA: Try it free', '- CTA: Try it free\n- Script: Only 3 licenses left at this price.', /Writing: Script: (?:urgency|a number)/],
+      ['- CTA: Try it free', '- CTA: Try it free\n- Script: Nur für kurze Zeit im Angebot, bis Freitag.', /Writing: Script: urgency/],
+      ['- CTA: Try it free', '- CTA: Get it before it is gone', /Writing: CTA: urgency/],
+      ['- Copy hook: "You shared your screen. So did your inbox."', '- Copy hook: Jetzt oder nie, nur für kurze Zeit', /Copy hook: urgency/],
+      ['- Copy hook: "You shared your screen. So did your inbox."', '- Copy hook: Only a few licences left', /Copy hook: urgency/],
+      ['- Copy hook: "You shared your screen. So did your inbox."', "- Copy hook: Don't miss out, ends Sunday", /Copy hook: urgency/],
+    ]
+    for (const [from, to, expected] of cases) {
+      const brief = example().replace(from, to)
+      assert.notEqual(brief, example(), `fixture did not change for ${to}`)
+      assert.match(check(brief).errors.join(), expected, to)
+    }
+  })
+
+  it('leaves ordinary words alone when nothing is claimed', () => {
+    for (const topic of ['what your customers see when you share', 'the users of your Mac, and what they see today', 'was deine Kunden sehen, wenn du teilst']) {
+      assert.deepEqual(check(replaceLine(example(), 'Topic', `- Topic: ${topic}`)).errors, [], topic)
+    }
+    assert.match(check(replaceLine(example(), 'Topic', '- Topic: what happy customers say')).errors.join(), /Topic: proof/)
   })
 })
 

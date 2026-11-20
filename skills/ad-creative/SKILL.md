@@ -30,7 +30,7 @@ bait. Those parts are exactly what the hard rules below rule out.
 | [references/policy.md](references/policy.md) | before any launch: EU fair-trading law and each platform's ad policy |
 | [templates/brief.md](templates/brief.md) | the brief, copied per ad or batch |
 | [scripts/brief_check.mjs](scripts/brief_check.mjs) | before writing, and again before launch |
-| [examples/menubar-utility/brief.md](examples/menubar-utility/brief.md) | a passing brief for an invented Mac utility |
+| [examples/menubar-utility/brief.md](examples/menubar-utility/brief.md) | a filled brief for an invented Mac utility; it passes until its coupon ends (2026-12-07), then fails as a stale real one should |
 
 Not for the landing page (`ads-landingpage`), organic posts (`carousel`, `video`) or store
 listings (`aso`, `app-screenshots`).
