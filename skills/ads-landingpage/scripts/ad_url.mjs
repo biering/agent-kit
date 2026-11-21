@@ -26,7 +26,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** The medium a source runs on unless told otherwise. */
-export const SOURCES = { meta: 'paid_social', linkedin: 'paid_social', tiktok: 'paid_social', google: 'cpc' }
+export const SOURCES = { meta: 'paid_social', linkedin: 'paid_social', tiktok: 'paid_social', x: 'paid_social', reddit: 'paid_social', google: 'cpc' }
 export const MEDIUMS = ['paid_social', 'cpc']
 const FLAGS = ['source', 'medium', 'campaign', 'content', 'term', 'register']
 const VALUE = /^[a-z0-9_{}.]+$/
