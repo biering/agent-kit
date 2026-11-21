@@ -25,7 +25,8 @@ and draft.
 | [references/tracking.md](references/tracking.md) | ad URLs, events, how to judge a page |
 | [scripts/ad_url.mjs](scripts/ad_url.mjs) | building the URL each ad points at |
 
-Not for the homepage, SEO pages or the ad creative itself.
+Not for the homepage, SEO pages or the ad creative itself: the video, image, post text and
+headline of the ad are the `ad-creative` skill, which hands over its promise and its variant names.
 
 ## Hard rules
 
@@ -57,7 +58,8 @@ Not for the homepage, SEO pages or the ad creative itself.
 Answer these before writing. Ask the user only for what the repository cannot answer, usually
 the ad itself and the audience.
 
-- **The ad.** Its exact headline and hook, the network, the placement. No ad yet: write its
+- **The ad.** Its exact headline and hook, the network, the placement (from the `ad-creative`
+  brief when there is one; its premises seed this page's claim ledger). No ad yet: write its
   promise in one sentence and treat it as given.
 - **How warm is the click?** Cold feed, problem-aware, comparing, or retargeting.
 - **Who is it?** One person in one situation ("just received a data room"), not a segment.
