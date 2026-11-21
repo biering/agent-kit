@@ -15,6 +15,9 @@ Usage:
   python3 slop_scan.py --json FILE           # machine-readable
   cat draft.md | python3 slop_scan.py -      # stdin
   python3 slop_scan.py --lang de FILE        # force language (default: auto)
+  python3 slop_scan.py --voice PATH FILE     # also flag the voice file's "Never says" list
+                                             # (default: unslop.voice in agent-kit.config.json,
+                                             # else docs/agent-kit/voice.md if it exists)
 
 Exit code is always 0 — findings are advice, not a gate.
 """
@@ -23,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import statistics
 import sys
@@ -41,23 +45,59 @@ EN_PHRASES = [
     ("chatbot-artifact", r"(?:i hope this helps|great question|happy to help|let me know if you need|as an ai)"),
     ("generic-conclusion", r"(?:the future looks bright|exciting times lie ahead|only time will tell|one thing is certain|the bottom line|the key takeaway)"),
     ("negative-parallelism", r"(?:not only .{3,60} but also|it's not just about|not merely .{3,40} but)"),
+    # "It's not a tool, it's a teammate." / "The problem isn't X. It's Y."
+    ("not-x-its-y", r"\b(?:it's not|it is not|isn't|wasn't|aren't|is not)\s+(?:just\s+|about\s+|a\s+|an\s+|the\s+)?[^.,;:!?\n]{1,40}[,.;:]\s+(?:it's|it is|it was|they're|that's|it's about)\b"),
+    ("nobody-tells-you", r"\b(?:nobody|no one|no-one)\s+(?:tells? you|talks? about|prepares? you|warns? you|mentions)\b|\bwhat (?:nobody|no one) (?:tells|told|sees|says)\b"),
     ("ai-vocabulary", r"\b(?:delve|garner|interplay|tapestry|multifaceted|paramount|burgeoning|aforementioned|sheds light|strikes a balance|double.edged sword|in today's (?:fast.paced |digital )?(?:world|landscape|environment))"),
     ("filler", r"(?:at its core|when it comes to|at the end of the day|in the ever.evolving|navigate the (?:complex|challenges)|it's worth noting)"),
     ("rhetorical-setup", r"(?:so why should you care|but what does this mean for|here's why\b|the (?:answer|secret|key|takeaway) is\s*:)"),
 ]
 
+# Cut words: verbs and adjectives that sell instead of saying. Each also has a
+# literal sense, so each carries guards: `before` is a regex tried on the ~30
+# chars in front of the match (anchor it with $), `after` one tried on the ~30
+# chars behind it (matched at its start). A guard hit drops the finding. The
+# list follows the cut list of Tobi Adonadon's /closer skill; the guards are ours.
+EN_CUT_WORDS = [
+    # unlock your potential, unlock growth; not: unlock the door, your phone
+    (r"\bunlock(?:s|ed|ing)?\s+(?:your|the|our|their|new|more|true|full|real|hidden|growth|potential|value|insights?|success|possibilities)\b",
+     None, r"\s*(?:\w+\s+)?(?:doors?|phones?|screens?|device|account|car|bike|file|safe|gate|lock|cell|laptop|iphone|ipad)\b"),
+    # elevate your brand; not: elevate the patient's legs
+    (r"\belevat(?:e|es|ed|ing)\s+(?:your|the|our|their|every|any|its|this)\b",
+     None, r"\s*(?:\w+(?:'s)?\s+)?(?:legs?|head|feet|foot|arms?|bed|limbs?)\b"),
+    (r"\bsupercharg(?:e|es|ed|ing)\b", None, r"\s*(?:v\d|engines?|motors?|cars?|petrol|diesel)\b"),
+    (r"\bseamless\b", None, r"\s*(?:steel\s+)?(?:pipes?|tubes?|tubing|steel|stockings?|tights|gutters?|welds?|floor(?:ing)?)\b"),
+    # leverage as a verb (leverage AI, leveraging our data). The finance noun
+    # (the leverage, financial leverage, leverage ratio) is never flagged, nor
+    # a company called Leverage (see scan_phrases).
+    (r"\bleverag(?:e|es|ed|ing)\s+(?:the|our|your|their|its|this|these|those|ai|data|technology|insights?|existing|cutting|a|an)\b",
+     r"\b(?:the|financial|high|low|more|less|of|with|operating|no|some|enough|use|using|its|our|your|their|negotiating|bargaining|much|too)\s+$",
+     None),
+    # journey as a metaphor; not: the train journey, a three-hour journey
+    (r"\b(?:(?:your|our|my|their|his|her)\s+(?:\w+\s+)?journey|(?:customer|user|buyer|learning|growth|healing|transformation|fitness|career|wellness|digital|ai|founder|entrepreneurial|personal)\s+journey|embark(?:s|ed|ing)?\s+on\s+(?:a|an|this|the|your|our)\b(?:\s+\w+)?\s+journey|on\s+(?:a|this|the|your|our)\s+journey|journey\s+(?:to|towards?)\s+(?:success|growth|mastery|excellence|greatness|freedom|wellness|the\s+top)|it's\s+(?:a|been\s+a)\s+journey)\b",
+     None, None),
+]
+
+# A journey that began, took or lasted is the story's own past, told plainly.
+JOURNEY_PLAIN = re.compile(r"\s+(?:began|begun|started|took|lasted|ended|home)\b", re.I)
+
+# Words that make "our X journey" a trip, not a metaphor.
+LITERAL_JOURNEY = re.compile(r"\b(?:train|bus|car|flight|road|rail|boat|ferry|coach|plane|taxi|hours?|days?|minutes?|commute|return|outbound|overnight|long|short|first|last)\s+journey\b", re.I)
+
 DE_PHRASES = [
     ("throat-clearing", r"(?:tauchen wir (?:ein|gemeinsam)|lassen sie uns (?:einen blick|eintauchen)|werfen wir einen blick|schnallen sie sich an|willkommen in der welt)"),
     ("emphasis-crutch", r"(?:lassen sie das (?:kurz )?(?:sacken|wirken)|nicht mehr wegzudenken|das muss man sich (?:mal )?vorstellen)"),
-    ("significance-inflation", r"(?:spiel(?:t|en)\b.{0,50}?eine (?:entscheidende|zentrale|wichtige|maßgebliche|immer größere) rolle|meilenstein|von unschätzbarem wert|wahrer game.?changer|auf ein neues level)"),
+    ("significance-inflation", r"(?:spiel(?:t|en)\b.{0,50}?eine (?:entscheidende|zentrale|wichtige|maßgebliche|immer größere) rolle|eine (?:entscheidende|zentrale|maßgebliche|immer größere) rolle\b.{0,50}?spiel(?:t|en)\b|meilenstein|von unschätzbarem wert|wahrer game.?changer|auf ein neues level)"),
     ("promotional", r"(?:revolutionier|bahnbrechend|erstklassig|maßgeschneidert|nahtlos|ganzheitlich|innovativ(?:e|er|es|en)? lösung|einzigartig(?:e|es)? erlebnis)"),
     ("filler", r"(?:in der heutigen (?:digitalen |schnelllebigen |modernen )?(?:welt|zeit)|es ist (?:wichtig|entscheidend|unerlässlich)(?:,| zu (?:beachten|betonen|verstehen))|im (?:heutigen|modernen) zeitalter|in zeiten von|am ende des tages|nicht zuletzt)"),
     ("meta-scaffold", r"(?:zusammenfassend lässt sich sagen|abschließend lässt sich (?:festhalten|sagen)|zusammenfassend kann (?:man|gesagt werden)|wie eingangs erwähnt|fazit\s*:)"),
     ("vague-attribution", r"(?:experten sind sich einig|studien zeigen, dass|viele glauben|es ist allgemein bekannt|wie allgemein bekannt)"),
     ("negative-parallelism", r"(?:nicht nur .{3,60}, sondern auch|es geht nicht (?:nur )?darum)"),
+    ("not-x-its-y", r"\b(?:es ist|das ist) (?:kein(?:e|en)?|nicht) [^.,;:!?\n]{1,40}[,.;:]\s+(?:es ist|das ist)\b"),
+    ("nobody-tells-you", r"\b(?:was dir )?(?:niemand|keiner) (?:sagt dir|sagt|erzählt dir|spricht über|redet über|bereitet dich)\b"),
     ("rhetorical-setup", r"(?:doch was (?:bedeutet|heißt) das (?:konkret|genau|für sie|für dich)|die antwort (?:lautet|ist einfach)|warum (?:ist das wichtig|das wichtig ist)\??\s|sie fragen sich(?:jetzt)? vielleicht)"),
     ("generic-conclusion", r"(?:die zukunft (?:sieht rosig aus|bleibt spannend)|es bleibt spannend|eines ist (?:sicher|klar)|der schlüssel (?:zum erfolg )?liegt)"),
-    ("ai-vocabulary", r"(?:das volle potenzial (?:aus(?:zu)?schöpfen|entfalten)|potenzial(?:e)? (?:voll )?aus(?:zu)?schöpfen|die weichen (?:für die zukunft )?stellen|hand in hand|des weiteren|darüber hinaus bietet)"),
+    ("ai-vocabulary", r"(?:das volle potenzial\b.{0,40}?(?:aus(?:zu)?schöpfen|entfalten)|potenzial(?:e)? (?:voll )?aus(?:zu)?schöpfen|die weichen (?:für die zukunft )?stellen|hand in hand|des weiteren|darüber hinaus bietet)"),
     ("chatbot-artifact", r"(?:ich hoffe, das hilft|gerne helfe ich|als (?:ki|sprachmodell)|lassen sie es mich wissen)"),
 ]
 
@@ -100,7 +140,100 @@ def scan_phrases(text: str, lang: str) -> list:
                 "line": line_of(text, m.start()),
                 "match": m.group(0).strip()[:80],
             })
+    if lang == "en":
+        for pattern, before, after in EN_CUT_WORDS:
+            for m in re.finditer(pattern, text, re.I):
+                if guarded(text, m, before, after):
+                    continue
+                word = m.group(0)
+                if "journey" in word.lower() and (LITERAL_JOURNEY.search(word) or JOURNEY_PLAIN.match(text, m.end())):
+                    continue
+                # A capitalised "Leverage" that does not open a sentence is the company name.
+                if word.startswith("Leverage") and not re.search(r"(?:^|[.!?:]\s*|\n\s*)$", text[max(0, m.start() - 3):m.start()]):
+                    continue
+                findings.append({
+                    "kind": "phrase",
+                    "category": "cut-word",
+                    "line": line_of(text, m.start()),
+                    "match": word.strip()[:80],
+                })
     return findings
+
+
+def guarded(text: str, m: re.Match, before, after) -> bool:
+    """True when a guard says this match is the word's literal sense."""
+    if before and re.search(before, text[max(0, m.start() - 30):m.start()], re.I):
+        return True
+    if after and re.match(after, text[m.end():m.end() + 30], re.I):
+        return True
+    return False
+
+
+def load_voice_bans(path: str) -> list:
+    """Phrases listed under a "## Never says" heading of the repo's voice file.
+
+    One phrase per bullet. Quotes or backticks around it are stripped; text
+    after " (", " -- " or ": " is a note, not part of the phrase.
+    """
+    try:
+        lines = open(path, encoding="utf-8").read().splitlines()
+    except OSError:
+        return []
+    bans, inside = [], False
+    for ln in lines:
+        if ln.startswith("#"):
+            inside = bool(re.match(r"^#{2,3}\s+never says\b", ln, re.I))
+            continue
+        m = re.match(r"^[ \t]*[-*+][ \t]+(.+?)\s*$", ln) if inside else None
+        if m:
+            phrase = re.split(r"\s+\(|\s+--\s|:\s", m.group(1), maxsplit=1)[0].strip().strip("`\"'“”„")
+            if phrase:
+                bans.append(phrase)
+    return bans
+
+
+def scan_voice(text: str, bans: list) -> list:
+    findings = []
+    for phrase in bans:
+        for m in re.finditer(rf"(?<!\w){re.escape(phrase)}(?!\w)", text, re.I):
+            findings.append({
+                "kind": "phrase", "category": "voice-ban",
+                "line": line_of(text, m.start()),
+                "match": f"{m.group(0)} (the voice file says never)",
+            })
+    return findings
+
+
+def repo_root(start: str) -> str:
+    """The nearest folder upward holding agent-kit.config.json or .git; else start."""
+    here = os.path.abspath(start)
+    while True:
+        if any(os.path.exists(os.path.join(here, m)) for m in ("agent-kit.config.json", ".git")):
+            return here
+        parent = os.path.dirname(here)
+        if parent == here:
+            return os.path.abspath(start)
+        here = parent
+
+
+def resolve_voice(arg, cwd: str = "."):
+    """--voice PATH wins ('none' skips); else unslop.voice in agent-kit.config.json; else docs/agent-kit/voice.md.
+
+    The config and both defaults resolve against the repo root, so the scanner
+    finds the voice file from any subfolder.
+    """
+    if arg:
+        return None if arg == "none" else arg
+    root = repo_root(cwd)
+    try:
+        with open(os.path.join(root, "agent-kit.config.json"), encoding="utf-8") as fh:
+            path = (json.load(fh).get("unslop") or {}).get("voice")
+        if path:
+            return os.path.join(root, path)
+    except (OSError, ValueError, AttributeError):
+        pass
+    default = os.path.join(root, "docs", "agent-kit", "voice.md")
+    return default if os.path.exists(default) else None
 
 
 def scan_structure(text: str, lang: str) -> list:
@@ -197,11 +330,11 @@ def scan_structure(text: str, lang: str) -> list:
     return findings
 
 
-def scan(text: str, lang: str = "auto") -> dict:
+def scan(text: str, lang: str = "auto", voice_bans=None) -> dict:
     masked = mask_protected(text)
     if lang == "auto":
         lang = detect_lang(masked)
-    findings = scan_phrases(masked, lang) + scan_structure(masked, lang)
+    findings = scan_phrases(masked, lang) + scan_structure(masked, lang) + scan_voice(masked, voice_bans or [])
     findings.sort(key=lambda f: f["line"])
     return {"lang": lang, "findings": findings}
 
@@ -211,12 +344,15 @@ def main() -> None:
     ap.add_argument("files", nargs="+", help="files to scan, or - for stdin")
     ap.add_argument("--lang", choices=["auto", "de", "en"], default="auto")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--voice", help="the repo's voice file; 'none' skips it")
     args = ap.parse_args()
 
+    voice = resolve_voice(args.voice)
+    bans = load_voice_bans(voice) if voice else []
     out = {}
     for path in args.files:
         text = sys.stdin.read() if path == "-" else open(path, encoding="utf-8").read()
-        out[path] = scan(text, args.lang)
+        out[path] = scan(text, args.lang, bans)
 
     if args.json:
         print(json.dumps(out, ensure_ascii=False, indent=2))
