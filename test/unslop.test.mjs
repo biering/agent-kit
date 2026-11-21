@@ -39,7 +39,7 @@ describe('slop_scan cut words', { skip }, () => {
         "Unlock the door with your phone. Elevate the patient's legs. A seamless steel pipe. " +
         'Financial leverage raises returns. The leverage ratio is 3. Use leverage carefully. ' +
         'The leverage the bank gives you is limited. With Leverage you compare 400 banks. ' +
-        'Leverage helps you buy property.',
+        'Leverage helps you buy property. Our journey began in 2019.',
       'cut-word',
     )
     assert.deepEqual(hits, [])
@@ -50,6 +50,8 @@ describe('slop_scan cut words', { skip }, () => {
     assert.deepEqual(cats("It's not ready yet, we ship it in May.", 'not-x-its-y'), [])
     assert.equal(cats("Nobody tells you how hard it is. Here's what nobody sees.", 'nobody-tells-you').length, 2)
     assert.deepEqual(cats('Nobody came to the first meetup.', 'nobody-tells-you'), [])
+    assert.deepEqual(cats('Nobody sees the cost.', 'nobody-tells-you'), [])
+    assert.equal(cats("Here's what nobody sees.", 'nobody-tells-you').length, 1)
   })
 })
 
@@ -74,6 +76,16 @@ describe('slop_scan voice file', { skip }, () => {
     const hits = scan('Big news! We are thrilled to announce exports, honestly.', [], repo).filter((f) => f.category === 'voice-ban')
     assert.equal(hits.length, 2)
     assert.ok(!hits.some((h) => h.match.includes('honestly')))
+  })
+
+  it('finds the configured voice file from a subfolder of the repo', () => {
+    const repo = mkdtempSync(path.join(tmpdir(), 'unslop-'))
+    mkdirSync(path.join(repo, 'sub', 'deeper'), { recursive: true })
+    writeFileSync(path.join(repo, 'v.md'), '## Never says\n\n- foo bar\n')
+    writeFileSync(path.join(repo, 'agent-kit.config.json'), JSON.stringify({ unslop: { voice: 'v.md' } }))
+    for (const cwd of [repo, path.join(repo, 'sub'), path.join(repo, 'sub', 'deeper')]) {
+      assert.equal(scan('a foo bar', [], cwd).filter((f) => f.category === 'voice-ban').length, 1, cwd)
+    }
   })
 
   it('uses docs/agent-kit/voice.md when no path is configured, and skips it with --voice none', () => {
@@ -106,6 +118,38 @@ describe('ship_check', { skip }, () => {
 
   it('does not count urgency words as specifics', () => {
     assert.equal(check('Book today, one click, start tomorrow.', 'instagram').no_specifics, true)
+  })
+
+  it('does not count ordinary words or ratings as specifics', () => {
+    for (const vague of [
+      'Join our amazing workshop, you may love it!',
+      'We march on.',
+      'Gib Acht, mach mit!',
+      'Join our 5-star amazing experience',
+      'Rated 4.8 stars by happy buyers.',
+    ]) {
+      assert.equal(check(vague, 'instagram').no_specifics, true, vague)
+    }
+  })
+
+  it('counts month names next to a day or year, and number words that count something', () => {
+    const values = (text) => check(text, 'none').specifics.map((s) => s.value)
+    assert.deepEqual(values('Saturday 22 November, six seats.'), ['22 November', 'Saturday', 'six'])
+    assert.deepEqual(values('Opens May 3, 2027.'), ['May 3, 2027'])
+    assert.deepEqual(values('Kurs am 3. März, acht Plätze frei.'), ['3. März', 'acht'])
+  })
+
+  it('reads numbered field labels, and their numbers are not specifics', () => {
+    const r = check('Headline 1: Compare banks in one search today\nHeadline 2: Free and fast\nDescription 1: No credit check.', 'google-ads')
+    assert.deepEqual(r.limits.map((l) => l.field), ['headline 1'])
+    assert.equal(r.no_specifics, true)
+  })
+
+  it('flags a caption whose short first line leaves every specific behind the fold', () => {
+    const r = check(`Hi!\n${'word '.repeat(30)}Saturday 9am.`, 'instagram')
+    assert.equal(r.status, 1)
+    assert.equal(r.limits[0].actual, 'every specific sits after the fold')
+    assert.equal(check('Saturday 9am!\n' + 'word '.repeat(40), 'instagram').status, 0)
   })
 
   it('skips limits with --platform none, for text with no fold', () => {

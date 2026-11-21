@@ -20,6 +20,10 @@ is wrong, fix it here and in `LIMITS` in the script in the same edit.
 | Google Ads (`google-ads`) | headline, description | 30 chars per headline, 90 per description | Hard caps: the ad editor refuses longer fields. Check every one. |
 | Meta Ads (`meta-ads`) | primary text | 125 chars before "more" | Same fold as Instagram. |
 
+For a fold, the script checks two things: the first line fits before the fold, and when the text
+has specifics, at least one of them sits before it. A short "Hi!" over a caption whose facts all
+come after the fold fails.
+
 ## Platform unknown
 
 Check against the **125-character fold** (Instagram and Meta Ads, the tightest feed fold) and say
@@ -31,7 +35,7 @@ string) takes `--platform none`: the script then checks specifics and placeholde
 ## Input format for the script
 
 Plain text. Fields are lines with a label: `Subject:`, `Preview:`, `Headline:`, `Description:`,
-`Hook:`. Everything else is the body. Separate X posts with a line holding only `---`.
+`Hook:`, also numbered as ad exports write them (`Headline 1:`). Everything else is the body. Separate X posts with a line holding only `---`.
 
 ## When a field is over
 

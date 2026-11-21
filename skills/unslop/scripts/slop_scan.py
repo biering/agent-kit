@@ -47,7 +47,7 @@ EN_PHRASES = [
     ("negative-parallelism", r"(?:not only .{3,60} but also|it's not just about|not merely .{3,40} but)"),
     # "It's not a tool, it's a teammate." / "The problem isn't X. It's Y."
     ("not-x-its-y", r"\b(?:it's not|it is not|isn't|wasn't|aren't|is not)\s+(?:just\s+|about\s+|a\s+|an\s+|the\s+)?[^.,;:!?\n]{1,40}[,.;:]\s+(?:it's|it is|it was|they're|that's|it's about)\b"),
-    ("nobody-tells-you", r"\b(?:nobody|no one|no-one)\s+(?:tells? you|talks? about|prepares? you|warns? you|sees|mentions)\b|\bwhat (?:nobody|no one) (?:tells|told|sees|says)\b"),
+    ("nobody-tells-you", r"\b(?:nobody|no one|no-one)\s+(?:tells? you|talks? about|prepares? you|warns? you|mentions)\b|\bwhat (?:nobody|no one) (?:tells|told|sees|says)\b"),
     ("ai-vocabulary", r"\b(?:delve|garner|interplay|tapestry|multifaceted|paramount|burgeoning|aforementioned|sheds light|strikes a balance|double.edged sword|in today's (?:fast.paced |digital )?(?:world|landscape|environment))"),
     ("filler", r"(?:at its core|when it comes to|at the end of the day|in the ever.evolving|navigate the (?:complex|challenges)|it's worth noting)"),
     ("rhetorical-setup", r"(?:so why should you care|but what does this mean for|here's why\b|the (?:answer|secret|key|takeaway) is\s*:)"),
@@ -77,6 +77,9 @@ EN_CUT_WORDS = [
     (r"\b(?:(?:your|our|my|their|his|her)\s+(?:\w+\s+)?journey|(?:customer|user|buyer|learning|growth|healing|transformation|fitness|career|wellness|digital|ai|founder|entrepreneurial|personal)\s+journey|embark(?:s|ed|ing)?\s+on\s+(?:a|an|this|the|your|our)\b(?:\s+\w+)?\s+journey|on\s+(?:a|this|the|your|our)\s+journey|journey\s+(?:to|towards?)\s+(?:success|growth|mastery|excellence|greatness|freedom|wellness|the\s+top)|it's\s+(?:a|been\s+a)\s+journey)\b",
      None, None),
 ]
+
+# A journey that began, took or lasted is the story's own past, told plainly.
+JOURNEY_PLAIN = re.compile(r"\s+(?:began|begun|started|took|lasted|ended|home)\b", re.I)
 
 # Words that make "our X journey" a trip, not a metaphor.
 LITERAL_JOURNEY = re.compile(r"\b(?:train|bus|car|flight|road|rail|boat|ferry|coach|plane|taxi|hours?|days?|minutes?|commute|return|outbound|overnight|long|short|first|last)\s+journey\b", re.I)
@@ -143,7 +146,7 @@ def scan_phrases(text: str, lang: str) -> list:
                 if guarded(text, m, before, after):
                     continue
                 word = m.group(0)
-                if "journey" in word.lower() and LITERAL_JOURNEY.search(word):
+                if "journey" in word.lower() and (LITERAL_JOURNEY.search(word) or JOURNEY_PLAIN.match(text, m.end())):
                     continue
                 # A capitalised "Leverage" that does not open a sentence is the company name.
                 if word.startswith("Leverage") and not re.search(r"(?:^|[.!?:]\s*|\n\s*)$", text[max(0, m.start() - 3):m.start()]):
@@ -201,18 +204,35 @@ def scan_voice(text: str, bans: list) -> list:
     return findings
 
 
-def resolve_voice(arg):
-    """--voice PATH wins ('none' skips); else unslop.voice in agent-kit.config.json; else docs/agent-kit/voice.md."""
+def repo_root(start: str) -> str:
+    """The nearest folder upward holding agent-kit.config.json or .git; else start."""
+    here = os.path.abspath(start)
+    while True:
+        if any(os.path.exists(os.path.join(here, m)) for m in ("agent-kit.config.json", ".git")):
+            return here
+        parent = os.path.dirname(here)
+        if parent == here:
+            return os.path.abspath(start)
+        here = parent
+
+
+def resolve_voice(arg, cwd: str = "."):
+    """--voice PATH wins ('none' skips); else unslop.voice in agent-kit.config.json; else docs/agent-kit/voice.md.
+
+    The config and both defaults resolve against the repo root, so the scanner
+    finds the voice file from any subfolder.
+    """
     if arg:
         return None if arg == "none" else arg
+    root = repo_root(cwd)
     try:
-        with open("agent-kit.config.json", encoding="utf-8") as fh:
+        with open(os.path.join(root, "agent-kit.config.json"), encoding="utf-8") as fh:
             path = (json.load(fh).get("unslop") or {}).get("voice")
         if path:
-            return path
+            return os.path.join(root, path)
     except (OSError, ValueError, AttributeError):
         pass
-    default = os.path.join("docs", "agent-kit", "voice.md")
+    default = os.path.join(root, "docs", "agent-kit", "voice.md")
     return default if os.path.exists(default) else None
 
 

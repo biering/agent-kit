@@ -55,17 +55,30 @@ ALIASES = {"twitter": "x", "ig": "instagram", "meta": "meta-ads", "facebook": "m
            "reel": "reels", "shorts": "reels", "google": "google-ads", "adwords": "google-ads",
            "mail": "email", "newsletter": "email", "cold": "cold-email"}
 
-FIELD_RE = re.compile(r"^(subject|preview|headline|description|hook)\s*:\s*(.*)$", re.I)
+# "Headline:" and the numbered "Headline 1:" of ad exports.
+FIELD_RE = re.compile(r"^(subject|preview|headline|description|hook)(?:\s*\d+)?\s*:\s*(.*)$", re.I)
 URL_RE = re.compile(r"https?://\S+")
 PLACEHOLDER_RE = re.compile(r"\[(?:PLACEHOLDER|TODO|TBD|FILL)[^\]]*\]", re.I)
+
+# A month name is a date only next to a day or a year ("22 November",
+# "May 3", "March 2027"): alone, "may" is a verb and "march" a walk.
+MONTH = (r"(?:jan(?:uary|uar)?|feb(?:ruary|ruar)?|mar(?:ch)?|märz|apr(?:il)?|may|mai|june?|juni|july?|juli"
+         r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?|dez(?:ember)?)\.?")
+# A star rating ("5-star") is a claim, not a fact the reader can act on.
+NOT_RATING = r"(?!\s?-?\s?stars?\b|\s?-?\s?sterne?\b)"
 
 SPECIFICS = [
     ("price", r"(?:[€$£]\s?\d+(?:[.,]\d+)*|\d+(?:[.,]\d+)*\s?(?:€|\$|£|eur|euro|usd|dollars?|chf)\b)"),
     ("time", r"\b\d{1,2}(?::\d{2})?\s?(?:am|pm|uhr)\b|\b\d{1,2}:\d{2}\b"),
-    ("date", r"\b\d{1,2}\.\s?\d{1,2}\.(?:\d{2,4})?|\b\d{4}-\d{2}-\d{2}\b|\b(?:jan(?:uary|uar)?|feb(?:ruary|ruar)?|mar(?:ch)?|märz|apr(?:il)?|may|mai|june?|juni|july?|juli|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?|dez(?:ember)?)\b\.?\s?\d{0,2}"),
+    ("date", rf"\b\d{{1,2}}\.\s?\d{{1,2}}\.(?:\d{{2,4}})?|\b\d{{4}}-\d{{2}}-\d{{2}}\b"
+             rf"|\b\d{{1,2}}(?:st|nd|rd|th|\.)?\s+{MONTH}(?:\s+\d{{4}})?(?!\w)"
+             rf"|\b{MONTH}\s+\d{{1,2}}(?:st|nd|rd|th)?\b(?:,?\s+\d{{4}})?|\b{MONTH}\s+\d{{4}}\b"),
     # "today" and "tomorrow" are urgency words, not facts: they do not count.
     ("weekday", r"\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\b"),
-    ("number", r"\b\d+(?:[.,]\d+)?\s?%?|\b(?:two|three|four|five|six|seven|eight|nine|ten|twelve|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\b"),
+    # A number word counts only when it counts something ("six seats"), so
+    # German "Gib Acht" and a stray "ten" at the end of a clause do not.
+    ("number", rf"\b\d+(?:[.,]\d+)?(?![.,]?\d)(?:\s?%)?{NOT_RATING}"
+               rf"|\b(?:two|three|four|five|six|seven|eight|nine|ten|twelve|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\b{NOT_RATING}(?=\s+[^\W\d_])"),
 ]
 
 
@@ -114,6 +127,12 @@ def check_limits(platform: str, text: str) -> list:
             if len(line) > limit:
                 out.append({"field": field, "limit": note, "actual": f"first line is {len(line)} chars",
                             "before_fold": line[:limit]})
+            else:
+                # A short first line can still leave every fact behind the fold.
+                visible = f["body"][:limit]
+                if len(f["body"]) > limit and find_specifics(f["body"]) and not find_specifics(visible):
+                    out.append({"field": field, "limit": note,
+                                "actual": "every specific sits after the fold", "before_fold": visible})
         elif kind == "chars" and field == "post":
             posts = [p.strip() for p in re.split(r"^\s*---\s*$", f["body"], flags=re.M) if p.strip()]
             for i, p in enumerate(posts, 1):
@@ -143,7 +162,9 @@ def check(text: str, platform: str | None) -> dict:
     name = ALIASES.get((platform or "unknown").lower(), (platform or "unknown").lower())
     if name not in LIMITS:
         raise SystemExit(f"unknown platform {platform!r}; one of: {', '.join(sorted(LIMITS))}")
-    specifics = find_specifics(PLACEHOLDER_RE.sub(" ", text))
+    # Field labels ("Headline 1:") are not facts; neither are placeholders.
+    bare = "\n".join(FIELD_RE.sub(r"\2", ln.strip()) for ln in text.splitlines())
+    specifics = find_specifics(PLACEHOLDER_RE.sub(" ", bare))
     return {
         "platform": name,
         "specifics": specifics,
