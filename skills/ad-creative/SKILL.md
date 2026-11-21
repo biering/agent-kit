@@ -107,8 +107,9 @@ node <skill>/scripts/brief_check.mjs <brief.md>
 It fails an empty element; a premise without a source or a date, or one whose source is existing
 copy or hearsay; a number, an urgency word or a proof word in a clause that cites no premise;
 urgency whose premise holds no end date; anchoring or risk reversal with nothing behind it; and a
-deadline that has passed. It cannot tell whether the cited premise supports the clause. That is
-your job, and the launch checks'. Fix the brief, not the check.
+deadline that has passed. It cannot tell whether the cited premise supports the clause, and its
+urgency and proof words are a list: a phrasing it does not know passes. Both are your job, and
+the launch checks'. Fix the brief, not the check.
 
 **When facts are missing,** write `missing: <what, and who can answer>` in the field. The check
 then fails on purpose. Stop there and reply with three things: the brief as it stands, the
@@ -136,7 +137,9 @@ Plan ads as a batch, not one at a time ([elements.md](references/elements.md#bat
 - **Moderate:** one new bet (a new concept, format or topic) on proven ground.
 - **Aggressive:** several bets at once. Few of these; they teach less when they fail.
 
-Each variant changes **one** variable against its sibling, and its name says which
+Each variant is a row in the brief's batch table, with the text or asset it ships under
+Changes; the check reads that cell like the hook. Each variant changes **one** variable against
+its sibling, and its name says which
 (`<angle>_<format>_<variable>_<v>`, the `utm_content` of `ads-landingpage`'s
 `scripts/ad_url.mjs`), so a result teaches something.
 
@@ -153,6 +156,9 @@ Tick the brief's launch checks against [policy.md](references/policy.md), then:
 ```bash
 node <skill>/scripts/brief_check.mjs <brief.md> --launch
 ```
+
+With `--launch` it also refuses an empty Script and a batch table without rows: what ships has
+to be in the brief, or the check has nothing to read.
 
 Hand over the creatives, the brief path and one ad URL per variant from `ads-landingpage`.
 

@@ -19,7 +19,8 @@
  *   - an empty writing or batch field; urgency or proof in the mini-blocks, the CTA or the script,
  *     and a number in the CTA or the script (timings belong in the mini-blocks),
  *     without a premise;
- *   - with --launch, an unticked launch check.
+ *   - per row of the batch table: urgency, proof or a number in its Changes, without a premise;
+ *   - with --launch, an unticked launch check, an empty Script, or a batch table without rows.
  * Warns (exit 0) on likely health claims, a question that asserts the reader's condition, and a
  * format asked to carry more than it can.
  *
@@ -71,6 +72,14 @@ export const URGENCY = words([
   'solange der vorrat reicht', 'frist', 'bald teurer', 'nur für kurze zeit', 'für kurze zeit', 'kurze zeit',
   `bis (?:${WOCHENTAGE})`, 'jetzt oder nie', 'nicht verpassen', 'verpasse? (?:es )?nicht', 'schnell sein', 'fast weg',
   'nur solange',
+  // plain deadline phrasings: a closing, a last day, a price that rises, a span of days or hours left
+  'last (?:day|days|hours?|call|weekend)', 'final (?:hours?|days?|call|weekend)', 'clos(?:es|ing) (?:soon|tonight|today|tomorrow|on|at|in|this)',
+  'closing soon', 'tonight', 'this weekend', 'soon gone', 'price(?:s)? (?:rises?|rising|increases?|goes up|go up)',
+  '(?:rises?|goes up|increases?) (?:on|after|from|next)', '(?:only|just) (?:\\w+ )?(?:days?|hours?|minutes?)(?: left| to go)?',
+  '(?:\\d+|one|two|three|four|five|six|seven|a few) (?:more )?(?:days?|hours?|minutes?) (?:left|to go|remaining)',
+  'letzter tag', 'letzte (?:tage|stunden|gelegenheit)', 'endspurt', 'schließt', 'heute abend', 'dieses wochenende',
+  'preis steigt', 'wird teurer', 'steigt (?:am|ab|nach)', '(?:nur|noch) (?:\\d+|einen|eine|zwei|drei|vier|fünf|sechs|sieben|wenige) (?:tage?n?|stunden?|minuten?)',
+  '(?:\\d+|zwei|drei|vier|fünf|sechs|sieben) (?:tage?|stunden) (?:noch|übrig|lang)',
 ])
 export const PROOF = words([
   // plural "reviews": "a client review" is a meeting, "4,000 reviews" is proof. "users" and "customers"
@@ -257,6 +266,17 @@ export function checkBrief(brief, { launch = false, today = new Date().toISOStri
   for (const name of ['Mini-blocks', 'CTA', 'Script']) if (writing[name] && !empty(text(writing[name]))) claimCheck(writing[name], `Writing: ${name}`, { numbers: name !== 'Mini-blocks' })
 
   const batch = fields(parts.Batch)
+  // The variant table: each row's "Changes" is the text that ships in that variant, so it is checked like the hook.
+  const table = (parts.Batch ?? []).filter((line) => /^\s*\|/.test(line)).map((line) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim()))
+  const header = table.find((cells) => cells.some((cell) => /^changes?$/i.test(cell))) ?? []
+  const changes = header.findIndex((cell) => /^changes?$/i.test(cell))
+  const variants = table.filter((cells) => cells !== header && !cells.every((cell) => /^:?-*:?$/.test(cell)) && cells.some(Boolean))
+  for (const cells of variants) {
+    const name = cells[0] || '(unnamed)'
+    const change = cells[changes >= 0 ? changes : 1] ?? ''
+    if (empty(change)) errors.push(`Batch: variant ${name} says nothing in Changes (the text or asset it ships)`)
+    else claimCheck({ value: change, more: [] }, `Batch: variant ${name}`)
+  }
   if (!parts.Batch) errors.push('Batch: section missing')
   for (const name of ['Risk', 'Bets', 'Variable']) if (empty(text(batch[name]))) errors.push(`Batch: ${name} is empty`)
   const risk = first(batch.Risk?.value)
@@ -267,6 +287,9 @@ export function checkBrief(brief, { launch = false, today = new Date().toISOStri
     const boxes = (parts['Launch checks'] ?? []).filter((line) => /^- \[[ xX]\]/.test(line))
     if (!boxes.length) errors.push('Launch checks: section missing or empty')
     for (const box of boxes) if (/^- \[ \]/.test(box)) errors.push(`Launch checks: not ticked: ${box.slice(6)}`)
+    // What ships has to be in the brief, or the checks above read nothing.
+    if (empty(text(writing.Script))) errors.push('Writing: Script is empty; before launch it holds the text that ships, so the check reads it')
+    if (!variants.length) errors.push('Batch: no variant rows; before launch each ad in the batch is a row named by its utm_content')
   }
 
   return { errors, warnings }

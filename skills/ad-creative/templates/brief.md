@@ -13,6 +13,8 @@ Values the check knows:
   Features: one indented "- odds: / - dream: / - effort: / - time:" line per feature
 A note may follow the value in parentheses: "problem-aware (from reviews)".
 Timings ("0-3 s") go in Mini-blocks; every number in the CTA and the Script is a claim and cites a premise.
+Each batch row's Changes holds the text or asset that variant ships, and is checked the same way.
+Before launch the Script and at least one batch row must be filled.
 Check it: node <skill>/scripts/brief_check.mjs <this file>   (and --launch before launch)
 <skill> is this skill's folder. The elements are explained in references/elements.md.
 -->

@@ -16,6 +16,9 @@ const example = () => read(EXAMPLE)
 const TODAY = '2026-11-20'
 const check = (text, options = {}) => checkBrief(text, { today: TODAY, ...options })
 const replaceLine = (text, start, line) => text.replace(new RegExp(`^- ${start}:.*$`, 'm'), line)
+// The Script field with its indented lines, replaced as a whole.
+const setScript = (text, script) => text.replace(/^- Script:.*(?:\r?\n[ \t]+\S.*)*/m, `- Script: ${script}`)
+const setVariant = (text, name, change) => text.replace(new RegExp(`^\\| ${name} \\|[^|]*\\|`, 'm'), `| ${name} | ${change} |`)
 
 describe('brief_check', () => {
   it('passes the worked example', () => {
@@ -86,7 +89,7 @@ describe('brief_check', () => {
     const errors = check(cta).errors.join()
     assert.match(errors, /Writing: CTA: urgency/)
     assert.match(errors, /Writing: CTA: proof/)
-    const script = example().replace('- CTA: Try it free', '- CTA: Try it free\n- Script: Rated by thousands. Try it.')
+    const script = setScript(example(), 'Rated by thousands. Try it.')
     assert.match(check(script).errors.join(), /Writing: Script: proof/)
     const blocks = example().replace('- Mini-blocks: hook', '- Mini-blocks: countdown 0-3 s; hook')
     assert.match(check(blocks).errors.join(), /Writing: Mini-blocks: urgency/)
@@ -182,17 +185,47 @@ describe('brief_check', () => {
 
   it('catches invented urgency and stock in the script, the CTA and the hook', () => {
     const cases = [
-      ['- CTA: Try it free', '- CTA: Try it free\n- Script: Only 3 licenses left at this price.', /Writing: Script: (?:urgency|a number)/],
-      ['- CTA: Try it free', '- CTA: Try it free\n- Script: Nur für kurze Zeit im Angebot, bis Freitag.', /Writing: Script: urgency/],
+      ['Script', 'Only 3 licenses left at this price.', /Writing: Script: (?:urgency|a number)/],
+      ['Script', 'Nur für kurze Zeit im Angebot, bis Freitag.', /Writing: Script: urgency/],
       ['- CTA: Try it free', '- CTA: Get it before it is gone', /Writing: CTA: urgency/],
       ['- Copy hook: "You shared your screen. So did your inbox."', '- Copy hook: Jetzt oder nie, nur für kurze Zeit', /Copy hook: urgency/],
       ['- Copy hook: "You shared your screen. So did your inbox."', '- Copy hook: Only a few licences left', /Copy hook: urgency/],
       ['- Copy hook: "You shared your screen. So did your inbox."', "- Copy hook: Don't miss out, ends Sunday", /Copy hook: urgency/],
     ]
     for (const [from, to, expected] of cases) {
-      const brief = example().replace(from, to)
+      const brief = from === 'Script' ? setScript(example(), to) : example().replace(from, to)
       assert.notEqual(brief, example(), `fixture did not change for ${to}`)
       assert.match(check(brief).errors.join(), expected, to)
+    }
+  })
+
+  it('reads the variant table, which is what ships per ad', () => {
+    const hook = 'Only 3 licenses left, hurry. 10,000 happy users. Cures stress.'
+    const brief = setVariant(example(), 'share_video40_hook_b', hook)
+    assert.notEqual(brief, example())
+    const { errors, warnings } = check(brief)
+    const mine = errors.filter((e) => e.startsWith('Batch: variant share_video40_hook_b')).join()
+    assert.match(mine, /urgency/)
+    assert.match(mine, /proof/)
+    assert.match(mine, /a number/)
+    assert.match(warnings.join(), /Batch: variant share_video40_hook_b: reads like a health claim/)
+    assert.match(check(setVariant(example(), 'share_video40_hook_a', ' ')).errors.join(), /variant share_video40_hook_a says nothing/)
+    // A sourced claim in a variant passes, like anywhere else.
+    assert.deepEqual(check(setVariant(example(), 'share_video40_hook_b', '30 % off until 2026-12-07 [P6]')).errors, [])
+  })
+
+  it('refuses a launch without the Script or variant rows', () => {
+    const ticked = example().replace(/^- \[ \]/gm, '- [x]')
+    assert.deepEqual(check(ticked, { launch: true }).errors, [])
+    assert.match(check(setScript(ticked, ''), { launch: true }).errors.join(), /Writing: Script is empty/)
+    const noRows = ticked.replace(/^\| share_video40_hook_[ab] .*\n/gm, '')
+    assert.match(check(noRows, { launch: true }).errors.join(), /Batch: no variant rows/)
+    assert.deepEqual(check(noRows).errors, [], 'without --launch a brief may still lack variants')
+  })
+
+  it('catches plain deadline phrasings', () => {
+    for (const phrase of ['Last day.', 'Closing soon.', 'Price rises Monday.', 'Offer closes tonight.', 'Final hours.', 'Nur zwei Tage.', 'Only two days left.', '48 hours left.', 'Letzter Tag.', 'Der Preis steigt am Montag.', 'Noch drei Tage.']) {
+      assert.match(check(setScript(example(), phrase)).errors.join(), /Writing: Script: (?:urgency|a number)/, phrase)
     }
   })
 

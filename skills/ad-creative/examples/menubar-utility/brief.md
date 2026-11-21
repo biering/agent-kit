@@ -65,6 +65,14 @@ the coupon date is in the past after 2026-12-07, which the check then reports, a
 - Reference ad: a screen-recording ad for a productivity utility, running since 2026-08 in the Meta Ad Library (entry saved in the research notes, seen 2026-11-18)
 - Mini-blocks: hook 0-3 s; the routine 3-10 s; the cause 10-17 s; the fix shown 17-27 s; set-once 27-32 s; trial and refund 32-36 s; coupon and CTA 36-40 s
 - CTA: Try it free
+- Script:
+  - hook: "You shared your screen. So did your inbox."
+  - routine: Close mail. Hide the folder called "invoices". Turn on Do Not Disturb. Hope.
+  - cause: Three steps while the call is starting, and the one you forget is the one that shows.
+  - fix: Sharehush sees the share start. It hides the icons, pauses notifications and covers the windows you listed [P3].
+  - set once: Set it up once. Every share after that starts clean [P3].
+  - offer: Try it 7 days free [P2]. If you buy, you have 30 days to ask for your money back [P5].
+  - coupon: 30 % off until 2026-12-07 [P6]. Try it free.
 
 ## Batch
 
