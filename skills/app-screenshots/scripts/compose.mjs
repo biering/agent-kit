@@ -81,10 +81,10 @@ export const SIZES = {
 
 /**
  * The App Store Connect display type a size key is uploaded under, where it is
- * verified. "6.3" most likely maps to APP_IPHONE_61 (push, then
- * `eas metadata:pull` to confirm); Duo has no display type in eas-cli yet.
+ * verified. "6.3" (1206x2622) is APP_IPHONE_61: App Store Connect accepted and
+ * processed a set there in November 2026. Duo has no display type in eas-cli yet.
  */
-export const DISPLAY_TYPES = { '6.9': 'APP_IPHONE_67', '6.7': 'APP_IPHONE_67', '6.5': 'APP_IPHONE_65' }
+export const DISPLAY_TYPES = { '6.9': 'APP_IPHONE_67', '6.7': 'APP_IPHONE_67', '6.5': 'APP_IPHONE_65', '6.3': 'APP_IPHONE_61' }
 
 /** Apple takes at most this many screenshots per set. */
 export const MAX_FRAMES = 10

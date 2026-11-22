@@ -42,11 +42,13 @@ takes both large Dynamic Island sizes. So 1290x2796 (`6.7`) is the largest set
 pushable from git; 1320x2868 (`6.9`) is the sharpest, kept as the source of
 record and uploaded by hand if wanted.
 
-**Uploading the required class from git is unverified.** `@expo/apple-utils`
-(eas-cli 24.14) knows `APP_IPHONE_61`, which is presumably where the medium
-Dynamic Island sizes go, but nothing in eas-cli checks pixel sizes, and it has
-no Duo display type at all. Push, then `eas metadata:pull` to see what landed.
-Duo screenshots go up by hand in App Store Connect for now.
+**The required class goes in `APP_IPHONE_61`.** App Store Connect accepted a
+1206x2622 set under that display type and processed it (November 2026, uploaded
+through the App Store Connect API); a later `eas metadata:push` with the set
+declared under `APP_IPHONE_61` synced without error and left it intact. Nothing
+in eas-cli checks pixel sizes, so read the sets back after every push
+(`eas metadata:pull`, or the API). eas-cli has no Duo display type at all; Duo
+screenshots go up by hand in App Store Connect for now.
 
 ## Product page header (new, iOS 27)
 
