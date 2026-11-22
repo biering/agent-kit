@@ -12,6 +12,7 @@ import {
   contrast,
   copyErrors,
   fitTokens,
+  headlineTokens,
   polygonsOverlap,
   rotatedCorners,
   groundOf,
@@ -116,6 +117,17 @@ describe('set spec', () => {
     assert.match(errorsFor({ ...hero, headlineLines: 4 }).join(), /"headlineLines" must be 1, 2 or 3/)
     assert.match(errorsFor({ ...hero, headlineSize: 'set' }).join(), /can only be "frame"/)
     assert.match(validateSetSpec({ ...withFrame(hero), headlineLines: 0 }).join(), /"headlineLines" must be 1, 2 or 3/)
+  })
+
+  it('keeps the breaks an author sets, and refuses more lines than allowed', () => {
+    const { toks, cuts } = headlineTokens('Your portfolio\n*in your pocket*')
+    assert.deepEqual(cuts, [2])
+    const measure = (line, px) => line.reduce((w, t) => w + t.text.length, 0) * px * 0.6
+    const fit = fitTokens(toks, measure, { maxWidth: 900, maxFont: 58, minFont: 30, maxLines: 2, cuts })
+    assert.deepEqual(fit.lines.map((l) => l.map((t) => t.text).join(' ')), ['Your portfolio', 'in your pocket'])
+    assert.equal(headlineTokens('One line').cuts, undefined)
+    const frame = { template: 'tilted-device', headline: 'A\nB\nC', headlineLines: 2, device: { screen: 'a.png' } }
+    assert.match(errorsFor(frame).join(), /breaks into 3 lines/)
   })
 
   it('places a callout freely, cuts one from another capture only with a place, and knows one sticker icon', () => {

@@ -258,6 +258,10 @@ export function validateSetSpec(spec) {
         errors.push(`${at}: headline has ${words} words; ${MAX_HEADLINE_WORDS} at most, three to five read best at thumbnail size`)
       }
       if ((frame.headline.match(/\*/g) ?? []).length > 2) errors.push(`${at}: emphasise one word or phrase per headline, not several`)
+      const authorLines = frame.headline.split('\n').length
+      if (authorLines > (frame.headlineLines ?? spec.headlineLines ?? 3)) {
+        errors.push(`${at}: headline breaks into ${authorLines} lines, more than its headlineLines allow`)
+      }
       errors.push(...copyErrors(frame.headline, { at, field: 'headline' }))
     }
     if (frame.sub !== undefined) {
@@ -425,9 +429,25 @@ export const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top 
  * @param {{ maxWidth: number, maxFont: number, minFont: number, maxLines: number }} limits
  * @returns {{ lines: Array<Array<{ text: string, accent: boolean }>>, fontSize: number }}
  */
-export function fitTokens(toks, measure, { maxWidth, maxFont, minFont, maxLines, prefer = 0.85 }) {
+/**
+ * A headline's words, and where its author broke the lines. "Your portfolio\n*in your pocket*"
+ * keeps the phrase whole; without a `\n` the fitter chooses the breaks.
+ */
+export function headlineTokens(headline) {
+  const toks = []
+  const cuts = []
+  for (const [i, line] of headline.split('\n').entries()) {
+    if (i > 0) cuts.push(toks.length)
+    toks.push(...tokens(line.trim()))
+  }
+  return { toks, cuts: cuts.length ? cuts : undefined }
+}
+
+export function fitTokens(toks, measure, { maxWidth, maxFont, minFont, maxLines, prefer = 0.85, cuts }) {
   const n = toks.length
   const splits = (count) => {
+    // Breaks the author set are the only split: the type size is all that is fitted.
+    if (cuts) return count === cuts.length + 1 ? [cuts] : []
     if (count === 1) return [[]]
     if (count === 2) return Array.from({ length: n - 1 }, (_, i) => [i + 1])
     const out = []
@@ -557,8 +577,9 @@ export function setHeadlineSize(frames, ctx) {
   if (shared.length === 0) return undefined
   return Math.min(
     ...shared.map((frame) =>
-      fitTokens(tokens(frame.headline), measureLine(font, styleOf(spec, frame)), {
+      fitTokens(headlineTokens(frame.headline).toks, measureLine(font, styleOf(spec, frame)), {
         ...headlineLimits(s, size, linesOf(spec, frame)),
+        cuts: headlineTokens(frame.headline).cuts,
         prefer: 1,
       }).fontSize,
     ),
@@ -571,11 +592,11 @@ function copyBlock(frame, ctx, frameLeft) {
   const margin = 32 * s
   const limits = headlineLimits(s, size, linesOf(spec, frame))
   const { maxWidth } = limits
-  const toks = tokens(frame.headline)
+  const { toks, cuts } = headlineTokens(frame.headline)
   // At the set's size: the fewest lines that fit. Per frame: fitted on its own.
   const { lines, fontSize } = ctx.setPx && frame.headlineSize !== 'frame'
-    ? fitTokens(toks, measureLine(font, style), { ...limits, maxFont: ctx.setPx, minFont: ctx.setPx, prefer: 0 })
-    : fitTokens(toks, measureLine(font, style), limits)
+    ? fitTokens(toks, measureLine(font, style), { ...limits, cuts, maxFont: ctx.setPx, minFont: ctx.setPx, prefer: 0 })
+    : fitTokens(toks, measureLine(font, style), { ...limits, cuts })
   const lead = fontSize * 1.0
   const set = lines.map((l) => headlineLine(font, l, fontSize, style))
   let sub = null

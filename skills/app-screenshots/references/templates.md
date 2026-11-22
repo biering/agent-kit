@@ -174,6 +174,9 @@ exactly that: a rule the app applies.
   then differ in line count, not in type size, which is what makes a set read
   as one. A single frame with `"headlineSize": "frame"` (the hero) is sized on
   its own and does not set the others'.
+- A `\n` in a headline sets the line breaks ("Your portfolio\n*in your
+  pocket*"); only the type size is then fitted. Use it where the balanced
+  split would break a phrase.
 - `headlineLines: 1 | 2 | 3` (set or frame, default 3): the most lines a
   headline takes. Two keeps a phrase whole ("Swipe right, / it's done") where
   three breaks it wherever the width runs out.
