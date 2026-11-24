@@ -395,6 +395,9 @@ matches the work.
 - [`rules/how-we-win.md`](rules/how-we-win.md): the guiding principles for
   evaluating ideas, building, experimenting and deleting; every repo's CEO and
   idea scoring follow it.
+- [`rules/growth-stages.md`](rules/growth-stages.md): which growth work fits which
+  revenue stage, the gate to the next, the demand test, hand sales for the first
+  10 customers, the price review and the hard lines.
 
 ## Why vendored
 
