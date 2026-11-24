@@ -5,9 +5,11 @@ that has no customers yet, and hand sales stop scaling at $50k a month. Read the
 before planning distribution work, and do the work of that stage and the ones below it. A repo maps
 the stages onto its own distribution system and names its own channels; this file only says when.
 
-**The stage is measured, never guessed:** paid revenue in the last 30 days (MRR for a
-subscription), in USD or the same amount in the repo's currency. A product moves up when it held the
-next stage's floor for two months in a row and you can name the channel that brought most of it.
+**The stage is measured, never guessed:** paid revenue in the last 30 days, sales recorded by hand
+and store proceeds included (MRR for a subscription), in USD or the same amount in the repo's
+currency. A product moves up when it held the next stage's floor for two months in a row and you
+can name the channel that brought most of it. Write the stage where agents plan from, with the
+figure, its source and the date, and read it before picking distribution work.
 It never skips a stage, and the work of a lower stage keeps running.
 
 ## The stages
