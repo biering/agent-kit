@@ -1,0 +1,35 @@
+{
+  "skill_name": "mcp-design",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add MCP tools for our invoices: list, get, refund and void.",
+      "expected_output": "Agent reads docs/agent-kit/mcp-design.md, names them invoices_list, invoices_get, invoices_refund, invoices_void in one toolset, sets title and annotations.title and all four hints (refund and void destructive, open world where money leaves), gives invoices_list limit and next_cursor, makes refund idempotent on an idempotency key with a human confirmation, and adds them to the contract test.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Our MCP server has 120 tools and agents keep picking the wrong one. Is there a way to not load all of them?",
+      "expected_output": "Agent measures the list with scripts/tool-budget.mjs, proposes toolsets of 3 to 15 tools with a core default of about 20 tools, selection by ?toolsets= in the URL, the toolset map in the instructions, tools_search plus a read-only call-through, scopes kept for permission, and explains why a runtime enable_toolset tool is not used (2026-07-28 forbids side-effect list changes, Cursor ignores list_changed).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Write the description for a tool that returns analytics for a site.",
+      "expected_output": "Agent writes a first sentence that says what it returns for which object in the user's words, adds only the inputs or siblings that change the call, keeps it under 500 characters, and leaves out storage details, the HTTP route and instructions to the model.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "When a project id is wrong our tool returns {\"error\": \"not found\"}. Fine?",
+      "expected_output": "Agent says no: a success-shaped error reads as data; return isError true with what was wrong and the next call (the tool that lists valid ids), and adds a test for it.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Should our MCP server tell agents to read a guide resource before they start?",
+      "expected_output": "Agent says no: connector reviewers reject instructions that send the model to runtime guidance, and a needed guide means the descriptions are unclear; it moves single-tool facts into those tools' descriptions, keeps cross-tool rules and the toolset map in short, stable instructions, and keeps resources for data a person attaches.",
+      "files": []
+    }
+  ]
+}
