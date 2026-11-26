@@ -5,7 +5,7 @@
 
 ## 1. Executive summary
 
-- **Overall score: [X.X] / 10, grade [A to F]**
+- **Overall: [X.X] / 10, grade [A to F]** (REST [X.X], MCP [X.X]; the mean of the surfaces present)
 - **Reviewed:** [N] HTTP routes, [M] MCP tools ([date], branch `[branch]`).
 - **Top 3 strengths (preserve):** [one line each]
 - **Top 3 systemic weaknesses (themes):** [one line each: the patterns behind most deductions]
@@ -40,24 +40,40 @@
 | [projects] | [GET/POST /projects; GET/PATCH/DELETE /projects/{id}] | [projects_list, projects_get] | [api-key] | [tool with no route / route with no tool / ok] |
 | | | | | |
 
-## 4. Scorecard
+**MCP budget** (`tool-budget.mjs`, per credential kind and selection): [N] tools, about [T] tokens of
+definitions, [P] tools with problems; largest: [names].
+
+## 4. Scorecards
+
+### REST ([X.X] / 10)
 
 | # | Dimension | Weight | Score /10 | Weighted |
 |---|-----------|-------:|----------:|---------:|
-| A1 | Resource modeling and URL design | 10 | | |
-| A2 | HTTP method semantics and idempotency | 8 | | |
-| A3 | Status codes and headers | 8 | | |
-| A4 | Request/response shape consistency | 8 | | |
-| A5 | Error handling | 8 | | |
-| A6 | Pagination, filtering and sorting | 6 | | |
-| A7 | Versioning and compatibility | 5 | | |
-| A8 | Auth and security surface | 6 | | |
-| A9 | OpenAPI and documentation quality | 6 | | |
-| B1 | MCP tool naming and taxonomy | 8 | | |
-| B2 | MCP tool descriptions | 10 | | |
-| B3 | MCP annotations and mutation safety | 9 | | |
-| B4 | MCP input schemas and parity | 8 | | |
+| A1 | Resource modeling and URL design | 15 | | |
+| A2 | HTTP method semantics and idempotency | 12 | | |
+| A3 | Status codes and headers | 12 | | |
+| A4 | Request/response shape consistency | 12 | | |
+| A5 | Error handling | 12 | | |
+| A6 | Pagination, filtering and sorting | 9 | | |
+| A7 | Versioning and compatibility | 8 | | |
+| A8 | Auth and security surface | 10 | | |
+| A9 | OpenAPI and documentation quality | 10 | | |
 | | **Total** | **100** | | **[X.X] / 10** |
+
+### MCP ([X.X] / 10)
+
+| # | Dimension | Weight | Score /10 | Weighted | Rules failed |
+|---|-----------|-------:|----------:|---------:|--------------|
+| M1 | Surface size and scoping | 14 | | | |
+| M2 | Naming and taxonomy | 10 | | | |
+| M3 | Titles and descriptions | 14 | | | |
+| M4 | Input schemas and parity | 10 | | | |
+| M5 | Responses and token efficiency | 14 | | | |
+| M6 | Errors that teach | 10 | | | |
+| M7 | Annotations and write safety | 14 | | | |
+| M8 | Protocol, instructions and auth | 6 | | | |
+| M9 | Tests, evals and versioning | 8 | | | |
+| | **Total** | **100** | | **[X.X] / 10** | |
 
 ## 5. Per-dimension detail
 
@@ -89,8 +105,8 @@ _(Healthy dimension: one sentence and the score.)_
 |--------|-------------|-------|------------------|-----------|
 | | | | | |
 
-> Flag every row that breaks existing consumers (generated clients, MCP clients, CLIs, documented
-> routes). Present the clean break and the back-compat option; let the user choose.
+> Flag every row that breaks existing consumers (generated clients, MCP clients and their saved
+> prompts, CLIs, documented routes). Present the clean break and the back-compat option; let the user choose.
 
 ## 7. Open questions
 - [Decisions for a human: versioning and deprecation policy, casing standard, error-format target,

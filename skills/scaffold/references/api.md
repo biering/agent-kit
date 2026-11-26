@@ -127,67 +127,36 @@ api/
   be re-run by hand without waiting a day.
 - **Local dev:** `pnpm -C apps/<slug>/api dev` → `http://127.0.0.1:4011`.
 
-## MCP endpoint — best practices
+## MCP endpoint
 
-These practices are distilled from a production MCP server (official SDK, StreamableHTTP transport,
-annotations, resources, scopes, structured errors, contract tests). A minimal hand-rolled JSON-RPC
-handler — a route that pattern-matches the raw JSON-RPC body and answers only `tools/call` itself —
-can limp along for one or two tools, but for anything real use the SDK and the practices below.
+The design rules (tool budget and toolsets, names, descriptions, response shapes, errors, write
+safety, scopes, tests) are the `mcp-design` skill; read it before the first tool. What is specific
+to this stack:
 
-1. **Use the official SDK + StreamableHTTP transport, not hand-rolled JSON-RPC.** `new McpServer(...)`
-   from `@modelcontextprotocol/sdk/server/mcp.js`. The transport handles `initialize` / `tools/list` /
-   `tools/call` / notifications correctly — hand-rolling only `tools/call` (the shortcut above) skips
-   the handshake real clients expect. Mount it in one place (`server/mcp/executeMcpHttpExchange.ts`)
-   and call it from the route(s).
-
-   **On Workers pick the web transport**: `WebStandardStreamableHTTPServerTransport` from
-   `.../server/webStandardStreamableHttp.js`, whose `handleRequest(request)` takes a `Request` and
-   returns a `Response` — return that straight from the handler. The default
-   `StreamableHTTPServerTransport` (`.../server/streamableHttp.js`) is the Node wrapper: its
-   `handleRequest(req, res, body)` wants `IncomingMessage`/`ServerResponse`, which do not exist on
-   an edge runtime, so it can never work there. Let the transport read the body — do not pre-read it,
-   or the `Request` is already consumed.
-
-2. **Server `instructions` are agent onboarding — write them.** Pass `instructions` to `McpServer`: how
-   to auth, domain quirks, async/polling flows, units/ID conventions, and "read the `<app>://skill`
-   resource once per session." This prose is what makes the tools usable; contract-test it so it can't
-   silently drift from behavior.
-
-3. **Expose resources**, not just tools. `registerResource('<app>://skill', …, text/markdown)` for the
-   agent-facing skill doc, and `<app>://openapi` for the OpenAPI snapshot. Agents read these to self-serve.
-
-4. **Annotate every tool** with `ToolAnnotations` — `readOnlyHint`, `destructiveHint`, `idempotentHint`,
-   `openWorldHint`. Categorize consistently: read-only, mutating-create (non-idempotent), mutating-patch
-   (idempotent), destructive-delete. Centralize the title+annotations in one `toolMeta` map and the tool
-   names in one `toolNames` union — hosts use annotations to decide what to auto-approve.
-
-5. **Naming: `<resource>_<action>` snake_case, resource-first** (`scans_run`, `pages_get`,
-   `rubric_list`). One central name union gives you type safety and a target for the contract test.
-
-6. **zod `inputSchema` on every tool.** Reuse the same schemas as the REST routes so there is one source
-   of truth. `z.coerce.*` for params that arrive as strings. No `as` casts on tool args.
-
-7. **A single tool-run wrapper** (`runMcpTool(extra, fn)`) that maps a thrown `Error` to a structured
-   `CallToolResult` and a helper (`jsonToolResult(data)`) that wraps JSON in the text-content shape.
-   Handlers stay thin: validate → call a `core/` function → `jsonToolResult`. Don't format results ad hoc.
-
-8. **Least privilege via scope-gated registration.** Register read tools always; wrap write/destructive
-   tools in `registerWhenWrite(ctx, …)` so a read-only token never sees them. Auth (bearer / per-user
-   connector token vs service key) resolves scopes before the server is built.
-
-9. **Auth failures return JSON-RPC errors, not bare 401s** — reply on the same JSON-RPC `id` so the
-   client surfaces it cleanly; rate-limit the connector token. Never leak which tools exist to an
-   unauthorized caller.
-
-10. **Contract-test the surface** (`test/mcp/*`): a `tools.contract` test that locks tool names + input
-    schemas + annotations, plus auth, scopes, and structured-error tests. The contract test is what keeps
-    tools, annotations, and instructions honest over time — it's the highest-leverage MCP test.
-
-11. **Async work returns a `job_id`; add a `jobs_get` poll tool.** Don't block a tool call on a long job;
-    return the id and let the agent poll. Document the flow in the instructions.
-
-12. **Optional — MCP-UI (`@modelcontextprotocol/ext-apps`):** interactive cards for hosts that render them
-    (Claude Cowork), always with a text-JSON fallback so non-UI hosts still work.
+1. **The official SDK and its web transport.** `new McpServer(...)` from
+   `@modelcontextprotocol/sdk/server/mcp.js`, mounted in one place
+   (`server/mcp/executeMcpHttpExchange.ts`). On Workers use
+   `WebStandardStreamableHTTPServerTransport` (`.../server/webStandardStreamableHttp.js`): its
+   `handleRequest(request)` takes a `Request` and returns a `Response`. The default
+   `StreamableHTTPServerTransport` is the Node wrapper and cannot run on an edge runtime. Let the
+   transport read the body; a pre-read `Request` is consumed. Stateless: `sessionIdGenerator:
+   undefined`, a fresh server per POST, 405 on GET and DELETE.
+2. **One registry** (`server/mcp/toolMeta.ts`): a `ToolName` union and, per tool, its toolset,
+   title, scope and annotations. Registration reads it, sets `annotations.title` from `title`, and
+   skips tools the token's scopes or the URL's `?toolsets=` do not select.
+3. **zod `inputSchema` from `core/`**, the same schemas as the REST routes; `z.coerce.*` for values
+   that arrive as strings; no `as` casts on tool arguments.
+4. **One wrapper** (`runMcpTool(fn)`) maps a thrown error to an `isError` result with an actionable
+   message, and `jsonToolResult(data)` returns `structuredContent` plus the same JSON as text.
+   Handlers stay thin: validate, call a `core/` function, return.
+5. **No or a dead token is an HTTP 401 with `WWW-Authenticate`** (the OAuth metadata URL and the
+   scope), never a 200 carrying a JSON-RPC error: that header is how a client signs in from the URL
+   alone. A missing scope is a 403 `insufficient_scope`. Rate-limit per agent.
+6. **The contract test** (`server/mcp/tools.contract.test.ts`) snapshots names, toolsets, titles,
+   annotations and schemas, and runs `mcp-design`'s `scripts/tool-budget.mjs` budgets on the
+   default selection.
+7. **Optional, MCP Apps** (`@modelcontextprotocol/ext-apps`): interactive cards for hosts that render
+   them, always with the text result for hosts that do not.
 
 Keep handlers thin and reuse `core/`: the same Supabase client, zod schemas, and query functions back
 both the REST routes and the MCP tools, so the two surfaces can never diverge.

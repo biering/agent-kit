@@ -3,7 +3,7 @@
 What Anthropic's **Connectors Directory** requires of a remote MCP server, and the traps that pass
 every local test and still come back flagged in review.
 
-Treat this as **pass/fail compliance**, not a quality axis. A surface can score 9/10 on Group B and
+Treat this as **pass/fail compliance**, not a quality axis. A surface can score 9/10 on the MCP scorecard and
 still be rejected, because these are contract checks, not taste. Score quality in the rubric;
 report readiness as the checklist at the bottom.
 
@@ -83,6 +83,11 @@ string to rules that span several tools, put single-tool facts on their tools, a
 as prompts that string existing tools together, with no document to read and nothing done for the
 vendor unasked. Hold it with a contract test over the instructions, every tool description a
 client receives, and every prompt.
+
+A toolset map (one line per toolset and how to add it, `../mcp-design/references/scoping.md`)
+describes tools, so it belongs in the instructions and passes. Every toolset a reviewer can select
+follows the same rules, and the reviewer's connection should list the full surface the listing
+claims (`?toolsets=all` or the listed URL).
 
 ## Where the docs and the portal disagree
 
