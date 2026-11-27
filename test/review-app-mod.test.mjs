@@ -82,7 +82,9 @@ describe('review list mod: the rows', () => {
     assert.equal(n[0].level, 'warn')
     assert.match(n[0].text, /^Not complete: no phone screenshot/)
     assert.doesNotMatch(n[0].text, /em dash/)
-    assert.ok(n.some((x) => /approve the result here, the PR there/.test(x.text)))
+    assert.ok(n.some((x) => /approve the PR there first, then the result here/.test(x.text)))
+    assert.ok(notes({ ...result, ready: true, boardSays: 'Review passed' }).some((x) => x.text === 'Ready to approve on the board: Review passed.'))
+    assert.ok(notes({ ...spec, boardSays: 'Conversation compacted' }).some((x) => x.level === 'warn' && /marked it an error \(Conversation compacted\), but its last report stands/.test(x.text)))
     assert.ok(n.some((x) => x.text === 'OpenSpec change: /repo/openspec/changes/singing-bowl'))
     assert.ok(n.some((x) => x.text.startsWith('Brief file: ')))
     assert.match(notes(pr)[0].text, /Why: gate path: stripe\.config\.json\. CI green\./)
@@ -119,7 +121,7 @@ describe('review list mod: the keys', () => {
     assert.deepEqual(keyAction('escape', result, { asking: true }), { do: 'cancel' })
     assert.deepEqual(keyAction('b', result, { asking: true }), { do: 'cancel' })
     assert.equal(keyAction('a', pr), null)
-    assert.match(confirmText(result), /ship it\?.*merges once CI is green, posts the drafts on the brand accounts and archives its change once it lands/)
+    assert.match(confirmText(result), /Approve .*\? The board merges the PR it reviewed, then the drafts post on the brand accounts/)
     assert.match(confirmText(spec), /Its agent builds it now/)
   })
 
@@ -130,7 +132,7 @@ describe('review list mod: the keys', () => {
   })
 
   it('the footer names what a does for this kind', () => {
-    assert.match(footer(result), /a approve \+ ship/)
+    assert.match(footer(result), /a approve \+ merge/)
     assert.match(footer(spec), /a approve \+ build/)
     assert.doesNotMatch(footer(pr), /approve/)
     assert.equal(APPROVES.stuck, 'repair')

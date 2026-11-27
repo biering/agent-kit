@@ -3,7 +3,7 @@
 // No imports: this file is loaded by the Herdr app (gpui-shell) and by node alike.
 
 export const KIND = { spec: "spec", design: "design", result: "result", plan: "plan", stuck: "stuck", pr: "GitHub" };
-export const APPROVES = { spec: "approve + build", design: "approve + build", plan: "approve + build", result: "approve + ship", stuck: "repair" };
+export const APPROVES = { spec: "approve + build", design: "approve + build", plan: "approve + build", result: "approve + merge", stuck: "repair" };
 const TYPE = { artifact: "Artifact", pr: "PR", video: "Video", image: "Screenshot", link: "Link" };
 const MINUTE = 60 * 1000;
 
@@ -74,7 +74,9 @@ export function notes(it) {
   }
   const gaps = (it.findings ?? []).filter((f) => f.level === "error").map((f) => f.what);
   if (gaps.length) out.push({ text: `Not complete: ${gaps.join("; ")}.`, level: "warn" });
-  if (it.github) out.push({ text: `Its PR also waits for your approval on GitHub (${it.github}): approve the result here, the PR there.`, level: "warn" });
+  if (it.github) out.push({ text: `Its PR also waits for your approval on GitHub (${it.github}): approve the PR there first, then the result here (the board merges it).`, level: "warn" });
+  if (it.ready) out.push({ text: `Ready to approve on the board${it.boardSays ? `: ${it.boardSays}` : ""}.`, level: "dim" });
+  else if (it.boardSays) out.push({ text: `The board marked it an error (${it.boardSays}), but its last report stands: approve or send back as usual.`, level: "warn" });
   if (it.change) out.push({ text: `OpenSpec change: ${it.change}`, level: "dim" });
   if (it.briefFile) out.push({ text: `Brief file: ${it.briefFile}`, level: "dim" });
   return out;
@@ -89,7 +91,7 @@ export function footer(it) {
 
 /** What `a` asks before it acts. */
 export function confirmText(it) {
-  if (it.kind === "result") return `Approve ${it.key} and ship it? The agent merges once CI is green, posts the drafts on the brand accounts and archives its change once it lands. Press a again, Esc to cancel.`;
+  if (it.kind === "result") return `Approve ${it.key}? The board merges the PR it reviewed, then the drafts post on the brand accounts. Press a again, Esc to cancel.`;
   if (it.kind === "stuck") return `Repair ${it.key}? It is stopped and delegated again. Press a again, Esc to cancel.`;
   return `Approve ${it.key}? Its agent builds it now. Press a again, Esc to cancel.`;
 }
