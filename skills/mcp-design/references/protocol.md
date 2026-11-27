@@ -43,7 +43,8 @@ when you read this.
 The `instructions` string is read once at connect, by every client, and by connector reviewers.
 
 - **Short**: under about 1,500 characters (Claude Code cuts at 4,096). Rules that span tools: the
-  first call, units and time zones, id conventions, what counts as what, the toolset map.
+  first call, units and time zones, id conventions, what counts as what. Clients that search
+  tools read it to decide when to search, so open with what the server is for.
 - **The same every time**: no dates, counts or per-user text, so it caches.
 - **Tools only**: no "read resource X before acting" (reviewers reject guidance fetched at
   runtime), no "report problems to us" unless the person asks. A fact about one tool goes in that
@@ -55,7 +56,7 @@ The `instructions` string is read once at connect, by every client, and by conne
   with stable URIs and return `resource_link`s from tools. A guide the model must read before it
   can use the tools is a sign the tools are unclear; fix the descriptions instead.
 - **Prompts** are named workflows a person starts ("weekly review"): they string existing tools,
-  name only tools that exist on every selection that offers the prompt, and fetch nothing.
+  name only tools that every credential offered the prompt receives, and fetch nothing.
 
 ## Hosting checklist
 

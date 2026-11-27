@@ -33,8 +33,8 @@ finding cited to `path:line`, every low score paired with a fix that names the f
 | HTTP routes | every route handler, grouped by resource, and how it declares auth and OpenAPI metadata |
 | Generated spec | the emitted `openapi.json` or the served `/_openapi.json`; never hand-edited |
 | Shared schemas | the validation schemas and enums both REST and MCP import |
-| MCP tools | every tool registration, its title, annotations, toolset, and any read-only default set, write gate or allowlist per deployment |
-| MCP list as served | `tools/list` per credential kind and selection: a saved result, the server's tools page JSON, or a live call |
+| MCP tools | every tool registration, its title and annotations, and any write gate, scope filter or allowlist per deployment |
+| MCP list as served | `tools/list` per credential kind: a saved result, the server's tools page JSON, or a live call |
 | Auth | the helpers or wrapper that assign a route or tool its auth class |
 
 Async convention to check against unless the repo states another: a long-running operation
@@ -97,7 +97,7 @@ Compute each surface's weighted score with its rubric's weights and show the mat
 score is the mean of the surfaces present, unless the repo doc weights them; a server with only
 MCP tools has only the MCP score. Map each to the grade band. Name the top 3 strengths to preserve
 and the top 3 systemic weaknesses (themes that explain most deductions, such as "no shared error
-envelope" or "every tool loaded for every client").
+envelope" or "definitions five times over budget").
 
 ### Phase 4: action plan
 
@@ -105,14 +105,14 @@ envelope" or "every tool loaded for every client").
   `operationId` or examples, enum reuse, `annotations.title`.
 - **Consistency passes** (half a day): one error shape, pagination params, casing, the async
   pattern across every offender. List every file.
-- **Structural**: resource remodeling, toolsets and a default set, versioning policy, auth or scope
+- **Structural**: resource remodeling, consolidation, versioning policy, auth or scope
   changes.
 
 Each item: what, which dimension it lifts and by how much, files, a one-line acceptance check.
 Flag every item that breaks existing consumers (generated clients, MCP clients and their saved
 prompts, CLIs, documented routes). Present the clean break and the back-compat option and let the
-user choose. A toolset map is a structural item: give the sets, their tools, the default set and
-how an agent reaches the rest (`../mcp-design/references/scoping.md`).
+user choose. An item that shrinks the surface follows `../mcp-design/references/scoping.md`: the levers in its
+order, with the measured saving of each, never a default URL that hides listed tools.
 
 ## Deliverable
 

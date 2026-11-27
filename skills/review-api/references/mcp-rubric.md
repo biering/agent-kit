@@ -10,12 +10,12 @@ client receives (a saved `tools/list`, the server's tools page JSON, or `--url` 
 deployed server) for each credential kind. Its numbers go in the surface map.
 
 ### M1. Surface size and scoping (weight 14)
-S1 to S7. The default selection's tool count and definition tokens against the budget; toolsets by
-job with shared prefixes; a URL selector; the map in the instructions; `tools_search` and a
-read-only call-through; scopes filtering registration; no side-effect list changes; install lines
-per client. A server under the budget with one set scores on S1, S5 and S6 alone. Deduct hard for a
-default list far over budget (2x over: at most 5; 5x over: at most 3), for write tools listed to a
-read grant, and for a runtime enable-toolset tool.
+S1 to S7. The loaded list's tool count and definition tokens against the budget; lean schemas and
+shared prefixes; every listed tool on the default URL; no generic executor; scopes filtering
+registration; no side-effect list changes; instructions and `alwaysLoad` that help clients search.
+Deduct hard for a list far over budget (2x over: at most 5; 5x over: at most 3), for a default URL
+that hides listed tools, for a call-through standing in for listed tools, for write tools listed to
+a read grant, and for a runtime enable-toolset tool.
 
 ### M2. Naming and taxonomy (weight 10)
 N1, N2. One `<resource>_<verb>` convention and one verb per action; names that map onto the REST
@@ -30,8 +30,9 @@ and match the handler. Deduct for walls of text, leaked internals, backing route
 aspirational claims, orders to the model, and descriptions that restate the name.
 
 ### M4. Input schemas and parity (weight 10)
-I1, I2, I3. Flat, typed, enum-bound inputs from the same source as REST; one name per concept;
-server-side validation; parameters the connection fixes dropped. Deduct for retyped enums, loose
+I1 to I4. Flat, typed, enum-bound inputs from the same source as REST; one name per concept;
+server-side validation; portable JSON Schema; nothing asked beyond the operation; parameters the
+connection fixes dropped. Deduct for retyped enums, loose
 strings where an enum exists, a bare `id` among several, and tools whose inputs diverge from the
 route they wrap.
 
