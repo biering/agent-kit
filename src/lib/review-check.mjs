@@ -14,8 +14,12 @@ export const SECTIONS = {
   result: ['What the user gets', 'Why we should add it', 'Complexity', 'See it', 'Risk and undo', 'Distribution', 'Recommendation'],
 }
 
-/** "No screen changes" (or "no UI change", "nothing visible changes") lifts the media and design checks. */
-const NO_SCREENS = /\bno (?:screens?|ui|visible|user-visible) changes?\b|\bno screen changes\b|\bnothing (?:a user sees|visible) changes\b/i
+/**
+ * "No screen changes." (or "No UI change", "Nothing visible changes") lifts the media check of a pitch and the design
+ * check of a brief, but only as a line of its own in that section (See it, Design): a sentence elsewhere, or one
+ * that goes on ("No UI changes to the admin screens, only …"), never counts.
+ */
+export const NO_SCREENS = /^[ \t]*[-*]?[ \t]*(?:no (?:screens?|ui|visible|user-visible) changes?|nothing (?:a user sees|visible) changes)[ \t]*[.!]?[ \t]*$/im
 
 /** The body of a `## name` section, up to the next heading of the same or a higher level. */
 export function section(text, name) {
@@ -50,25 +54,25 @@ export function check(kind, text = '') {
     else if (!body.replace(/<!--[\s\S]*?-->/g, '').trim()) err(`"## ${name}" is empty`)
   }
   const links = allLinks(t)
-  const noScreens = NO_SCREENS.test(t)
   if (kind === 'spec') {
     if (!/openspec\/changes\/[a-z0-9][a-z0-9._-]*/i.test(t)) err('no `Change: openspec/changes/<name>` line')
     const scenarios = section(t, 'Scenarios') ?? ''
     if (scenarios && !/\bWHEN\b[\s\S]*?\bTHEN\b/.test(scenarios)) err('the scenarios have no WHEN … THEN')
     const design = section(t, 'Design') ?? ''
-    if (design && !links.some((l) => l.type === 'artifact') && !NO_SCREENS.test(design)) err('no design artifact link (or say "No screen changes" under Design)')
+    if (design && !links.some((l) => l.type === 'artifact') && !NO_SCREENS.test(design)) err('no design artifact link (or "No screen changes." on a line of its own under Design)')
     const complexity = section(t, 'Complexity') ?? ''
     if (complexity && !/\b(?:worth|because|cut|instead|so that|keeps?)\b/i.test(complexity)) warn('Complexity says what it adds but not why it is worth it (or what was cut)')
   }
   if (kind === 'result') {
     const see = section(t, 'See it') ?? ''
+    const noScreens = NO_SCREENS.test(see)
     if (!links.some((l) => l.type === 'pr')) err('no pull request link')
     if (!noScreens) {
-      if (!links.some((l) => l.type === 'video')) err('no video link (an .mp4 of the changed flow), or say "No screen changes" under See it')
+      if (!links.some((l) => l.type === 'video')) err('no video link (an .mp4 of the changed flow); with no screen change, put "No screen changes." on a line of its own under See it')
       const shots = links.filter((l) => l.type === 'image')
       if (!shots.some((l) => /desktop|1440|wide/i.test(`${l.label} ${l.url}`))) err('no desktop screenshot (label it "desktop")')
       if (!shots.some((l) => /phone|mobile|390/i.test(`${l.label} ${l.url}`))) err('no phone screenshot (label it "phone")')
-    } else if (see && !/\bno\b/i.test(see) && !links.length) err('See it has neither links nor "No screen changes"')
+    }
     const risk = section(t, 'Risk and undo') ?? ''
     if (risk && !/\b(?:revert|undo|roll ?back|flag|switch off|turn off|restore)\b/i.test(risk)) err('Risk and undo does not say how to undo it')
     const rec = section(t, 'Recommendation') ?? ''

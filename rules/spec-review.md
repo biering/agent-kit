@@ -90,7 +90,9 @@ config. What it writes:
    ```
 
    - Every link is the whole URL, one per line, the label before it.
-   - The brief passes `node <spec>/scripts/brief-check.mjs <closing-note.md>` (the `spec` skill).
+   - The brief passes `agent-kit review check <closing-note.md> --kind spec` (in a repo:
+     `node vendor/agent-kit/bin/agent-kit.mjs review check …`), and the change passes
+     `npx openspec validate <name> --strict`.
 4. Stop with this report:
 
    ```sh
@@ -113,7 +115,7 @@ approves and `b` sends back one line. The detail shows every link whole and the 
   repo's dev loop and ends at the result review (`result-review.md`): the PR is open, the pitch is
   written, the agent stops with `Result ready for review`.
 - **"Spec sent back…"**: revise the same change (and the same artifact URLs where you can), write the
-  brief again, run both checks, and stop again with `Spec ready for review`. Still no code.
+  brief again, run both checks (`openspec validate --strict`, `agent-kit review check --kind spec`), and stop again with `Spec ready for review`. Still no code.
 - The owner may answer on the board in his own words. That counts the same.
 
 ## 5. After it lands: archive

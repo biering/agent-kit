@@ -469,6 +469,26 @@ Ship it: small, tested, and it ends the quit moment.
     assert.ok(passes(check('result', noUi)), 'no media needed when no screen changes')
   })
 
+  it('"No screen changes." lifts the media check only as its own line under See it (review finding)', () => {
+    // The reviewer's case: See it has only the PR, and Risk mentions UI changes in passing.
+    const sneaky = goodPitch
+      .replace(/## See it[\s\S]*?## Risk and undo\n/, `## See it\n- Pull request: ${PR}\n\n## Risk and undo\nNo UI changes to the admin screens, only the session end screen changes.\n`)
+    const what = check('result', sneaky).map((f) => f.what)
+    assert.ok(what.some((w) => w.startsWith('no video link')), what.join('; '))
+    assert.ok(what.includes('no desktop screenshot (label it "desktop")'))
+    assert.ok(what.includes('no phone screenshot (label it "phone")'))
+    assert.ok(!passes(check('result', sneaky)))
+    // A sentence that goes on, even under See it, does not count either.
+    const onward = goodPitch.replace(/## See it[\s\S]*?## Risk/, `## See it\nNo UI changes to the admin screens, only the end screen.\n- Pull request: ${PR}\n\n## Risk`)
+    assert.ok(!passes(check('result', onward)))
+    // The line of its own elsewhere (not under See it) does not count.
+    const elsewhere = goodPitch.replace(/## See it[\s\S]*?## Risk and undo\n/, `## See it\n- Pull request: ${PR}\n\n## Risk and undo\nNo screen changes.\nRevert the PR.\n`)
+    assert.ok(!passes(check('result', elsewhere)))
+    // A spec: the escape counts only under Design.
+    const spec = goodSpec.replace(`- Design A, one bowl: ${ART}`, '- later').replace('Nothing open.', 'No screen changes.')
+    assert.ok(check('spec', spec).some((f) => f.what.startsWith('no design artifact link')))
+  })
+
   it('the pane shows what a pitch still lacks', () => {
     const list = [{ id: 'mb/2', state: 'blocked', kind: 'permission', stage: 'working', title: 't', msg: 'Result ready for review: the bowl ships' }]
     const details = { 'mb/2': { task: { id: 'MB-2', title: 't', stage: 'working', description: '' } } }

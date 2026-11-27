@@ -71,7 +71,10 @@ When the PR is open, green and reviewed:
    ```
 
    - Every link is the whole URL, one per line, the label before it.
-   - The pitch passes `node <result-pitch>/scripts/pitch-check.mjs <closing-note.md>`.
+   - Specced work that changes no screen: the line `No screen changes.` on its own under See it, in place of
+     the video and screenshots. Anywhere else, or inside a longer sentence, it does not count.
+   - The pitch passes `agent-kit review check <closing-note.md> --kind result` (in a repo:
+     `node vendor/agent-kit/bin/agent-kit.mjs review check …`).
    - The PR body opens with the same pitch (benefit first), so a reader on GitHub sees it too.
 6. Stop with this report:
 
