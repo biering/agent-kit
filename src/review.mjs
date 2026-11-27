@@ -10,6 +10,7 @@
  *   agent-kit review back <id> <text…>     send the spec, design or result back to its agent with these words
  *   agent-kit review annotate <id>         the brief in Plannotator, in a new tab of the CEO's workspace
  *   agent-kit review doc                   what runs in that tab (the plugin's `doc` pane)
+ *   agent-kit review check <file> [--kind spec|result]   what a spec brief or a result pitch still lacks (exit 1 on a gap)
  *   agent-kit review notify                the plugin's event hook: a herdr notification per new spec, design or result
  *
  * Machine-wide, not per repo: it reads the work board (herdr-projects) for every repo and needs no
@@ -38,6 +39,7 @@ import {
   sendBack,
   toNotify,
 } from './lib/review.mjs'
+import { check, passes } from './lib/review-check.mjs'
 import { collectPrs } from './lib/waiting-prs.mjs'
 
 const PLUGIN = 'agent-kit.review'
@@ -348,7 +350,23 @@ async function cmdPane() {
   await runPane({ waiting, waitingPrs, board, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack })
 }
 
+/** Check a spec brief or a result pitch before the stop. The kind is --kind, else the title line's first word. */
+function cmdCheck() {
+  const kind = option('kind')
+  const file = args[0]
+  if (!file) die('agent-kit review check <closing-note.md> [--kind spec|result]')
+  const text = readFile(file)
+  if (text === null) die(`${file}: cannot read it`)
+  const k = kind || (/^#\s+result\b/im.test(text) ? 'result' : /^#\s+spec\b/im.test(text) ? 'spec' : '')
+  if (!k) die(`${file}: say --kind spec or --kind result (the title starts with neither "# Spec" nor "# Result")`)
+  const findings = check(k, text)
+  for (const f of findings) console.log(`${f.level === 'error' ? 'missing' : 'note   '}  ${f.what}`)
+  if (!passes(findings)) process.exit(1)
+  console.log(`ok: the ${k === 'spec' ? 'brief' : 'pitch'} has what the owner needs to decide${findings.length ? ' (notes above)' : ''}.`)
+}
+
 const commands = {
+  check: cmdCheck,
   list: cmdList,
   prs: cmdPrs,
   pane: cmdPane,

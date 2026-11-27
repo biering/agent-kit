@@ -379,3 +379,155 @@ describe('agent-kit review with a spec and a result (the CLI against a fake boar
     assert.match(tells.find((c) => c[1] === 'mb/1')[2], /^Spec sent back\.[\s\S]*Drop the second bowl/)
   })
 })
+
+describe('the brief and pitch check (agent-kit review check)', async () => {
+  const { check, passes, section } = await import('../src/lib/review-check.mjs')
+  const goodSpec = `# Spec: a singing bowl ends a session
+
+Product: tinybreath
+Change: openspec/changes/singing-bowl
+
+## Why
+People stop the timer by hand and lose the calm.
+
+## What the user gets
+They end a session with one tap on a bowl.
+
+## Scenarios
+- WHEN the timer ends THEN the bowl rings once
+- WHEN sound is off THEN the bowl glows instead
+
+## Design
+- Design A, one bowl: ${ART}
+
+## Tasks
+1. The bowl component, checked by a test. One PR.
+
+## Complexity
+One sound file and one component; worth it because the end of a session is the moment people quit.
+
+## Open
+Nothing open.
+`
+  const goodPitch = `# Result: a singing bowl ends a session
+
+Product: tinybreath
+
+## What the user gets
+One tap on the bowl ends the session.
+
+## Why we should add it
+People quit at the end of a session; this makes the end calm.
+
+## Complexity
+One component and one sound file, worth it for the moment people quit.
+
+## See it
+- Video, the changed flow: ${VIDEO}
+- Screenshot, desktop: ${DESK}
+- Screenshot, phone: ${PHONE}
+- Pull request: ${PR}
+
+## Risk and undo
+The sound could play twice on old phones. Revert the PR.
+
+## Distribution
+X post on the brand account, draft below.
+
+## Recommendation
+Ship it: small, tested, and it ends the quit moment.
+`
+  it('passes a complete spec brief and a complete pitch', () => {
+    assert.deepEqual(check('spec', goodSpec), [])
+    assert.deepEqual(check('result', goodPitch), [])
+    assert.equal(section(goodPitch, 'Risk and undo'), 'The sound could play twice on old phones. Revert the PR.')
+  })
+
+  it('names each gap in a spec brief', () => {
+    const bad = goodSpec.replace(/## Scenarios[\s\S]*?## Design/, '## Scenarios\n- the bowl rings\n\n## Design').replace(`- Design A, one bowl: ${ART}`, '- later').replace('Change: openspec/changes/singing-bowl\n', '').replace(/## Open[\s\S]*$/, '')
+    const what = check('spec', bad).map((f) => f.what)
+    assert.ok(what.includes('no "## Open" section'), what.join('; '))
+    assert.ok(what.includes('the scenarios have no WHEN … THEN'))
+    assert.ok(what.some((w) => w.startsWith('no design artifact link')))
+    assert.ok(what.some((w) => w.startsWith('no `Change: openspec/changes/<name>`')))
+    assert.ok(!passes(check('spec', bad)))
+    assert.deepEqual(check('spec', goodSpec.replace(`- Design A, one bowl: ${ART}`, 'No screen changes.')).filter((f) => f.level === 'error'), [], 'a spec without screens says so')
+  })
+
+  it('names each gap in a pitch: media, undo, recommendation, placeholders; an em dash is a note', () => {
+    const bad = goodPitch.replace(`- Screenshot, phone: ${PHONE}\n`, '').replace(`- Video, the changed flow: ${VIDEO}\n`, '').replace('Revert the PR.', 'Low.').replace('Ship it: small', 'Up to you: small').replace('One tap', 'One tap — <what the user gets>')
+    const f = check('result', bad)
+    const what = f.map((x) => x.what)
+    assert.ok(what.some((w) => w.startsWith('no video link')), what.join('; '))
+    assert.ok(what.includes('no phone screenshot (label it "phone")'))
+    assert.ok(what.includes('Risk and undo does not say how to undo it'))
+    assert.ok(what.includes('the recommendation does not say ship, hold or cut'))
+    assert.ok(what.some((w) => w.startsWith('a placeholder is left')))
+    assert.equal(f.find((x) => /em dash/.test(x.what))?.level, 'warn')
+    const noUi = goodPitch.replace(/## See it[\s\S]*?## Risk/, `## See it\nNo screen changes.\n- Pull request: ${PR}\n\n## Risk`)
+    assert.ok(passes(check('result', noUi)), 'no media needed when no screen changes')
+  })
+
+  it('the pane shows what a pitch still lacks', () => {
+    const list = [{ id: 'mb/2', state: 'blocked', kind: 'permission', stage: 'working', title: 't', msg: 'Result ready for review: the bowl ships' }]
+    const details = { 'mb/2': { task: { id: 'MB-2', title: 't', stage: 'working', description: '' } } }
+    const [item] = collect({ board: memBoard({ list, details }), data: '/d', ...io({ '/d/tasks/mb/2/closing-note.md': '# Result: x\n\n## See it\n- nothing\n' }), now: NOW })
+    const t = render({ items: [item], sel: 0, now: NOW }, 100, 40).map((l) => l.t).join('\n')
+    assert.match(t, /Not complete: no "## What the user gets" section/)
+  })
+
+  it('the CLI: exit 1 with the gaps, exit 0 on a complete pitch, the kind from the title', (t) => {
+    const dir = mkdtempSync(join(tmpdir(), 'review-check-'))
+    t.after(() => rmSync(dir, { recursive: true, force: true }))
+    writeFileSync(join(dir, 'good.md'), goodPitch)
+    writeFileSync(join(dir, 'bad.md'), '# Spec: x\n')
+    const ok = spawnSync(process.execPath, [KIT, 'review', 'check', join(dir, 'good.md')], { encoding: 'utf8' })
+    assert.equal(ok.status, 0, ok.stdout + ok.stderr)
+    assert.match(ok.stdout, /ok: the pitch has what the owner needs/)
+    const no = spawnSync(process.execPath, [KIT, 'review', 'check', join(dir, 'bad.md')], { encoding: 'utf8' })
+    assert.equal(no.status, 1)
+    assert.match(no.stdout, /missing {2}no "## Why" section/)
+  })
+})
+
+describe('the rules, the skills and the README name the same reports', () => {
+  const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8')
+  it('spec: marker, report, OpenSpec as a devDependency, archive', () => {
+    for (const f of ['rules/spec-review.md', 'skills/spec/SKILL.md', 'skills/dev-loop/SKILL.md']) {
+      assert.match(read(f), /Spec review: yes/, f)
+      assert.match(read(f), /Spec ready for review/, f)
+    }
+    assert.match(read('rules/spec-review.md'), /--msg "Spec ready for review: <one line>"/)
+    assert.match(read('rules/spec-review.md'), /openspec archive <name> --yes/)
+    assert.match(read('skills/spec/SKILL.md'), /-D @fission-ai\/openspec/)
+    assert.doesNotMatch(read('skills/spec/SKILL.md') + read('rules/spec-review.md'), /^\s*curl [^\n]*\|\s*(?:ba)?sh/m, 'never an installer piped to a shell')
+  })
+  it('result: report, media, screenshots at both widths, brand accounts only', () => {
+    for (const f of ['rules/result-review.md', 'skills/result-pitch/SKILL.md']) {
+      assert.match(read(f), /Result ready for review/, f)
+      assert.match(read(f), /1440/, f)
+      assert.match(read(f), /390/, f)
+      assert.match(read(f), /review\.media/, f)
+    }
+    assert.match(read('rules/result-review.md'), /--msg "Result ready for review: <one line>"/)
+    assert.match(read('skills/distribution-reuse/SKILL.md'), /Never as the owner/)
+  })
+  it('the README lists the rules and the skills, and no rule or skill has an em dash', () => {
+    const readme = read('README.md')
+    for (const f of ['rules/spec-review.md', 'rules/result-review.md']) assert.match(readme, new RegExp(`\\[\`${f.replace('.', '\\.')}\`\\]\\(${f.replace('.', '\\.')}\\)`))
+    for (const s of ['`spec`', '`result-pitch`', '`distribution-reuse`']) assert.ok(readme.includes(s), s)
+    for (const f of ['rules/spec-review.md', 'rules/result-review.md', 'skills/spec/SKILL.md', 'skills/result-pitch/SKILL.md', 'skills/distribution-reuse/SKILL.md']) assert.doesNotMatch(read(f), /—/, f)
+  })
+})
+
+describe('shots.mjs', async () => {
+  const { nameOf, parseArgs, VIEWPORTS } = await import('../skills/result-pitch/scripts/shots.mjs')
+  it('names a file per path and takes desktop and phone widths', () => {
+    assert.equal(nameOf('/'), 'home')
+    assert.equal(nameOf('/settings/sound?x=1'), 'settings-sound')
+    assert.equal(VIEWPORTS.desktop.viewport.width, 1440)
+    assert.equal(VIEWPORTS.phone.viewport.width, 390)
+    assert.deepEqual(parseArgs(['--base=http://x', '/a']).paths, ['/a'])
+    assert.equal(parseArgs([]).out, 'shots')
+  })
+})

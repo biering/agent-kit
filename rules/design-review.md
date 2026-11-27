@@ -2,8 +2,13 @@
 
 Work that changes what a user sees (a new screen, a redesign, a new flow, a landing page) gets the
 owner's yes on its design before it is built. The design comes to the owner in herdr, in the
-**Waiting for you** pane (README, "Design review"), where he opens the artifacts, comments, and approves.
+**review list** (README, "Review list"), where he opens the artifacts, comments, and approves.
 His approval starts the build.
+
+A feature or a bigger improvement gets a spec instead ([`spec-review.md`](spec-review.md)): its
+designs are part of the spec, so a task with `Spec review: yes` skips this stage. This stage is for
+screen work without a spec, such as a redesign of a screen that exists. Either way the finished PR goes
+through the result review ([`result-review.md`](result-review.md)): a video, screenshots and a pitch.
 
 ## 1. Flag the task (the CEO, or whoever puts the work on the board)
 

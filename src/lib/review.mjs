@@ -22,6 +22,7 @@
  */
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
+import { check } from './review-check.mjs'
 
 /** A Claude Artifact link, matched whole: https://claude.ai/artifact/<id> (or /code/artifact/<id>). */
 export const ARTIFACT = /https:\/\/claude\.ai\/(?:code\/)?artifact\/[A-Za-z0-9_-]+/g
@@ -295,6 +296,8 @@ export function collect({ board, data, readFile, mtime, now = Date.now() }) {
     it.product = productOf([it.brief, it.description], it.repo)
     const change = changeOf(it.brief)
     it.change = change ? (it.worktree ? join(it.worktree, 'openspec', 'changes', change) : `openspec/changes/${change}`) : ''
+    // What the brief or the pitch still lacks (review-check.mjs), shown on the detail.
+    it.findings = it.kind === 'spec' || it.kind === 'result' ? check(it.kind, it.brief) : []
     // The brief and the report together: a new "Design ready" with the same note is a new round.
     it.hash = briefHash(`${it.brief}\n${it.msg}`)
   }
@@ -653,6 +656,11 @@ function detailBlocks(it, state, W, now) {
   if (it.line && it.line !== it.title) for (const l of wrap(it.line, W - 1)) head.push({ t: ` ${l}`, s: 'dim' })
   if (st?.line) for (const l of wrap(st.line, W - 1)) head.push({ t: ` ${l}`, s: st.ok === false ? 'warn' : 'ok' })
   if (it.kind === 'stuck') for (const l of wrap('Its plan was approved, but the build never started (the agent may still be in plan mode, its worktree read-only). f repairs: stop, then delegate.', W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  const errors = (it.findings ?? []).filter((f) => f.level === 'error')
+  if (errors.length) {
+    const shown = errors.slice(0, 3).map((f) => f.what).join('; ')
+    for (const l of wrap(`Not complete: ${shown}${errors.length > 3 ? `; and ${errors.length - 3} more` : ''}. Send it back or ask the agent.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  }
   if (it.github) for (const l of wrap(`Its PR also waits for your approval on GitHub (${it.github}): approve the result here, the PR there.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   blocks.push(head)
   const links = it.links ?? []
