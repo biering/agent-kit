@@ -250,6 +250,9 @@ describe('approve and send back (spec and result)', () => {
     const text = board.calls[0][2]
     assert.match(text, /^Result approved\. Ship it/)
     assert.match(text, /openspec archive <name> --yes/)
+    // Archived only after it lands: the merge comes first, the archive is its own chore PR from main.
+    assert.ok(text.indexOf('merge once CI is green') < text.indexOf('openspec archive'))
+    assert.match(text, /Once it has landed on main.*new branch from main, one commit, a chore PR/)
     assert.match(text, /still waits for the owner's approval on GitHub/)
     assert.match(text, /brand accounts, never as the owner/)
     assert.match(text, /Shorter caption\./)
@@ -520,6 +523,9 @@ describe('the rules, the skills and the README name the same reports', () => {
     }
     assert.match(read('rules/spec-review.md'), /--msg "Spec ready for review: <one line>"/)
     assert.match(read('rules/spec-review.md'), /openspec archive <name> --yes/)
+    // The archive waits until the work is on main (the task: 'after the work lands on main'), in a chore PR.
+    assert.match(read('rules/spec-review.md'), /once its PR has landed on `main`[\s\S]*chore\(openspec\): archive <name>/)
+    for (const f of ['rules/spec-review.md', 'rules/result-review.md', 'skills/spec/SKILL.md', 'skills/result-pitch/SKILL.md', 'skills/dev-loop/SKILL.md']) assert.doesNotMatch(read(f), /before the merge|as the (?:PR's )?last commit/, f)
     assert.match(read('skills/spec/SKILL.md'), /-D @fission-ai\/openspec/)
     assert.doesNotMatch(read('skills/spec/SKILL.md') + read('rules/spec-review.md'), /^\s*curl [^\n]*\|\s*(?:ba)?sh/m, 'never an installer piped to a shell')
   })

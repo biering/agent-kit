@@ -126,10 +126,11 @@ Specs describe the product as it is. Once the build ships, its change moves into
 npx openspec archive <name> --yes
 ```
 
-The agent runs it after the owner approves the result and before the merge, as the last commit of the
-PR, so the change reaches `main` together with the code it describes: `main` never has a shipped change
-that is not archived, nor an archived one that did not ship. A change split over several PRs is
-archived with its last PR.
+The agent runs it once its PR has landed on `main`, in the same conversation: on a new branch from
+the updated `main`, one commit (`chore(openspec): archive <name>`), its own PR. That PR is a chore, so it
+needs no result pitch and the CEO merges it. Only what shipped is archived: a PR that is sent back,
+held or reverted leaves its change open. A change split over several PRs is archived after the last
+one lands.
 
 ## Setup in a repo, once
 

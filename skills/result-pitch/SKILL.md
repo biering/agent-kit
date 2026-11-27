@@ -91,9 +91,10 @@ The one line is the user benefit in under 70 characters.
 
 ## 7. The answer
 
-- **Result approved**: archive the OpenSpec change if there is one (`npx openspec archive <name>
-  --yes`, one commit), merge once CI is green under the repo's merge rules (a CODEOWNERS path or a new
+- **Result approved**: merge once CI is green under the repo's merge rules (a CODEOWNERS path or a new
   runtime dependency still needs his approval on GitHub), then post the drafts on the product's brand
-  accounts, never as the owner. Report the merged PR and the post links.
+  accounts, never as the owner. Once it has landed on `main`, archive the OpenSpec change if there is
+  one (`npx openspec archive <name> --yes` on a new branch from `main`, one commit, a chore PR).
+  Report the merged PR, the post links and the archive PR.
 - **Result sent back**: change the work on the same branch, record again what changed on screen,
   write the pitch again, check, stop again. Nothing merges, nothing is posted.

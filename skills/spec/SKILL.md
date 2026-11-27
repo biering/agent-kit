@@ -100,5 +100,5 @@ The one line is what the owner reads in the review list: what the user gets, in 
   skill). When the PR is open, the result review starts (the `result-pitch` skill).
 - **Spec sent back**: revise the same change and the same artifacts, write the brief again, check,
   stop again. Still no code.
-- **After the result is approved**: `npx openspec archive <name> --yes` as the PR's last commit, before
-  the merge (`rules/spec-review.md` §5).
+- **After it lands on `main`**: `npx openspec archive <name> --yes` on a new branch from the updated
+  `main`, one commit, a chore PR (`rules/spec-review.md` §5).

@@ -94,14 +94,16 @@ new tab of the CEO's workspace); `1` to `9` open the video, the screenshots and 
 
 - The merge, under the repo's own rules: CI green, the board review passed, and a CODEOWNERS path or a
   new runtime dependency still waits for his approval on GitHub.
-- Archiving the OpenSpec change, as the PR's last commit (`spec-review.md` §5).
+- Archiving the OpenSpec change once the PR has landed on `main`, in a chore PR of its own
+  (`spec-review.md` §5).
 - Posting the drafts from the pitch **on the product's brand accounts**, as written or with his notes.
   Never as him: his own X, Reddit or communities are his to post (the CEO manual's "Who decides what").
 
 ## 5. What the owner's answer means
 
-- **"Result approved. Ship it…"**: archive the change if there is one, merge once CI is green, post the
-  drafts on the brand accounts, then report the merged PR and the post links. Notes in that message are
+- **"Result approved. Ship it…"**: merge once CI is green, post the drafts on the brand accounts,
+  then archive the change if there is one (a chore PR from the updated `main`), and report the merged
+  PR, the post links and the archive PR. Notes in that message are
   guidance (a shorter caption, a different clip), not a send back.
 - **"Result sent back…"**: change the work on the same branch and PR, record the media again where the
   change shows, write the pitch again, stop again with `Result ready for review`. Nothing merges and

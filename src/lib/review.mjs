@@ -337,7 +337,7 @@ export const specBackWords = (text) =>
 
 /** What the agent hears on a result approve and send back (rules/result-review.md §5). */
 export const resultApprovedWords = (notes = '') =>
-  `Result approved. Ship it: archive its OpenSpec change if it has one (openspec archive <name> --yes, one commit on the PR), merge once CI is green under the repo's own merge rules (a CODEOWNERS path or a new runtime dependency still waits for the owner's approval on GitHub), then post the distribution drafts from the pitch on the product's brand accounts, never as the owner. Report the merged PR and the post links when done.${notes.trim() ? `\n\nNotes from the review (guidance, not a send back):\n\n${notes.trim()}` : ''}`
+  `Result approved. Ship it: merge once CI is green under the repo's own merge rules (a CODEOWNERS path or a new runtime dependency still waits for the owner's approval on GitHub), then post the distribution drafts from the pitch on the product's brand accounts, never as the owner. Once it has landed on main, archive its OpenSpec change if it has one (openspec archive <name> --yes on a new branch from main, one commit, a chore PR). Report the merged PR, the post links and the archive PR when done.${notes.trim() ? `\n\nNotes from the review (guidance, not a send back):\n\n${notes.trim()}` : ''}`
 export const resultBackWords = (text) =>
   `Result sent back. The owner reviewed the pitch and wrote:\n\n${text.trim()}\n\nChange the work on the same branch and PR, record the video and screenshots again where the change shows, write the pitch again, then stop again with a report whose message starts "Result ready for review". Do not merge or post anything.`
 

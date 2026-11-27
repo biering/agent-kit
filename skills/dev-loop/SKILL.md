@@ -124,7 +124,8 @@ For a run longer than a few minutes, poll with the built-in `/loop` instead of b
 One message: PR URL, CI status, one-line summary, review verdicts. Merge only the way
 `AGENTS.md` says. If it holds a class of change for a person (schema, prices, a first launch),
 hand it over and stop. A specced or user-visible PR does not merge before the owner approved its
-result pitch (`result-pitch` skill); after his yes, archive its OpenSpec change as the last commit.
+result pitch (`result-pitch` skill); once it has landed on `main`, archive its OpenSpec change in a
+chore PR (`rules/spec-review.md` §5).
 
 ## Pitfalls
 
