@@ -25,7 +25,9 @@ names (see App UI).
 - **The owner sees the design before it is built.** A task that changes screens, or whose
   description has the line `Design review: yes`, stops at a design review first: private artifacts,
   each linked as its whole URL, a short brief, and a `Design ready` report (the kit's
-  `rules/design-review.md`). The build starts on his yes.
+  `rules/design-review.md`). The build starts on his yes. In a task with `Spec review: yes` the
+  designs are part of the spec's brief instead (the `spec` skill), and the finished screens are shown
+  again in the result pitch (video and screenshots, the `result-pitch` skill).
 - **The idea comes from the subject.** A page built from category defaults (a centred headline,
   a label above it, three icon cards, a soft gradient) looks like every other generated page.
   Find what belongs to this product and no competitor, and build from that.

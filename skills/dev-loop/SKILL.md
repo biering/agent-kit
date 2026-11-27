@@ -16,6 +16,14 @@ The loop is for work headed to a PR. A one-line answer or a throwaway experiment
 the line `Design review: yes`, starts with a design stage: publish the designs, write the brief and stop at
 `Design ready`. Code starts only once the owner approves (the kit's `rules/design-review.md`).
 
+**Bigger work gets a spec first, unasked; results get a pitch.** Nobody has to say "write a spec":
+step 1 decides. A new feature, a bigger improvement or a bigger bugfix (the test in the kit's
+`rules/spec-review.md` §1), or a task with the line `Spec review: yes`, starts with the `spec` skill:
+an OpenSpec change, no code, and the owner's approval in Plannotator (a board task stops at
+`Spec ready for review`). A specced task, or any PR that
+changes what a user sees, ends with the `result-pitch` skill and a stop at `Result ready for review`
+before the merge (`rules/result-review.md`).
+
 ## 0. Read the repo's version of each step
 
 1. Root `AGENTS.md`, then the owning app's `AGENTS.md`, then `docs/agent-kit/dev-loop.md` if the
@@ -47,12 +55,20 @@ Two repos, as examples of how this gets filled in:
 | PR | ready for review | draft first, CI skips drafts, then `gh pr ready` |
 | Merge | agents squash-merge green, reviewed PRs; gated ones after a reviewer pass | a person merges |
 
-## 1. Branch
+## 1. Size it, then branch
 
-Off an up-to-date default branch, named the way `AGENTS.md` says. Already on a branch for this
+First, before any code: does the work meet the spec test (`rules/spec-review.md` §1: a new feature or
+screen, a schema change, pricing, more than one PR, real added complexity, a bigger bugfix)? Then the
+first commits on the branch are the `spec` skill's OpenSpec change, and step 2 starts only on the
+owner's yes. A bug ticket goes through the `bugfix` skill, which applies the same test. Neither: go
+straight on. Say which in one line ("Spec first: a new screen." / "No spec: a copy fix."), so the owner
+can overrule it.
+
+Branch off an up-to-date default branch, named the way `AGENTS.md` says. Already on a branch for this
 work: stay on it. Never commit or push on the default branch.
 
-**Done when** `git branch --show-current` prints the work branch.
+**Done when** `git branch --show-current` prints the work branch, and specced work has the owner's yes
+on its change.
 
 ## 2. Change and tests
 
@@ -117,7 +133,8 @@ For a run longer than a few minutes, poll with the built-in `/loop` instead of b
 
 One message: PR URL, CI status, one-line summary, review verdicts. Merge only the way
 `AGENTS.md` says. If it holds a class of change for a person (schema, prices, a first launch),
-hand it over and stop.
+hand it over and stop. A specced or user-visible PR does not merge before the owner approved its
+result pitch (`result-pitch` skill); after his yes, archive its OpenSpec change as the last commit.
 
 ## Pitfalls
 

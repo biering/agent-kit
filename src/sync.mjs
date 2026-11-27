@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Vendor this kit into a repo: `agent-kit sync <repo>` from the kit's own
- * checkout. Copies bin/, src/, hooks/, terminal/, rules/, herdr-review/ (the machine-wide Design
- * review plugin) and the README to <repo>/vendor/agent-kit,
+ * checkout. Copies bin/, src/, hooks/, terminal/, rules/, herdr-review/ (the machine-wide review
+ * list plugin) and the README to <repo>/vendor/agent-kit,
  * writes the repo's herdr plugin manifest (its own id; herdr needs ids
  * unique), and records the kit's commit in <repo>/agent-kit.lock.json.
  *

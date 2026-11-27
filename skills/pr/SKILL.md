@@ -85,6 +85,10 @@ folder), fix what it flags, pass the file with `--body-file`, delete it afterwar
 PR template gets filled in with these two sections first, not replaced. If the harness appends a
 trailer (a "Generated with" line, a session link), keep it.
 
+**A result pitch first**, when the PR needs the owner's result approval (specced work, or a change a
+user sees; the `result-pitch` skill): the pitch opens the body, then Review focus. Its video and
+screenshots are uploaded media, linked by URL, so the screenshot step below is already done.
+
 **Screenshots**, only when the branch changes what a user sees (a component, page, layout, styles,
 a UI string): 1 to 4 PNGs of the changed screens, branch state only, desktop width plus one phone
 width shot when layout changed, each with a one-line caption. `gh` cannot upload images, so

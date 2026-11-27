@@ -1,6 +1,6 @@
 /**
  * Pull requests that wait for the owner's review, across every repo the work board knows
- * (README "Waiting for you"). The second section of the review pane, next to the designs.
+ * (README "Review list"). The GitHub rows of the review pane, next to the specs, designs and results.
  *
  * Pure: `gh` comes in as an async runner and the board's files as readers, so every rule here is tested
  * without GitHub (test/waiting-prs.test.mjs). Nothing here writes anything: approval stays on GitHub.

@@ -19,6 +19,8 @@ it and stop.
 
 - **A new feature, customer wish or idea:** score first, in the reply, before a plan, a branch or code.
 - **A plan:** the score lines open its body.
+- **An OpenSpec change:** the score lines open its `proposal.md`, above Why (the `spec` skill;
+  `agent-kit plan-review` refuses a change without them).
 - **A PR:** the score lines open its body. Score again here, because scope grows while building. Say when
   a number moved since the plan.
 - **A bug:** it is fixed either way. The score only decides how small the fix can be.

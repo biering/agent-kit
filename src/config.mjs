@@ -18,6 +18,7 @@
  *     "stats": { "repos": { "maelstrom": ".", "leverage": "../../leverage/leverage" } },
  *     "mail": { "inbox": "<inbox>@agentmail.to" },
  *     "loop": { "verify": "pnpm gates", "docs": "pnpm verify:docs", "gate": null },  // dev-loop skill
+ *     "review": { "media": "pnpm media upload {product} {dir}" },   // result-pitch skill: where the video and screenshots go
  *     "daylog": { "log": "docs/daily-log", "decisions": "docs/decisions.md",
  *                  "stats": { "products": [{ "name": "App", "site": "..." }] } },   // daily-log skill; stats: see README
  *     "schema": { "engines": { "d1": ["apps/api/migrations/*.sql"] },          // read by `agent-kit migrations`
@@ -98,6 +99,8 @@ export const config = {
   mail: { inbox: raw.mail?.inbox },
   // Read by the dev-loop skill, not by the CLI: the repo's local verify, docs check and gate script.
   loop: { verify: raw.loop?.verify, docs: raw.loop?.docs, gate: raw.loop?.gate ?? null },
+  // Read by the result-pitch skill, not by the CLI: the command that uploads a pitch's media and prints their URLs.
+  review: { media: raw.review?.media ?? null },
   // Read by `daylog collect`: where the day's facts come from. `log` is where the daily-log skill writes.
   daylog: {
     log: raw.daylog?.log ?? 'docs/daily-log',

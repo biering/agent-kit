@@ -13,7 +13,8 @@ describe('readme', () => {
 
   it('groups skills by the job, under the names that install them', () => {
     const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
-    const skills = readme.slice(readme.indexOf('## Skills'))
+    const start = readme.indexOf('## Skills')
+    const skills = readme.slice(start, readme.indexOf('\n## ', start + 1))
     const areas = [...skills.matchAll(/^\| ([A-Za-z]+) \|/gm)].map((match) => match[1])
     assert.deepEqual(areas, ['Area', 'Ship', 'Review', 'Harness', 'Build', 'Write', 'Market', 'Decide', 'Editor'])
   })

@@ -75,7 +75,11 @@ Fresh context. Inputs: the ticket, the repro evidence and the failing test, noth
    not just where. Name the file and lines.
 2. Write the plan in the repo's plan directory from
    [references/plan-template.md](references/plan-template.md). The proposed solution is concrete:
-   files, approach, why it fixes the root cause rather than the symptom.
+   files, approach, why it fixes the root cause rather than the symptom. **A bigger bugfix** (the fix
+   changes behavior a user relies on, the data model or an API, or takes more than one PR; the kit's
+   `rules/spec-review.md` §1) is planned as an OpenSpec change with the `spec` skill instead, unasked:
+   the repro evidence goes into its proposal, the fix is plan-only, and the owner approves the change
+   in Plannotator before Stage 3.
 3. Evaluate the autonomy gate ([references/autonomy-gate.md](references/autonomy-gate.md)) against
    the proposed solution and record the verdict, one line per criterion that decided it.
 4. Commit the plan on the branch.
