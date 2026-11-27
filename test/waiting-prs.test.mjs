@@ -260,11 +260,11 @@ describe('the screen: PRs next to designs', () => {
     judge(pr({ body: 'for robin: Adds a button. It could double-charge. Revert it.', reviewDecision: 'REVIEW_REQUIRED', files: [{ path: 'apps/care/a.ts' }], ...over }), repo, ctx({ owner: 'robin' }))
   const text = (state, cols = 70, rows = 40) => render({ now: NOW, ...state }, cols, rows).map((l) => l.t).join('\n')
 
-  it('one view, two groups: designs to approve, then PRs to approve', () => {
+  it('one list, newest first: the design and the PR, each with its kind, product and age', () => {
     const t = text({ items: [design, prItem()], sel: 0 })
-    assert.match(t, /Waiting for you · 1 to approve · 1 PR/)
-    assert.ok(t.indexOf('Designs to approve') < t.indexOf('PRs to approve (on GitHub)'))
-    assert.match(t, /web#7 +3h {2}PR +feat\(web\): a thing/)
+    assert.match(t, /Review list · 2 waiting \(1 on GitHub\)/)
+    assert.ok(t.indexOf('design web') < t.indexOf('GitHub web'))
+    assert.match(t, /GitHub web +3h  feat\(web\): a thing/)
   })
 
   it('a PR’s detail: whole URL on its own line, repo, age, why, CI, the sentences, and that approval is on GitHub', () => {
@@ -302,7 +302,7 @@ describe('the screen: PRs next to designs', () => {
   it('says when the PR section is still loading or incomplete, and "nothing" only when both are empty', () => {
     assert.match(text({ items: [design], sel: 0, prNote: 'PRs: loading from GitHub…' }), /loading from GitHub/)
     assert.match(text({ items: [design], sel: 0, prNote: 'PRs incomplete: api: HTTP 502' }), /PRs incomplete: api: HTTP 502/)
-    assert.match(text({ items: [], sel: 0 }), /Nothing waits for you: no design and no PR/)
+    assert.match(text({ items: [], sel: 0 }), /Nothing waits for you: no spec, design, result or PR/)
     assert.doesNotMatch(text({ items: [], sel: 0, prNote: 'PRs: loading from GitHub…' }), /Nothing waits for you/)
   })
 })

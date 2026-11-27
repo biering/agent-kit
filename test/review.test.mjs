@@ -132,7 +132,8 @@ describe('which tasks wait', () => {
     }
     const board = memBoard({ list, details })
     const items = collect({ board, data, ...fakeIo(files), now: NOW })
-    assert.deepEqual(items.map((i) => [i.id, i.kind]), [['web/2', 'plan'], ['web/4', 'stuck'], ['web/1', 'design']])
+    // Newest first.
+    assert.deepEqual(items.map((i) => [i.id, i.kind]), [['web/1', 'design'], ['web/4', 'stuck'], ['web/2', 'plan']])
     const design = items.find((i) => i.id === 'web/1')
     assert.deepEqual(design.links.map((l) => l.url), [A, B])
     assert.equal(design.key, 'WEB-1')
@@ -219,10 +220,11 @@ describe('the screen', () => {
   it('lists the kind, age and key, and asks before an approve', () => {
     const lines = render({ items: [item(), item({ id: 'web/2', key: 'WEB-2', kind: 'stuck' })], sel: 0, now: NOW, mode: 'confirm' }, 60, 40)
     const text = lines.map((l) => l.t).join('\n')
-    assert.match(text, /Waiting for you · 2 to approve/)
-    assert.match(text, /Designs to approve/)
-    assert.match(text, /▸ WEB-1 +12m {2}design/)
-    assert.match(text, /WEB-2 .* stuck/)
+    assert.match(text, /Review list · 2 waiting/)
+    assert.doesNotMatch(text, /Designs to approve/, 'one list, no groups')
+    assert.match(text, /▸ design web +12m  A settings screen/)
+    assert.match(text, /  stuck  web +12m/)
+    assert.match(text, /WEB-1 · web · design ready 12m ago/)
     assert.match(text, /Approve WEB-1 and start the build\? y \/ n/)
   })
 })
@@ -442,7 +444,7 @@ describe('agent-kit review (the CLI against a fake board)', () => {
     assert.match(tell[2], /Bigger toggles/)
     const no = run('approve', 'web/9')
     assert.equal(no.status, 1)
-    assert.match(no.stderr, /does not wait for a design decision/)
+    assert.match(no.stderr, /does not wait for you/)
   })
 
   it('an unreachable board is said, not shown as nothing waiting', (t) => {
