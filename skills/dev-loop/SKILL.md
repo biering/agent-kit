@@ -16,6 +16,12 @@ The loop is for work headed to a PR. A one-line answer or a throwaway experiment
 the line `Design review: yes`, starts with a design stage: publish the designs, write the brief and stop at
 `Design ready`. Code starts only once the owner approves (the kit's `rules/design-review.md`).
 
+**Features get a spec first, results get a pitch.** A task whose description has the line
+`Spec review: yes` starts with the `spec` skill: an OpenSpec change and a brief, no code, and a stop at
+`Spec ready for review` (the kit's `rules/spec-review.md`). A specced task, or any PR that changes what
+a user sees, ends with the `result-pitch` skill and a stop at `Result ready for review` before the
+merge (`rules/result-review.md`).
+
 ## 0. Read the repo's version of each step
 
 1. Root `AGENTS.md`, then the owning app's `AGENTS.md`, then `docs/agent-kit/dev-loop.md` if the
@@ -117,7 +123,9 @@ For a run longer than a few minutes, poll with the built-in `/loop` instead of b
 
 One message: PR URL, CI status, one-line summary, review verdicts. Merge only the way
 `AGENTS.md` says. If it holds a class of change for a person (schema, prices, a first launch),
-hand it over and stop.
+hand it over and stop. A specced or user-visible PR does not merge before the owner approved its
+result pitch (`result-pitch` skill); once it has landed on `main`, archive its OpenSpec change in a
+chore PR (`rules/spec-review.md` §5).
 
 ## Pitfalls
 

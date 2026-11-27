@@ -1,12 +1,12 @@
 /**
- * The "Waiting for you" pane (designs and PRs): the terminal part of `agent-kit review pane` (src/review.mjs). The rules and
+ * The review list pane (specs, designs, results and PRs, newest first): the terminal part of `agent-kit review pane` (src/review.mjs). The rules and
  * the screen are in review.mjs; this file reads keys, draws, and watches the board's task folder, so the
  * list stays current while agents work. No dependencies: raw mode and ANSI, like the other kit panes.
  */
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, watch, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { render } from './review.mjs'
+import { merge, render } from './review.mjs'
 
 const ESC = '\x1b'
 const STYLE = {
@@ -63,7 +63,7 @@ export function onKey(s, key, act, page = 10) {
       s.input = ''
       if (!text) return say('Nothing sent.', 'dim')
       const r = act.back(it, text)
-      r.ok ? say(`${it.key}: sent back to the design stage.`) : say(`${it.key}: not sent: ${r.error}`, 'warn')
+      r.ok ? say(`${it.key}: sent back to its agent.`) : say(`${it.key}: not sent: ${r.error}`, 'warn')
     } else if (key === 'backspace') s.input = s.input.slice(0, -1)
     else if (key.length === 1 && key >= ' ') s.input += key
     return
@@ -220,7 +220,7 @@ export async function runPane({ waiting, waitingPrs, data, STATE, statusFile, sk
     const keep = s.items[s.sel]?.id
     let all = []
     try {
-      all = [...waiting(), ...prs]
+      all = merge(waiting(), prs)
     } catch (e) {
       // Keep what was shown; an unreachable board is not an empty one.
       Object.assign(s, { status: e.message, statusStyle: 'warn' })
@@ -257,7 +257,7 @@ export async function runPane({ waiting, waitingPrs, data, STATE, statusFile, sk
     approve: (it) => approveDetached(it.id),
     back: (it, text) => {
       const r = sendBack(board, it, text)
-      if (r.ok) writeJson(statusFile(it.id), { ok: true, short: 'back', line: 'Sent back to the design stage.', at: Date.now() })
+      if (r.ok) writeJson(statusFile(it.id), { ok: true, short: 'back', line: 'Sent back to its agent.', at: Date.now() })
       readStatuses()
       return r
     },

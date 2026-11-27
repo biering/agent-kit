@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * The design review gate in herdr (rules/design-review.md, README "Design review").
+ * The review list in herdr (rules/spec-review.md, rules/result-review.md, rules/design-review.md, README "Review list").
  *
- *   agent-kit review [list] [--json]       everything that waits for you: designs to approve and PRs to approve
+ *   agent-kit review [list] [--json]       everything that waits for you, newest first: specs, designs, results, PRs
  *   agent-kit review prs [--json]          only the PRs (open, not draft, where your approval blocks), across repos
- *   agent-kit review pane                  the "Waiting for you" pane (the plugin runs it)
- *   agent-kit review open-pane             open that pane beside the focused one, or focus it
- *   agent-kit review approve <id> [--notes "…"]   approve and see the build start (repairs a stuck one)
- *   agent-kit review back <id> <text…>     send the design back with these words
+ *   agent-kit review pane                  the review list pane (the plugin runs it)
+ *   agent-kit review open-pane             open that pane below the work board (else beside the focused pane), or focus it
+ *   agent-kit review approve <id> [--notes "…"]   approve: a spec or design builds, a result ships (repairs a stuck plan)
+ *   agent-kit review back <id> <text…>     send the spec, design or result back to its agent with these words
  *   agent-kit review annotate <id>         the brief in Plannotator, in a new tab of the CEO's workspace
  *   agent-kit review doc                   what runs in that tab (the plugin's `doc` pane)
- *   agent-kit review notify                the plugin's event hook: a herdr notification per new design
+ *   agent-kit review check <file> [--kind spec|result]   what a spec brief or a result pitch still lacks (exit 1 on a gap)
+ *   agent-kit review notify                the plugin's event hook: a herdr notification per new spec, design or result
  *
  * Machine-wide, not per repo: it reads the work board (herdr-projects) for every repo and needs no
  * agent-kit.config.json, so it does not load config.mjs. <id> is the board's (`repo/n` or `KEY-n`).
@@ -24,16 +25,21 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { herdr, notify } from './lib/herdr.mjs'
 import {
+  age,
   approve,
+  briefDoc,
   boardBin,
   boardClient,
   ceoWorkspace,
   collect,
   dataDir,
   fromAnnotation,
+  merge,
+  paneSpot,
   sendBack,
   toNotify,
 } from './lib/review.mjs'
+import { check, passes } from './lib/review-check.mjs'
 import { collectPrs } from './lib/waiting-prs.mjs'
 
 const PLUGIN = 'agent-kit.review'
@@ -128,7 +134,7 @@ function find(id) {
   if (!id) die('Which task? (repo/n or KEY-n)')
   const want = String(id).toLowerCase()
   const it = waitingOrDie().find((t) => t.id.toLowerCase() === want || t.key.toLowerCase() === want)
-  return it ?? die(`${id} does not wait for a design decision (agent-kit review list).`)
+  return it ?? die(`${id} does not wait for you (agent-kit review list).`)
 }
 
 function status(id, s) {
@@ -162,8 +168,8 @@ async function cmdApprove() {
     },
   })
   if (r.ok) {
-    const line = { told: 'Approved: the agent builds it now.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
-    status(it.id, { ok: true, short: 'build', line })
+    const line = { told: 'Approved: the agent builds it now.', shipping: 'Approved: the agent ships it now.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
+    status(it.id, { ok: true, short: r.how === 'shipping' ? 'ship' : 'build', line })
     console.log(line)
   } else {
     status(it.id, { ok: false, short: 'fail', line: `Not building: ${r.error}` })
@@ -175,7 +181,7 @@ function cmdBack() {
   const it = find(args.shift())
   const r = sendBack(board, it, args.join(' '))
   if (!r.ok) die(`${it.key}: ${r.error}`)
-  status(it.id, { ok: true, short: 'back', line: 'Sent back to the design stage.' })
+  status(it.id, { ok: true, short: 'back', line: 'Sent back to its agent.' })
   console.log(`${it.key}: sent back.`)
 }
 
@@ -187,24 +193,36 @@ async function prsOrDie() {
     return die(e.message)
   }
 }
-const printItems = (items) => {
+const printItems = (items, head = true) => {
   for (const it of items) {
-    console.log(`${it.key}  ${it.kind}  ${it.title}`)
+    if (head) console.log(`${it.key}  ${it.kind}  ${it.title}`)
     if (it.kind === 'pr') {
       console.log(`  ${it.url}`)
       console.log(`  ${it.draft ? 'DRAFT, mark it ready. ' : ''}why: ${it.why.join('; ')}. ${{ passing: 'CI green', failing: 'CI failing', pending: 'CI running', none: 'no CI' }[it.ci]}.`)
       if (it.sentences) console.log(`  ${it.sentences}`)
-    } else for (const l of it.links) console.log(`  ${l.label ? `${l.label}: ` : ''}${l.url}`)
+    } else {
+      if (it.change) console.log(`  OpenSpec change: ${it.change}`)
+      if (it.briefFile) console.log(`  Brief: ${it.briefFile}`)
+      for (const l of it.links) console.log(`  ${l.type ?? 'link'}: ${l.label ? `${l.label}: ` : ''}${l.url}`)
+    }
   }
 }
+
+/** One row of the list as text: kind, product, age, one line, then the key. */
+const rowText = (it, now = Date.now()) =>
+  `${(it.kind === 'pr' ? 'GitHub' : it.kind).padEnd(6)}  ${String(it.product ?? it.repo).padEnd(12)}  ${age(it.at, now).padStart(6)}  ${it.line || it.title}  (${it.key})`
 
 async function cmdList() {
   const designs = waitingOrDie()
   const prs = await prsOrDie()
-  if (flag('json')) return console.log(JSON.stringify({ designs, prs: prs.items, errors: prs.errors }, null, 2))
-  if (!designs.length && !prs.items.length) console.log(prs.errors.length ? 'Nothing waits for you that could be read.' : 'Nothing waits for you: no design and no PR.')
-  if (designs.length) console.log('Designs to approve\n'), printItems(designs), console.log()
-  if (prs.items.length) console.log('PRs to approve (on GitHub)\n'), printItems(prs.items)
+  const items = merge(designs, prs.items)
+  // `designs` keeps its name for scripts that read it: every task kind (spec, design, result, plan, stuck).
+  if (flag('json')) return console.log(JSON.stringify({ items, designs, prs: prs.items, errors: prs.errors }, null, 2))
+  if (!items.length) console.log(prs.errors.length ? 'Nothing waits for you that could be read.' : 'Nothing waits for you: no spec, design, result or PR.')
+  for (const it of items) {
+    console.log(rowText(it))
+    printItems([it], false)
+  }
   for (const e of prs.errors) console.error(`PRs incomplete: ${e}`)
 }
 
@@ -258,8 +276,7 @@ function cmdDoc() {
   mkdirSync(join(STATE, 'results'), { recursive: true })
   mkdirSync(dir, { recursive: true })
   const file = join(dir, `${it.key}.md`)
-  const links = it.links.map((l) => `- ${l.label ? `${l.label}: ` : ''}${l.url}`).join('\n')
-  writeFileSync(file, `# ${it.key}: ${it.title}\n\n${links ? `Artifacts:\n\n${links}\n\n` : ''}---\n\n${it.brief}\n`)
+  writeFileSync(file, briefDoc(it))
   const result = join(STATE, 'results', `${it.key}-${Date.now()}.json`)
   // Standalone, not `herdr open`, and without herdr's context: Plannotator would otherwise find an agent
   // pane (the one focused when the tab opened) and type the decision into it. The decision comes back
@@ -272,7 +289,7 @@ function cmdDoc() {
   const what = fromAnnotation(readJson(result, null))
   if (what.action === 'approve') {
     approveDetached(it.id, what.notes)
-    return pause(`${it.key}: approved. The build starts; the Waiting for you pane shows how it goes.`)
+    return pause(`${it.key}: approved. ${it.kind === 'result' ? 'It ships now' : 'The build starts'}; the review list shows how it goes.`)
   }
   if (what.action === 'back') {
     const b = sendBack(board, it, what.text)
@@ -287,7 +304,10 @@ function pause(line) {
   spawnSync('sleep', ['2'])
 }
 
-/** Open the pane beside the focused one, or focus it when it is open already. */
+/**
+ * Open the pane below the work board (the herdr-projects pane), or focus it when it is open already.
+ * No board pane open: beside the focused pane, as before.
+ */
 function cmdOpenPane() {
   const known = readJson(join(STATE, 'pane.json'), {})
   if (known.pane && herdr(['pane', 'get', known.pane])) return herdr(['plugin', 'pane', 'focus', known.pane])
@@ -295,10 +315,11 @@ function cmdOpenPane() {
   try {
     ctx = JSON.parse(env.HERDR_PLUGIN_CONTEXT_JSON || '{}')
   } catch {}
-  const target = ctx.focused_pane_id || env.HERDR_PANE_ID
+  const focused = ctx.focused_pane_id || env.HERDR_PANE_ID
+  const where = paneSpot(herdr(['pane', 'list'])?.panes ?? [], { focused, workspace: ctx.workspace_id || env.HERDR_WORKSPACE_ID })
   herdr([
     'plugin', 'pane', 'open', '--plugin', PLUGIN, '--entrypoint', 'pane', '--placement', 'split',
-    '--direction', 'right', ...(target ? ['--target-pane', target] : []), '--focus',
+    '--direction', where.direction, ...(where.target ? ['--target-pane', where.target] : []), '--focus',
   ])
 }
 
@@ -319,7 +340,7 @@ function cmdNotify() {
   const skipped = readJson(skipsFile, {})
   for (const it of toNotify(items, seen)) {
     if (skipped[it.id] === it.hash) continue
-    notify(it.kind === 'plan' ? 'Plan ready for design review' : 'Design ready for review', `${it.key} ${it.title}`)
+    notify({ spec: 'Spec ready for review', result: 'Result ready for review', plan: 'Plan ready for design review' }[it.kind] ?? 'Design ready for review', `${it.key} ${it.title}`)
   }
   writeJson(seenFile, Object.fromEntries(items.map((it) => [it.id, it.hash])))
 }
@@ -329,7 +350,23 @@ async function cmdPane() {
   await runPane({ waiting, waitingPrs, board, data, STATE, statusFile, skipsFile, approveDetached, openForReview, sendBack })
 }
 
+/** Check a spec brief or a result pitch before the stop. The kind is --kind, else the title line's first word. */
+function cmdCheck() {
+  const kind = option('kind')
+  const file = args[0]
+  if (!file) die('agent-kit review check <closing-note.md> [--kind spec|result]')
+  const text = readFile(file)
+  if (text === null) die(`${file}: cannot read it`)
+  const k = kind || (/^#\s+result\b/im.test(text) ? 'result' : /^#\s+spec\b/im.test(text) ? 'spec' : '')
+  if (!k) die(`${file}: say --kind spec or --kind result (the title starts with neither "# Spec" nor "# Result")`)
+  const findings = check(k, text)
+  for (const f of findings) console.log(`${f.level === 'error' ? 'missing' : 'note   '}  ${f.what}`)
+  if (!passes(findings)) process.exit(1)
+  console.log(`ok: the ${k === 'spec' ? 'brief' : 'pitch'} has what the owner needs to decide${findings.length ? ' (notes above)' : ''}.`)
+}
+
 const commands = {
+  check: cmdCheck,
   list: cmdList,
   prs: cmdPrs,
   pane: cmdPane,

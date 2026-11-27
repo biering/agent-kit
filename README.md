@@ -10,7 +10,7 @@ agent in the repo.
 | `agent-kit linear setup` / `inbox` / `ask` / `task` / `issue` / … | Linear as the human-in-the-loop inbox: a "Human" label group (Blocker, Decision, Approval, Spend), a "Needs me" view filtered to the owner, one project per bet as the agents' queue |
 | `agent-kit herdr ceo` / `new <slug>` / `worker <slug> --brief f` / `list` / `sync` / `cleanup` | The CEO and every topic session as herdr panes, each in its own worktree, cleaned up when finished, and closed when their checkout is gone; the plugin re-syncs PR, CI and issue on every agent status change, at most once a minute |
 | `agent-kit herdr open-link <url>` | A ctrl+click on this repo's PR or Linear issue link in herdr: the session working on it, else the browser (the plugin's link handlers) |
-| `agent-kit review` / `review pane` / `prs` / `approve <id>` / `back <id> <text>` / `annotate <id>` | Everything that waits for the owner, across repos: the herdr **Waiting for you** pane (`prefix+y`) with designs to approve (approve to build, send back) and PRs to approve on GitHub (Design review and Waiting for you below) |
+| `agent-kit review` / `review pane` / `prs` / `check <file>` / `approve <id>` / `back <id> <text>` / `annotate <id>` | Everything that waits for the owner, across repos, newest first: the herdr **review list** pane (`prefix+y`, below the work board) with specs to approve before the build, designs, results to ship (approve or send back with a key) and PRs to approve on GitHub (Review list below) |
 | `agent-kit herdr install-cursor-hooks` | Cursor chats report their state for the control panel |
 | `agent-kit ceo-schedule install` / `status` / `run` | The CEO's daily run (launchd), in its own checkout on `origin/main` |
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
@@ -49,7 +49,7 @@ under `claude --agent`). A repo that gates every session wires it in its own
    `loop` is read by the `dev-loop` skill, not the CLI: `verify` is the local
    check before a PR, `docs` the extra one when docs or skills changed, `gate`
    an optional script that reports what the branch still owes (`null` when
-   hooks do that job). Three more blocks belong to skills: `carousel` (the brands
+   hooks do that job). Four more blocks belong to skills: `review` (`media`, the command the `result-pitch` skill uploads its video and screenshots with; README "Review list"), `carousel` (the brands
    folder, where Playwright lives), `ads` (the landing-page register and the
    URL pattern per brand, for `ads-landingpage`) and `unslop` (`voice`, the
    repo's voice file, default `docs/agent-kit/voice.md`).
@@ -212,13 +212,13 @@ The directory name is the install key, so skills are not renamed here. The table
 
 | Area | Skills |
 |------|--------|
-| Ship | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix` |
+| Ship | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix`, `result-pitch` (the owner ships it without reading code: user benefit, complexity and why it is worth it, risk and undo, a recommendation, with a video and desktop and phone screenshots of the real app; checked by `agent-kit review check`) |
 | Review | `review-code`, `review-api` (REST and MCP scorecards; the MCP half scores against `mcp-design`), `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
 | Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `mcp-design` (an MCP server for agents: tool budget and a small surface on one URL, names, descriptions, response shapes, errors that teach, write safety, scopes, contract tests and evals; `scripts/tool-budget.mjs` measures a tool list), `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
 | Write | `copywriting`, `unslop` (runs on every user-facing text before it ships: AI-sounding prose in German and English, specifics first, platform limits, a voice file per repo that learns from edits), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest, led by a per-product Stats block when configured) |
-| Market | `aso`, `app-screenshots` (six layout templates: hero object, tilted device, panorama, feature callout, before and after, honest proof; sourced rules), `video` (a video studio: seven roles, six styles including agent films, measured QA, voice-over, X player cards, and `record.mjs` for explainers of the real app), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ad-creative` (the ad itself for paid social and search: sourced premises, target from ad libraries and reviews, a 17-element brief checked by `brief_check.mjs`, batches as a risk portfolio, no invented urgency or proof), `ads-landingpage` (the page the ad lands on) |
-| Decide | `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
+| Market | `distribution-reuse` (a shipped change in a live product, told as the brand: an X post, a clip, a changelog entry or a launch asset, drafted inside the result pitch and posted on its approve), `aso`, `app-screenshots` (six layout templates: hero object, tilted device, panorama, feature callout, before and after, honest proof; sourced rules), `video` (a video studio: seven roles, six styles including agent films, measured QA, voice-over, X player cards, and `record.mjs` for explainers of the real app), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ad-creative` (the ad itself for paid social and search: sourced premises, target from ad libraries and reviews, a 17-element brief checked by `brief_check.mjs`, batches as a risk portfolio, no invented urgency or proof), `ads-landingpage` (the page the ad lands on) |
+| Decide | `spec` (a feature planned before any code: an OpenSpec change with WHEN/THEN scenarios, designs as Artifacts, one brief the owner approves in the review list), `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
 | Editor | `workspace-chrome` (title bar and status bar only) |
 
 Every listed description costs room in the harness's skill listing. A repo
@@ -247,90 +247,159 @@ beside it) because the design router needs it as a reference, not a skill.
 whole, it claims every web UI task and sets fonts, icons and invented proof that
 the repos' design systems and the taste kit rule out.
 
-## Design review
+## Review list
 
-Work that changes screens gets the owner's yes on its design before it is built
-([`rules/design-review.md`](rules/design-review.md)). The **Waiting for you** pane brings those
-designs to him in herdr, and the PRs that wait for his review (next section), across every repo on the work board
-([herdr-projects](https://github.com/eliasstravik/herdr-projects), used through its CLI only).
+The owner is in the loop at two points, and the **review list** is where both reach him: a herdr pane
+below the work board ([herdr-projects](https://github.com/eliasstravik/herdr-projects), used through its
+CLI only) that lists everything waiting for him, across repos, newest first.
+
+1. **The spec, before the build** ([`rules/spec-review.md`](rules/spec-review.md), the `spec` skill): a
+   feature or a bigger improvement is written as an OpenSpec change (proposal, WHEN/THEN scenarios,
+   design, tasks) with the designs as private Artifacts, and one brief. No code until he approves.
+2. **The result, before the merge** ([`rules/result-review.md`](rules/result-review.md), the
+   `result-pitch` and `distribution-reuse` skills): specced work and every PR a user would notice comes
+   with a pitch, a video and desktop and phone screenshots of the real app, and the drafts for the
+   product's brand accounts. His approve ships it and posts the drafts as the brand.
+
+Screen work without a spec still gets its design approved first ([`rules/design-review.md`](rules/design-review.md)),
+and PRs that need his approval on GitHub (a CODEOWNERS path, a new runtime dependency) show in the same
+list, to open, not to approve.
 
 ```
- Waiting for you · 3 to approve · 1 PR
- ────────────────────────────────────────────────
-  Designs to approve
- ▸ KIT-14      12m  design Settings screen redesign
-   MB-411       2h  plan   Onboarding, three steps
-   MB-405       1h  stuck  Tinybreath singing bowl
-  PRs to approve (on GitHub)
-   app#88       3h  PR     feat(app): refund button
- ────────────────────────────────────────────────
- KIT-14 · agent-kit · design ready 12m ago
- Artifacts
- [1] Variant A, grouped
- https://claude.ai/artifact/<id>
- Brief
- …
- ────────────────────────────────────────────────
- ⏎/p review in Plannotator  a approve + build
- b send back  1-9 open link  o open all  …
+ Review list · 4 waiting (1 on GitHub)
+ ──────────────────────────────────────────────────────────────
+ ▸ result tinybreath    12m  a singing bowl ends the session
+   spec   wavedance      2h  save a mix as a playlist
+   design agent-kit      5h  settings in two taps
+   GitHub app            1d  feat(app): refund button
+ ──────────────────────────────────────────────────────────────
+  MB-590 · tinybreath (maelstrom) · result ready 12m ago
+  feat(tinybreath): singing bowl
+  Links
+  [1] Video, the changed flow
+ https://media.example.com/tinybreath/bowl/flow.mp4
+  [2] Screenshot, desktop
+ https://media.example.com/tinybreath/bowl/session-desktop.png
+  [3] Screenshot, phone
+ https://media.example.com/tinybreath/bowl/session-phone.png
+  [4] Pull request
+ https://github.com/acme/maelstrom/pull/612
+  Brief file (⏎ opens it in Plannotator)
+ ~/.herdr-projects/data/tasks/maelstrom/590/closing-note.md
+ ──────────────────────────────────────────────────────────────
+  ⏎/p review in Plannotator  a approve + ship  b send back
+  1-9 open link  o open all  y1-9 copy link  s skip  S skipped
 ```
 
-**What waits there.**
-- **design**: the agent made its designs with its usual access and stopped with a
-  `Design ready: …` report. Its description has the line `Design review: yes`. The brief is its
-  closing note.
-- **plan**: the board's plan step (`plan.approve you`) with a design brief. Its description has the
-  marker line, or its plan links an artifact.
-- **stuck**: a plan was approved but its build never started (see "Approve" below).
+**Each row** is the kind, the product (a `Product: <name>` line in the brief or the task's
+description, else the repo), the age and one line (the report's message after `Spec ready for review:`,
+else the title). Kinds:
+
+| Row kind | The task stopped with | Its brief | Approve does |
+|---|---|---|---|
+| `spec` | `Spec ready for review: …` | the closing note: why, user benefit, scenarios, design links, tasks, complexity | one `tell`: build it now, in the same conversation |
+| `design` | `Design ready: …`, on a task with `Design review: yes` | the closing note with the artifacts | one `tell`: build it now |
+| `result` | `Result ready for review: …` | the closing note: the pitch, its video, screenshots, PR and drafts | one `tell`: merge under the repo's rules, post the drafts on the brand accounts, archive the change once it lands |
+| `plan` | the board's plan step (`plan.approve you`) with a design brief | the plan | the board's `approve`, then a check that the build starts |
+| `stuck` | (an approved plan whose build never started) | the plan | `f` repairs: `stop`, then `delegate` |
+| `GitHub` | (an open PR whose merge waits for his GitHub approval) | the PR | nothing here: `⏎` opens it to approve on GitHub |
+
+**The detail** shows every link whole, typed (Artifact, Video, Screenshot, PR, Link), the brief's file,
+the OpenSpec change's folder in the task's worktree, and what the brief or pitch still lacks
+(`Not complete: no phone screenshot; …`, the same check as `agent-kit review check`). A result whose PR
+also waits on GitHub says so on both rows.
 
 **Keys.**
-- `⏎`/`p` opens the brief in Plannotator (the annotate plugin), in a **new tab of the CEO's
-  workspace** (label `ceo`, of the task's repo; `AGENT_KIT_REVIEW_WORKSPACE` picks another). There,
-  `A` approves and `E` sends the comments back.
-- `a` approves (it asks first); `b` sends back a one-line comment.
-- `1`–`9` opens an artifact in the browser, `o` opens them all, and `y` then a digit copies one.
-- `s` skips a task until its brief changes (`S` shows skipped ones); `f` repairs a stuck one.
+- `⏎`/`p` opens the brief or the pitch in Plannotator (the annotate plugin), in a **new tab of the
+  CEO's workspace** (label `ceo`, of the task's repo; `AGENT_KIT_REVIEW_WORKSPACE` picks another). There,
+  `A` approves and `E` sends the comments back. On a GitHub row, `⏎` opens the PR in the browser.
+- `a` approves (it asks first); `b` sends back a one-line comment to the same agent.
+- `1`–`9` opens a link in the browser, `o` opens them all, and `y` then a digit copies one.
+- `s` skips a row until its brief changes (`S` shows skipped ones); `f` repairs a stuck one.
 - `g` opens the board, `r` refreshes, `?` lists every key.
 
-Artifact links are always shown whole: each on a line of its own, broken without anything added
-when the pane is narrower than the URL, and a terminal hyperlink either way. The pane refreshes
-when the board writes a task (it watches the board's `tasks/` folder) and every 30 s.
+Links are always shown whole: each on a line of its own, broken without anything added when the pane is
+narrower than the URL, and a terminal hyperlink either way. The pane refreshes when the board writes a
+task (it watches the board's `tasks/` folder) and every 30 s.
 
-**Approve.**
-- A design task gets one `tell`: build it now, in the same conversation.
+**Approve, in detail.**
+- A spec, a design or a result gets one `tell` (the words are in `src/lib/review.mjs`), and the agent goes
+  on in the same conversation with its usual access.
 - A plan gets the board's `approve`. The pane then sends nothing until the build has started (the
   task's `plan.built`), because a message in that window cancels the build and leaves the agent in
-  Claude's plan mode on a read-only worktree.
-- If the build still does not start, it repairs: `stop`, then `delegate --now --plan.approve none`,
-  which builds the approved plan with normal access.
+  Claude's plan mode on a read-only worktree. If the build still does not start, it repairs: `stop`, then
+  `delegate --now --plan.approve none`, which builds the approved plan with normal access.
 - An approve runs on its own, so closing the pane does not cut it off. Its progress shows on the row.
-- **Send back** is a `tell` with the owner's words (a design gets "revise, then stop at Design ready
-  again"; a plan goes back to its plan step).
+- **Send back** is a `tell` with the owner's words and what to do next: revise and stop again at the same
+  report (`Spec ready for review`, `Design ready`, `Result ready for review`); a plan goes back to its plan
+  step.
 
-**Notifications.** A herdr notification arrives when a design becomes ready, even with the pane
-closed: the plugin's `pane.agent_status_changed` hook, at most one board read every 20 seconds.
+**Notifications.** A herdr notification arrives when a spec, a design, a plan or a result becomes ready,
+even with the pane closed: the plugin's `pane.agent_status_changed` hook, at most one board read every 20
+seconds.
 
-**Setup, once per machine.** The pane is its own plugin (`herdr-review/`, id `agent-kit.review`),
-not part of each repo's plugin, so it shows once for all repos. `terminal/install.sh` links it when
-herdr runs. By hand: `herdr plugin link <repo>/vendor/agent-kit/herdr-review`. The key `prefix+y`
-(the kit's herdr config) opens the pane beside the current one.
+**Setup, once per machine.** The pane is its own plugin (`herdr-review/`, id `agent-kit.review`), not part
+of each repo's plugin, so it shows once for all repos. `terminal/install.sh` links it when herdr runs. By
+hand: `herdr plugin link <repo>/vendor/agent-kit/herdr-review`. The key `prefix+y` (the kit's herdr
+config) opens it below the work board pane (else beside the focused pane), or focuses it.
 
-- It needs no `agent-kit.config.json` entry.
+- It needs no `agent-kit.config.json` entry. The skills read `review.media` there (below).
 - It finds the board as the board does: `HERDR_PROJECTS_BIN`, `HERDR_PROJECTS_DATA_DIR`,
   `HERDR_PROJECTS_HOME`.
 - It finds Plannotator through herdr's plugin list, or `PLANNOTATOR_TUI_BIN`.
-- Each repo's CEO manual adds one line that points to the rule.
+- Each repo's CEO manual adds one line that points to the rules.
 
-`agent-kit review list [--json]` prints the same list (designs, then PRs; `--json` is `{ designs, prs, errors }`),
-`agent-kit review prs [--json]` only the PRs, and `approve`, `back`, `annotate` and `notify` are the
+`agent-kit review list [--json]` prints the same list, newest first (`--json` is
+`{ items, designs, prs, errors }`: `items` the whole list, `designs` every board task, `prs` the GitHub
+rows), `agent-kit review prs [--json]` only the PRs, `agent-kit review check <file> [--kind spec|result]`
+what a brief or pitch still lacks (exit 1 on a gap), and `approve`, `back`, `annotate` and `notify` are the
 pane's actions as commands.
 
-## Waiting for you: PRs
+**A repo that uses it** sets, in `agent-kit.config.json`:
 
-The same pane has a second section, **PRs to approve (on GitHub)**: the open pull requests, in every repo
-the work board knows (its `repos.json`, each repo's `origin` remote, asked through `gh`), where the
-owner's approval is what blocks the merge. Nothing approves from the pane: `⏎` (or `1`, `o`) opens the
-PR in the browser, `y` then `1` copies its URL, and the approval stays on GitHub.
+```json
+"review": { "media": "pnpm media upload {product} {dir}" }
+```
+
+`media` is the command the `result-pitch` skill uploads the video and screenshots with; it prints the
+public URLs the pitch links. `{product}` and `{dir}` are filled in. Without it, the skill asks once.
+OpenSpec is a devDependency of the repo (`@fission-ai/openspec`, `npx openspec init --tools none`).
+
+### Herdr desktop app
+
+The Herdr desktop app (0.1.18) does not load herdr's plugins: it reads no `herdr-plugin.toml`, so it has
+no plugin panes, actions, link handlers or events. Its own extension point is **mods**: small JavaScript
+programs in `~/.config/herdr-app/mods/<name>/` that draw native panels, run programs with `exec()` and
+run app commands. So the review list ships for it as a mod, `herdr-app/review-list`, as well:
+
+- Install: `herdr-app/install.sh` (`terminal/install.sh` runs it) copies it into the app's mods folder
+  and writes `kit.json`, the `node` and the `agent-kit` it runs. No app folder, nothing is done.
+- Open: focus the board's pane, then the palette's **Review list**. It splits that pane down, so the
+  list sits below the board. `herdr-app do pane.split '{"direction":"down","mod":"review-list"}'` does the
+  same from a shell.
+- The same list: it runs `agent-kit review list --json` every 30 seconds and draws its rows natively:
+  kind, product, age, one line, newest first, the detail with every link whole and "Not complete: …"
+  when the brief or pitch has gaps.
+- The same keys: `↑`/`↓` (or `j`/`k`) move, `⏎` opens the brief in Plannotator in a new tab
+  (`agent-kit review doc`) or a GitHub row in the browser, `a` asks once and then approves
+  (`agent-kit review approve`; `f` on a stuck row repairs it), `b` opens a one-line field for the words
+  that go back (`agent-kit review back`), `1` to `9` open a link, `r` reads the list again. The confirm and
+  the field act on the row they were opened for: if a refresh drops that row (done in the herdr pane, say),
+  they close and nothing is sent, so a second `a` never lands on another row.
+- Commands: `review-list.down`, `.up`, `.open`, `.approve`, `.back` and `.refresh` take the same
+  actions from `keys.json` (`"alt-a": "review-list:approve"`) or a shell
+  (`herdr-app do review-list.approve`).
+
+The list, the checks and every action stay in this kit's CLI; the mod is only the screen, so the herdr
+pane and the mod never disagree. What it does not do yet: the `s` skip, `y` copy and `o` open-all keys
+of the herdr pane, and the per-row approve status (`build`, `ship`) the pane reads from its state folder.
+
+### GitHub rows
+
+The list also has the open pull requests, in every repo the work board knows (its `repos.json`, each
+repo's `origin` remote, asked through `gh`), where the owner's approval is what blocks the merge. Nothing
+approves from the pane: `⏎` (or `1`, `o`) opens the PR in the browser, `y` then `1` copies its URL, and the
+approval stays on GitHub.
 
 ```
  app#88 · app · open 3h
@@ -373,7 +442,7 @@ and the like) and what follows it up to the blank line.
 its header with "mark it ready", also when the board's task for it still reads "working" (the detail says so): an agent may have stopped
 to ask for him without the board's state moving. Those are the PRs left as drafts although they wait for him.
 
-**Live.** The pane loads the PRs on their own, so the designs never wait for GitHub (it says "loading
+**Live.** The pane loads the PRs on their own, so the board rows never wait for GitHub (it says "loading
 from GitHub…"). It asks again when the board writes a task (at most every 20 s) and every 3 minutes, and
 `r` asks now. A repo `gh` cannot read is named in the pane ("PRs incomplete: …"), never shown as "no PR
 waits"; the last list stays on screen. `s` skips a PR until its head or its reasons change. There is no
@@ -390,6 +459,10 @@ matches the work.
 
 - [`rules/mobile-apps.md`](rules/mobile-apps.md): analytics consent (not ATT),
   the review prompt, onboarding.
+- [`rules/spec-review.md`](rules/spec-review.md): a feature or a bigger improvement gets an OpenSpec
+  change and one brief the owner approves before any code (which work, the stage, the brief, the archive).
+- [`rules/result-review.md`](rules/result-review.md): specced work and every PR a user would notice
+  gets a result pitch, a video and screenshots before it merges; his approve also covers the brand posts.
 - [`rules/design-review.md`](rules/design-review.md): work that changes screens gets a design
   review first (the marker line, the design stage, the brief, what approve and send back mean).
 - [`rules/how-we-win.md`](rules/how-we-win.md): the guiding principles for
