@@ -9,11 +9,15 @@ auto_switch = false
 sidebar_width = 34
 sidebar_min_width = 32
 sidebar_max_width = 44
+# cockpit (quaresc/cockpit): one agent per space, so the tab row only shows in a
+# space holding several tabs; blocked and finished agents float to the top.
+hide_tab_bar_when_single_tab = true
+agent_panel_sort = "priority"
 
-# Agent "done" and "needs input" toasts reach macOS, not only the herdr window.
-# Without terminal-notifier herdr falls back to osascript.
+# cockpit sends the system notifications itself (its icon, a click that leads
+# to the agent), so herdr keeps its own as in-app toasts and none arrives twice.
 [ui.toast]
-delivery = "system"
+delivery = "herdr"
 
 # Agents in the sidebar as the work board shows them (herdr-projects docs/install.md):
 # the board's own tab names hidden, the agent, then the task's summary and progress.
@@ -126,3 +130,89 @@ key = "prefix+shift+a"
 type = "plugin_action"
 command = "maelstrom.panel.board"
 description = "work board on the right"
+
+# Herdr Annotate (plannotator/herdr-annotate): comment on terminal text, review
+# documents and agent replies, send the notes to the agent. Four of the keys the
+# plugin suggests are taken above (prefix+a, prefix+shift+a, prefix+m, prefix+d),
+# so these differ from its README.
+[[keys.command]]
+key = "prefix+t"
+type = "plugin_action"
+command = "annotate.capture"
+description = "annotate text"
+
+[[keys.command]]
+key = "prefix+shift+m"
+type = "plugin_action"
+command = "annotate.manage"
+description = "manage annotations"
+
+[[keys.command]]
+key = "prefix+shift+c"
+type = "plugin_action"
+command = "annotate.copy-context"
+description = "copy annotations as context"
+
+[[keys.command]]
+key = "prefix+ctrl+a"
+type = "plugin_action"
+command = "annotate.copy-archive"
+description = "copy annotations as context and archive them"
+
+[[keys.command]]
+key = "prefix+ctrl+v"
+type = "plugin_action"
+command = "annotate.paste-archive"
+description = "paste annotations into the agent's prompt and archive them"
+
+[[keys.command]]
+key = "prefix+ctrl+s"
+type = "plugin_action"
+command = "annotate.send-archive"
+description = "send annotations to the agent and archive them"
+
+[[keys.command]]
+key = "prefix+u"
+type = "plugin_action"
+command = "annotate.open"
+description = "review documents in this folder"
+
+[[keys.command]]
+key = "prefix+shift+o"
+type = "plugin_action"
+command = "annotate.last"
+description = "review the agent's recent replies"
+
+[[keys.command]]
+key = "prefix+ctrl+o"
+type = "plugin_action"
+command = "annotate.last-newest"
+description = "review the agent's newest reply"
+
+# cockpit (quaresc/cockpit): only its keys that clash with none above. Its space
+# jumps (inbox, to-do, runbook...) live in the Herdr app as cmd-alt-0..7, so the
+# house keys keep prefix+i/t/a/d/u/m/f/y. ~/.config/cockpit/herdr follows the
+# plugin's current install folder.
+[[keys.command]]
+key = "prefix+space"
+type = "shell"
+command = "sh ~/.config/cockpit/herdr/palette.sh"
+description = "cockpit palette"
+
+[[keys.command]]
+key = "prefix+shift+q"
+type = "shell"
+command = "sh ~/.config/cockpit/herdr/popup.sh queue"
+description = "prompt queue"
+
+[[keys.command]]
+key = "prefix+shift+s"
+type = "shell"
+command = "sh ~/.config/cockpit/herdr/popup.sh start-work"
+description = "start work"
+
+[[keys.command]]
+key = "prefix+shift+u"
+type = "shell"
+command = "sh ~/.config/cockpit/herdr/cockpit.sh resume all"
+description = "resume agents"

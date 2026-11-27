@@ -1,0 +1,22 @@
+{
+  "github": { "enabled": true, "org": "" },
+  "tickets": { "enabled": false, "name": "", "server": "", "keys": [], "urlTemplate": "" },
+  "ci": { "enabled": true, "name": "GitHub", "server": "", "imageJob": "" },
+  "platform": { "enabled": false },
+  "deployWatch": { "enabled": false, "afterMinutes": 30, "tools": [] },
+  "recap": { "enabled": true, "awayMinutes": 10 },
+  "meetingBrief": { "enabled": false },
+  "calendar": { "enabled": false },
+  "mail": { "enabled": false },
+  "brief": { "enabled": true, "at": "08:30", "weekends": false },
+  "notifications": true,
+  "e2eBrowser": "terminal-browser",
+  "browserIdleMinutes": 60,
+  "sideBrowser": "chromium",
+  "herdrPluginRoot": "",
+  "spaces": ["inbox", "terminal", "actions", "to-do", "runbook", "routines", "review"],
+  "agents": { "default": "claude" },
+  "runbookTools": [],
+  "worktrees": true,
+  "density": "compact"
+}

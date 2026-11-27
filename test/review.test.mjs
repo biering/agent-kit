@@ -476,7 +476,8 @@ describe('the plugin and its wiring', () => {
     assert.match(manifest, /on = "pane\.agent_status_changed"\ncommand = \["node", "\.\.\/bin\/agent-kit\.mjs", "review", "notify"\]/)
     assert.match(read('src/review.mjs'), /const PLUGIN = 'agent-kit\.review'/)
     assert.match(read('terminal/herdr/config.toml'), /key = "prefix\+y"\ntype = "plugin_action"\ncommand = "agent-kit\.review\.open"/)
-    assert.match(read('terminal/install.sh'), /herdr plugin link "\$review"/)
+    // `hr` is install.sh's herdr wrapper (herdr with HERDR_SOCKET_PATH unset).
+    assert.match(read('terminal/install.sh'), /\b(herdr|hr) plugin link "\$review"/)
     assert.match(read('src/sync.mjs'), /'herdr-review'/)
     assert.match(read('bin/agent-kit.mjs'), /review: '\.\.\/src\/review\.mjs'/)
   })
