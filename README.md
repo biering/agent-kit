@@ -401,8 +401,10 @@ run app commands. So the review list ships for it as a mod, `herdr-app/review-li
   when the brief or pitch has gaps.
 - The same keys: `↑`/`↓` (or `j`/`k`) move, `⏎` opens the brief in Plannotator in a new tab
   (`agent-kit review doc`) or a GitHub row in the browser, `a` asks once and then approves
-  (`agent-kit review approve`), `b` opens a one-line field for the words that go back
-  (`agent-kit review back`), `1` to `9` open a link, `r` reads the list again.
+  (`agent-kit review approve`; `f` on a stuck row repairs it), `b` opens a one-line field for the words
+  that go back (`agent-kit review back`), `1` to `9` open a link, `r` reads the list again. The confirm and
+  the field act on the row they were opened for: if a refresh drops that row (done in the herdr pane, say),
+  they close and nothing is sent, so a second `a` never lands on another row.
 - Commands: `review-list.down`, `.up`, `.open`, `.approve`, `.back` and `.refresh` take the same
   actions from `keys.json` (`"alt-a": "review-list:approve"`) or a shell
   (`herdr-app do review-list.approve`).
