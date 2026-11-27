@@ -87,6 +87,13 @@ Claude API, `input_examples` raised accuracy on complex parameters from 72% to 9
   everything: the schema is advice to the model, the validator is the contract.
 - **Scope parameters away.** A connection bound to one project (URL or grant) drops `project_id`
   from every schema rather than asking for it on each call.
+- **Ask only for what the operation needs.** A field the REST route stores but the agent's job does
+  not need (an IBAN, a bank's contract number, a birth date) stays out of the tool schema. OpenAI's
+  review flags "information beyond the operation" (observed 2026-11-13).
+- **Publish portable JSON Schema.** Some providers validate the whole tool list before running a
+  model, so one unsupported keyword fails every request, not the one call. Regex lookaround (zod's
+  default email pattern has it) and `$ref` into `$defs` have both broken clients; test the
+  published schemas for them.
 
 ## Annotations and write safety
 
@@ -96,16 +103,23 @@ dangerous kind. Clients treat hints as untrusted: the server still checks scopes
 
 | Kind | readOnly | destructive | idempotent | openWorld |
 |---|---|---|---|---|
-| Read our data | true | false | true | false |
-| Read a third party (a crawl, a search API) | true | false | true | true |
+| Read our data, free | true | false | true | false |
+| Read a third party, free (a crawl, a search API) | true | false | true | true |
+| Paid read, or a read that starts background work | false | false | true | per source |
 | Create (each call adds one) | false | false | false | false |
-| Update or set (same call, same state) | false | false | true | false |
-| Delete, revoke, overwrite | false | true | true | false |
+| Update or set (overwrites what was there) | false | true | true | false |
+| Delete, revoke | false | true | true | false |
 | Send outside the product (mail, post, webhook, payment) | false | per effect | false | true |
 
-- `readOnlyHint` is about state, not cost. A paid lookup that stores nothing is read-only; gate its
-  cost with an `estimate` mode and a budget, not with the hint. A "read" that persists a run is a
-  write.
+- **Read the hints the strict way.** The spec words them as state, but OpenAI's app review
+  (observed 2026-11-13) refused `readOnlyHint: true` on a search that charges credits and starts
+  background work, and `destructiveHint: false` on every update, because an update overwrites. A
+  server listed in both directories follows the stricter reading; Anthropic's review accepts it. A
+  "read" that persists a run is a write.
+- **A private approval class beside the public hints.** A first-party agent that needs its own
+  policy (ask before a write, never before a read) gets it in a namespaced `_meta` key sent only to
+  first-party credentials. Every other client sees the public hints alone: a reviewer reading a
+  second class that disagrees with them sees a contradiction.
 - **Human in the loop for the irreversible.** Deletion, key minting, money and anything sent to a
   third party: mark it destructive or open-world so clients ask, and where the client supports a
   hard confirmation (Claude Code: `_meta: { "anthropic/requiresUserInteraction": true }`), set it.
@@ -115,4 +129,5 @@ dangerous kind. Clients treat hints as untrusted: the server still checks scopes
   `idempotency_key`, say so in the description, and return the existing record on a repeat. Agents
   retry after timeouts.
 - **Cost before spend.** A tool that spends money or quota takes `estimate: true` and returns the
-  expected cost and what is left, without spending. Every paid result says what it cost.
+  expected cost and what is left, without spending. Every paid result says what it cost. Hold the
+  price while the work runs and give it back when the work fails: a failed call costs nothing.

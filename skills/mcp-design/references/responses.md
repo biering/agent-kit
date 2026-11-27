@@ -71,7 +71,10 @@ and the next call.**
 - Keep error text short (under about 1,000 characters; Claude Code keeps only the first and last
   5,000 of a long one). No internals, no secrets, no stack traces.
 - Rate limits: say how long to wait. Quota or budget exhaustion: say what is left and when it
-  resets.
+  resets. Put the numbers in `structuredContent` too (a code such as `plan_upgrade_required`, the
+  limit, used, remaining, `resets_at` or `retry_after_seconds`, an `upgrade_url`) with a
+  `retryable` flag: false until the person acts, true after the wait. The agent branches on the
+  code and tells the person what the payload says.
 - Do not retry inside the tool on input errors; return so the agent can correct itself.
 - HTTP-level auth stays HTTP: no or a dead token is a 401 with `WWW-Authenticate`; a missing scope
   is a 403 `insufficient_scope` naming every scope needed (`protocol.md`).

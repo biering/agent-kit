@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
-import { analyze, estimateTokens } from '../skills/mcp-design/scripts/tool-budget.mjs'
+import { analyze, estimateTokens, unportable } from '../skills/mcp-design/scripts/tool-budget.mjs'
 
 const root = new URL('..', import.meta.url)
 const read = (file) => readFileSync(new URL(file, root), 'utf8')
@@ -39,6 +39,27 @@ describe('tool-budget', () => {
     assert.match(by.invoices_list, /hints not set: destructiveHint, idempotentHint, openWorldHint/)
     assert.match(by.invoices_get, /description 501 characters/)
     assert.match(by['invoices refund'], /characters outside/)
+  })
+
+  it('flags a long first sentence and a schema a provider rejects', () => {
+    const email = { type: 'string', pattern: "^(?!\\.)[^@]+@[^@]+$" }
+    const result = analyze([
+      tool('contacts_create', { inputSchema: { type: 'object', properties: { email } } }),
+      tool('contacts_list', { description: `${'Lists contacts '.repeat(15)}. Then more.` }),
+      tool('contacts_get', { inputSchema: { type: 'object', properties: { id: { $ref: '#/$defs/Id' } } } }),
+    ])
+    const by = Object.fromEntries(result.problems.map((p) => [p.name, p.problems.join('; ')]))
+    assert.match(by.contacts_create, /unportable schema: lookaround in properties\.email/)
+    assert.match(by.contacts_list, /first sentence 2\d\d characters/)
+    assert.match(by.contacts_get, /\$ref at properties\.id/)
+    assert.deepEqual(unportable({ type: 'string', pattern: '^[a-z]+$' }), [])
+  })
+
+  it('caps the tools a server loads upfront in Claude Code', () => {
+    const upfront = (name) => tool(name, { _meta: { 'anthropic/alwaysLoad': true } })
+    const result = analyze(['a_1', 'a_2', 'a_3', 'a_4', 'a_5', 'a_6'].map(upfront))
+    assert.equal(result.alwaysLoad.length, 6)
+    assert.match(result.budget.join(), /6 tools marked anthropic\/alwaysLoad, at most 5/)
   })
 
   it('reports a default set over its budget', () => {
