@@ -8,6 +8,10 @@
 // Nothing is printed when the command runs no merge, also when its text merely
 // mentions one (echo "gh pr merge 5", a commit message, a task description).
 //
+// With --approves it prints the work board's approves instead (hooks/merge-gate.sh, the CEO's approve gate):
+//   APPROVE, id                             a real `herdr-projects approve <id>` (quotes removed, flags skipped)
+//   UNSAFE_APPROVE, why                     an approve whose task id cannot be read literally
+//
 // It reads the command the way the shell does: quotes, ; | & && || newlines and
 // ( ) split commands; `$(…)`, backticks, `bash -c '…'`, `eval`, here-docs fed to a
 // shell and wrappers (env, xargs, sudo, find -exec …) are followed, so a merge
@@ -220,8 +224,21 @@ function dropRedirects(words) {
 // source <(…), gh $args) the gate cannot read it, and refuses if the command says "merge".
 let FULL = ''
 const DYNAMIC = /\bmerge\b/
+const DYNAMIC_APPROVE = /\bapprove\b/
 const dynamic = (results, from, why) => {
   if (DYNAMIC.test(FULL) && !results.slice(from).some((r) => r[0] === 'MERGE' || r[0] === 'UNSAFE')) results.push(['UNSAFE', why])
+  if (DYNAMIC_APPROVE.test(FULL) && !results.slice(from).some((r) => r[0] === 'APPROVE' || r[0] === 'UNSAFE_APPROVE')) results.push(['UNSAFE_APPROVE', why])
+}
+
+// herdr-projects approve <id> [--anyway]: the work board's yes that merges finished work.
+function analyzeBoard(args, results) {
+  const pos = args.filter((w) => !(w.t.startsWith('-') && !w.x))
+  if (pos[0]?.x) { dynamic(results, results.length, 'a board command built at run time'); return }
+  if (pos[0]?.t !== 'approve') return
+  const id = pos[1]
+  if (!id) return
+  if (id.x || /[%{\\*?[]/.test(id.t)) results.push(['UNSAFE_APPROVE', 'the task id is built at run time'])
+  else results.push(['APPROVE', id.t])
 }
 
 function analyzeGh(args, envRepo, results) {
@@ -249,6 +266,7 @@ function analyzeGh(args, envRepo, results) {
 const line = (words, docs = []) => [words.map((w) => w.t).join(' '), ...docs].join('\n')
 // A loose match for `gh … pr … merge`, to fail closed on text that reaches a shell the parser cannot follow.
 const LOOSE = /\bgh\b[^\n]*\bpr\b[^\n]*\bmerge\b/
+const LOOSE_APPROVE = /herdr-projects\b[^\n]*\bapprove\b/
 
 // Package runners (pnpm exec, npx …), remote shells and interpreters run the text they are given.
 const RUNNERS = new Set(['npx', 'pnpx', 'bunx', 'ssh', 'su', 'script', 'at', 'tmux', 'screen', 'docker', 'podman', 'kubectl', 'osascript'])
@@ -273,11 +291,19 @@ function analyze(cmd, results, depth, envRepo) {
   // Code handed to something that runs it: if its text names a merge, the merge is
   // read from the text, and when that does not give one the command is refused.
   const loose = () => {
-    if (!LOOSE.test(line(rest, cmd.docs))) return
-    for (const w of rest) if (LOOSE.test(w.t)) analyzeString(w.t, results, depth + 1, repo)
-    if (!results.slice(before).some((r) => r[0] === 'MERGE')) results.push(['UNSAFE', 'a merge inside what ' + name + ' runs'])
+    const text = line(rest, cmd.docs)
+    if (LOOSE.test(text)) {
+      for (const w of rest) if (LOOSE.test(w.t)) analyzeString(w.t, results, depth + 1, repo)
+      if (!results.slice(before).some((r) => r[0] === 'MERGE')) results.push(['UNSAFE', 'a merge inside what ' + name + ' runs'])
+    }
+    if (LOOSE_APPROVE.test(text)) {
+      const n = results.length
+      for (const w of rest) if (LOOSE_APPROVE.test(w.t)) analyzeString(w.t, results, depth + 1, repo)
+      if (!results.slice(n).some((r) => r[0] === 'APPROVE')) results.push(['UNSAFE_APPROVE', 'an approve inside what ' + name + ' runs'])
+    }
   }
   if (name === 'gh') analyzeGh(rest, repo, results)
+  else if (name === 'herdr-projects') analyzeBoard(rest, results)
   else if (SHELLS.has(name)) {
     let code = null
     for (let j = 0; j < rest.length; j++) {
@@ -293,6 +319,11 @@ function analyze(cmd, results, depth, envRepo) {
         const fed = c.words.slice(1)
         const text = line(fed, c.docs)
         if (fed.some((w) => w.x)) dynamic(results, before, 'a pipe of text built at run time into ' + name)
+        if (LOOSE_APPROVE.test(text)) {
+          const a = results.length
+          analyzeString(text, results, depth + 1, repo)
+          if (text.includes('\\') || !results.slice(a).some((r) => r[0] === 'APPROVE')) results.push(['UNSAFE_APPROVE', 'an approve piped into ' + name])
+        }
         if (!LOOSE.test(text)) continue
         const n = results.length
         analyzeString(text, results, depth + 1, repo)
@@ -310,7 +341,7 @@ function analyze(cmd, results, depth, envRepo) {
     for (let j = 0; j < rest.length; j++) {
       if (rest[j].t.startsWith('GH_REPO=')) repo = { t: rest[j].t.slice(8), x: rest[j].x }
       const n = base(rest[j].t)
-      if (n === 'gh' || SHELLS.has(n) || n === 'eval') {
+      if (n === 'gh' || n === 'herdr-projects' || SHELLS.has(n) || n === 'eval') {
         analyze({ words: rest.slice(j), docs: cmd.docs, pipedFrom: cmd.pipedFrom }, results, depth + 1, repo)
         // xargs, find -exec and parallel supply the PR numbers: the gate cannot see them
         if (name === 'xargs' || name === 'find' || name === 'parallel') {
@@ -336,5 +367,7 @@ process.stdin.on('end', () => {
   const results = []
   FULL = input
   analyzeString(input, results)
-  for (const r of results) console.log(r.join('\x1f'))
+  // Each caller reads only its own kinds: merges by default, the board's approves with --approves.
+  const approves = process.argv.includes('--approves')
+  for (const r of results) if (r[0].endsWith('APPROVE') === approves) console.log(r.join('\x1f'))
 })

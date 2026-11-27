@@ -203,6 +203,7 @@ export function boardClient(bin, run) {
     stop: (id) => call(['stop', id]),
     delegate: (id, extra = []) => call(['delegate', id, ...extra]),
     add: (title, extra = []) => call(['add', title, ...extra]),
+    finish: (id) => call(['finish', id]),
   }
 }
 
@@ -301,9 +302,9 @@ export function approverOf(id, { board, data, readFile }) {
 
 /**
  * Every task waiting for the owner's decision, newest first.
- * io: { board, data, readFile(path) → string|null, mtime(path) → ms|null, exists(path) → bool, now }
+ * io: { board, data, readFile(path) → string|null, mtime(path) → ms|null, exists(path) → bool, list(dir) → names, now }
  */
-export function collect({ board, data, readFile, mtime, exists = () => false, now = Date.now() }) {
+export function collect({ board, data, readFile, mtime, exists = () => false, list = () => [], now = Date.now() }) {
   const items = []
   for (const row of board.list()) {
     if (!row?.id || row.stage === 'done' || row.archivedAt) continue
@@ -331,11 +332,15 @@ export function collect({ board, data, readFile, mtime, exists = () => false, no
         msg = r.msg
       }
     }
+    // Finished work the board brought as "ready to approve", then marked an error: an idle compaction after
+    // the result was ready reads as a turn without a summary (stage nosummary). No report was filed (the agent
+    // ended normally), but the board's own review is in its file: reviewedHead and the PR.
+    const lost = !stopped && row.state === 'error' && row.stage === 'nosummary' && Boolean(taskFile().reviewedHead) && Boolean(taskFile().pr || row.pr)
     // Finished work the board brings as "ready to approve": a result when the owner reviews it, else the CEO's.
     const ready = !stopped && readyToApprove(row)
     const planReady = !stopped && !ready && row.stage === 'plan'
     let maybeStuck = false
-    if (!stopped && !ready && !planReady) {
+    if (!stopped && !ready && !lost && !planReady) {
       // Only a task whose own file says "approved, not built" is worth a details call.
       const p = taskFile().plan
       maybeStuck = Boolean(p?.approvedAt && !p?.built && p?.locked)
@@ -344,7 +349,7 @@ export function collect({ board, data, readFile, mtime, exists = () => false, no
     const note = join(dir, 'closing-note.md')
     const d = board.details(row.id)
     if (!d?.task) continue
-    if (ready && !ownersResult({ note: readFile(note) ?? '', description: `${taskFile().description ?? ''}\n${d.task.description ?? ''}`, said: taskFile().said ?? '' })) continue
+    if ((ready || lost) && !ownersResult({ note: readFile(note) ?? '', description: `${taskFile().description ?? ''}\n${d.task.description ?? ''}`, said: taskFile().said ?? '' })) continue
     const base = {
       id: row.id,
       key: d.task.id || row.id,
@@ -360,6 +365,11 @@ export function collect({ board, data, readFile, mtime, exists = () => false, no
     }
     if (maybeStuck) {
       if (stuck(d)) items.push({ ...base, kind: 'stuck', brief: d.plan?.text ?? '', at: d.plan?.approvedAt })
+      continue
+    }
+    if (lost) {
+      const brief = readFile(note) ?? ''
+      items.push({ ...base, kind: 'result', lost: true, msg: '', boardSays: row.msg ?? '', prUrl: base.prUrl || taskFile().pr || '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
       continue
     }
     if (ready) {
@@ -399,7 +409,10 @@ export function collect({ board, data, readFile, mtime, exists = () => false, no
     it.product = productOf([it.brief, it.description], it.repo)
     const change = changeOf(it.brief)
     const open = change && it.worktree ? join(it.worktree, 'openspec', 'changes', change) : ''
-    it.change = change ? open || `openspec/changes/${change}` : ''
+    // Archived (spec-review.md §5): the folder moved to changes/archive/<date>-<name>; point there.
+    const archive = open ? join(it.worktree, 'openspec', 'changes', 'archive') : ''
+    const archived = open && !exists(open) ? list(archive).filter((n) => n === change || n.endsWith(`-${change}`)).sort().pop() : ''
+    it.change = change ? (archived ? join(archive, archived) : open || `openspec/changes/${change}`) : ''
     // What the brief or the pitch still lacks (review-check.mjs), shown on the detail.
     it.findings = it.kind === 'spec' || it.kind === 'result' ? check(it.kind, it.brief, { unarchived: it.kind === 'result' && Boolean(open) && exists(open) }) : []
     if (it.kind === 'result' && !it.links.some((l) => l.type === 'pr'))
@@ -544,6 +557,14 @@ export async function approve(item, { board, sleep, now = Date.now, log = () => 
  * first, or the board's merge would fail. After: the drafts go out as a task of their own, after the merge.
  */
 export function approveResult(item, { board, log = () => {}, notes = '' }) {
+  // Marked an error after it was ready (an idle compaction): the board's finish takes the work as it is, runs
+  // its finish line again and brings it back as ready to approve. Nothing merges until the owner's next yes.
+  if (item.lost) {
+    const f = board.finish(item.id)
+    if (!f.ok) return { ok: false, error: f.error }
+    log('back on the board: it returns as ready to approve, then approve it')
+    return { ok: true, how: 'finishing' }
+  }
   if (!item.ready) return { ok: false, error: 'the board has not brought it as ready to approve yet (its PR, check or review is not done): send it back so it ends its turn' }
   if (item.github) return { ok: false, error: `approve its PR on GitHub first (${item.github}), then here` }
   const r = board.approve(item.id)
@@ -742,7 +763,7 @@ export function render(state, cols, rows) {
   const foot = [sep]
   const cur = items[sel]
   if (mode === 'confirm')
-    foot.push({ t: cut(cur?.kind === 'result' ? ` Approve ${cur?.key}: the board merges it, then the drafts post? y / n` : ` Approve ${cur?.key} and start the build? y / n`, W), s: 'warn' })
+    foot.push({ t: cut(cur?.kind === 'result' && cur?.lost ? ` Put ${cur?.key} back on the board's finish line (it returns as ready to approve)? y / n` : cur?.kind === 'result' ? ` Approve ${cur?.key}: the board merges it, then the drafts post? y / n` : ` Approve ${cur?.key} and start the build? y / n`, W), s: 'warn' })
   else if (mode === 'input') {
     foot.push({ t: cut(' Send back (Enter sends, Esc cancels):', W), s: 'warn' })
     for (const l of wrap(`> ${state.input ?? ''}▏`, W)) foot.push({ t: l, s: '' })
@@ -812,6 +833,7 @@ function detailBlocks(it, state, W, now) {
   }
   if (it.github) for (const l of wrap(`Its PR also waits for your approval on GitHub (${it.github}): approve the PR there first, then the result here (the board merges it).`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   if (it.ready) for (const l of wrap(`Ready to approve on the board${it.boardSays ? `: ${it.boardSays}` : ''}`, W - 1)) head.push({ t: ` ${l}`, s: 'dim' })
+  else if (it.lost) for (const l of wrap(`The board marked it an error after it was ready to approve (${it.boardSays || 'no message'}). a puts it back on the board's finish line (herdr-projects finish): it returns as ready to approve, and nothing merges before your next a.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   else if (it.boardSays) for (const l of wrap(`The board marked it an error (${it.boardSays}), but its last report stands: approve or send back as usual.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   blocks.push(head)
   const links = it.links ?? []

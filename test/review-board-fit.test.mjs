@@ -218,7 +218,7 @@ describe('2. the archive: part of the reviewed PR, before the agent ends', () =>
     const files = { '/data/tasks/mb/1/closing-note.md': pitch() }
     const seen = []
     const [it0] = collect({ board: memBoard({ list, details }), data: '/data', ...io(files), exists: (p) => (seen.push(p), true), now: NOW })
-    assert.deepEqual(seen, ['/wt/1/openspec/changes/singing-bowl'])
+    assert.deepEqual([...new Set(seen)], ['/wt/1/openspec/changes/singing-bowl'])
     assert.ok(it0.findings.some((x) => /not archived yet/.test(x.what)))
   })
 
@@ -285,6 +285,79 @@ describe('3. false errors: a stop the board then marked an error keeps its row',
     const r = await approve(items.find((i) => i.id === 'mb/1'), { board, sleep: async () => {} })
     assert.equal(r.ok, true)
     assert.match(board.calls[0][2], /^Spec approved/)
+  })
+})
+
+describe('3b. a result that was ready to approve, then marked an error by a compaction (review round 1)', () => {
+  // KIT-15 (13:03 ready to approve, 13:54 error) and MB-593 (13:16, 14:01) on 2026-11-27: the agent ended
+  // normally, so there is no blocked report; the board's own review is in task.json.
+  const ready = { id: 'mb/593', state: 'blocked', kind: 'permission', stage: 'approval', title: 'fix(wavedance): launch film', msg: 'Review passed', pr: PR }
+  const lostRow = { ...ready, state: 'error', stage: 'nosummary', kind: undefined, msg: 'Conversation compacted (ctrl+o for history)' }
+  const details = { 'mb/593': { task: { id: 'MB-593', title: 'fix(wavedance): launch film', stage: 'nosummary', description: 'Spec review: yes' }, pr: PR, worktree: '/wt/593' } }
+  const files = {
+    '/data/tasks/mb/593/closing-note.md': pitch({ change: '' }),
+    '/data/tasks/mb/593/task.json': JSON.stringify({ blocked: null, reviewedHead: '938ba45e', pr: PR, since: NOW - 40 * MIN, description: 'Spec review: yes' }),
+  }
+  const run = (row) => collect({ board: memBoard({ list: [row], details }), data: '/data', ...io(files), now: NOW })
+
+  it('the row stays a result after the compaction, with the board’s word', () => {
+    assert.deepEqual(run(ready).map((i) => [i.key, i.kind, Boolean(i.ready)]), [['MB-593', 'result', true]])
+    const [it0] = run(lostRow)
+    assert.equal(it0?.kind, 'result', 'not dropped')
+    assert.equal(it0.lost, true)
+    assert.equal(it0.ready, undefined)
+    assert.equal(it0.boardSays, 'Conversation compacted (ctrl+o for history)')
+    assert.equal(it0.links.at(-1).url, PR)
+    const t = render({ items: [it0], sel: 0, now: NOW }, 120, 50).map((l) => l.t).join('\n')
+    assert.match(t, /marked it an error after it was ready to approve \(Conversation compacted/)
+    assert.match(render({ items: [it0], sel: 0, now: NOW, mode: 'confirm' }, 120, 50).map((l) => l.t).join('\n'), /Put MB-593 back on the board's finish line/)
+  })
+
+  it('a task in error that the board never reviewed, or one that is the CEO’s, does not come back', () => {
+    const unreviewed = { ...files, '/data/tasks/mb/593/task.json': JSON.stringify({ blocked: null, pr: PR }) }
+    assert.deepEqual(collect({ board: memBoard({ list: [lostRow], details }), data: '/data', ...io(unreviewed), now: NOW }), [])
+    const fix = { '/data/tasks/mb/593/closing-note.md': 'Fixed it.', '/data/tasks/mb/593/task.json': JSON.stringify({ reviewedHead: 'x', pr: PR }) }
+    const plain = { 'mb/593': { ...details['mb/593'], task: { ...details['mb/593'].task, description: '' } } }
+    assert.deepEqual(collect({ board: memBoard({ list: [lostRow], details: plain }), data: '/data', ...io(fix), now: NOW }), [])
+  })
+
+  it('approve is the board’s finish (approve refuses a task in nosummary), and nothing merges yet', async () => {
+    const calls = []
+    const board = { finish: (id) => (calls.push(['finish', id]), { ok: true }), approve: () => assert.fail('no merge'), add: () => assert.fail('no post yet') }
+    const r = await approve(run(lostRow)[0], { board, sleep: async () => {} })
+    assert.deepEqual(r, { ok: true, how: 'finishing' })
+    assert.deepEqual(calls, [['finish', 'mb/593']])
+  })
+
+  it('the CLI: list keeps it, approve runs finish on the fake board', (t) => {
+    const dir = mkdtempSync(join(tmpdir(), 'review-lost-'))
+    t.after(() => rmSync(dir, { recursive: true, force: true }))
+    copyFileSync(FAKE, join(dir, 'board.mjs'))
+    chmodSync(join(dir, 'board.mjs'), 0o755)
+    writeFileSync(join(dir, 'board.json'), JSON.stringify({ list: [lostRow], details }))
+    const data = join(dir, 'data')
+    mkdirSync(join(data, 'tasks', 'mb', '593'), { recursive: true })
+    for (const [f, text] of Object.entries(files)) writeFileSync(join(data, f.replace('/data/', '')), text)
+    const kit = (...a) => spawnSync(process.execPath, [KIT, 'review', ...a], { encoding: 'utf8', env: { ...process.env, HERDR_PROJECTS_BIN: join(dir, 'board.mjs'), HERDR_PROJECTS_DATA_DIR: data, XDG_STATE_HOME: join(dir, 'state'), FAKE_BOARD_DIR: dir } })
+    const l = kit('list', '--json')
+    assert.equal(l.status, 0, l.stderr)
+    assert.equal(JSON.parse(l.stdout).items[0]?.lost, true)
+    const a = kit('approve', 'MB-593')
+    assert.equal(a.status, 0, a.stderr)
+    assert.match(a.stdout, /Back on the board: it returns as ready to approve/)
+    assert.equal(JSON.parse(readFileSync(join(dir, 'board.json'), 'utf8')).details['mb/593'].task.stage, 'checking')
+  })
+})
+
+describe('an archived change points at its archive folder (review round 1, minor)', () => {
+  it('the row and the doc name openspec/changes/archive/<date>-<name>', () => {
+    const list = [{ id: 'mb/1', state: 'blocked', kind: 'permission', stage: 'approval', title: 't', msg: '', pr: PR }]
+    const details = { 'mb/1': { task: { id: 'MB-1', title: 't', description: '' }, pr: PR, worktree: '/wt/1' } }
+    const files = { '/data/tasks/mb/1/closing-note.md': pitch() }
+    const dirs = { '/wt/1/openspec/changes/archive': ['2026-11-01-other', '2026-11-28-singing-bowl'] }
+    const [it0] = collect({ board: memBoard({ list, details }), data: '/data', ...io(files), exists: () => false, list: (d) => dirs[d] ?? [], now: NOW })
+    assert.equal(it0.change, '/wt/1/openspec/changes/archive/2026-11-28-singing-bowl')
+    assert.ok(!it0.findings.some((f) => /not archived/.test(f.what)))
   })
 })
 
@@ -379,6 +452,15 @@ describe('the CEO approves only what needs no result review (agent-kit review ow
     assert.equal(gate(t, 'herdr-projects approve MB-8 && herdr-projects approve MB-7').status, 2, 'every approve in the command')
     assert.equal(gate(t, 'herdr-projects approve MB-9').status, 2, 'cannot tell: blocked')
     assert.equal(gate(t, 'herdr-projects list --json').status, 0)
+    // Quoting, flags before the id, shells, wrappers and pipes do not get past it (review round 1).
+    for (const cmd of ['herdr-projects approve "MB-7"', "herdr-projects approve 'maelstrom/7'", 'herdr-projects approve --anyway MB-7', 'bash -c "herdr-projects approve MB-7"', 'env X=1 herdr-projects approve MB-7', 'echo herdr-projects approve MB-7 | sh', "eval 'herdr-projects approve MB-7'"]) {
+      const r = gate(t, cmd)
+      assert.equal(r.status, 2, cmd)
+      assert.match(r.stderr, /MB-7 is a result|maelstrom\/7 is a result/, cmd)
+    }
+    assert.equal(gate(t, 'h=MB-7; herdr-projects approve "$h"').status, 2, 'an id built at run time is refused')
+    assert.equal(gate(t, 'herdr-projects approve --anyway "MB-8"').status, 0, 'a quoted fix is still the CEO’s')
+    assert.equal(gate(t, 'git commit -m "approve the bowl"').status, 0, 'a commit message that says approve')
     assert.equal(gate(t, 'echo "herdr-projects approve MB-7 is the owner’s"').status, 0, 'a mention is not an approve')
   })
 })

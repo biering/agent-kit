@@ -350,7 +350,9 @@ fix, an SEO page, content, a chore) stays the CEO's, and the CEO's merge gate bl
 **False errors.** When a spec or design stop is followed by an idle compaction, the board reads the
 compaction as a turn without a summary and marks the task an error ("Conversation compacted"). The row
 stays: the list reads the agent's last real report from the task's own file and shows the board's word
-beside it. The fix belongs in the board (herdr-projects): its worker settings file could turn
+beside it. A result that was already ready to approve has no such report (its agent ended normally), so
+it is kept from the board's own review in that file (its reviewed head and PR); there `a` runs the
+board's `finish`, which brings it back as ready to approve, and the next `a` merges it. The fix belongs in the board (herdr-projects): its worker settings file could turn
 `idleCompaction` off, or its turn-end could skip a compaction.
 
 **Notifications.** A herdr notification arrives when a spec, a design, a plan or a result becomes ready,

@@ -121,6 +121,12 @@ title. Enter opens the pitch in Plannotator (in a new tab of the CEO's workspace
 video, the screenshots and the PR in the browser; `a` approves, `b` sends back one line. A row whose
 board review failed or whose checks are red says so; the board then refuses the approve.
 
+An idle compaction after the result was ready can make the board mark it an error ("Conversation
+compacted", stage `nosummary`), and the board refuses an approve there. The row stays, from the board's
+own review in the task's file (its reviewed head and PR), and says so. `a` then runs the board's
+`finish`, which takes the work as it is and brings it back as ready to approve; nothing merges before
+his next `a`.
+
 ## 4. What his approve covers
 
 - The merge: his approve is the board's `approve` on the ready-to-approve task, so the board merges

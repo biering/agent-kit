@@ -41,6 +41,13 @@ switch (cmd) {
     else d.task.stage = 'starting'
     save()
     break
+  case 'finish':
+    // finish anyway: only a task that stopped without a summary; it goes back to the finish line
+    if (!d) fail(`no task ${id}`)
+    if (d.task.stage !== 'nosummary') fail(`${id} did not stop without a summary.`)
+    d.task.stage = 'checking'
+    save()
+    break
   case 'tell':
   case 'retry':
     if (!d) fail(`no task ${id}`)

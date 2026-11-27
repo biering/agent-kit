@@ -76,6 +76,7 @@ export function notes(it) {
   if (gaps.length) out.push({ text: `Not complete: ${gaps.join("; ")}.`, level: "warn" });
   if (it.github) out.push({ text: `Its PR also waits for your approval on GitHub (${it.github}): approve the PR there first, then the result here (the board merges it).`, level: "warn" });
   if (it.ready) out.push({ text: `Ready to approve on the board${it.boardSays ? `: ${it.boardSays}` : ""}.`, level: "dim" });
+  else if (it.lost) out.push({ text: `The board marked it an error after it was ready to approve (${it.boardSays || "no message"}). a puts it back on the board's finish line: it returns as ready to approve, and nothing merges before your next a.`, level: "warn" });
   else if (it.boardSays) out.push({ text: `The board marked it an error (${it.boardSays}), but its last report stands: approve or send back as usual.`, level: "warn" });
   if (it.change) out.push({ text: `OpenSpec change: ${it.change}`, level: "dim" });
   if (it.briefFile) out.push({ text: `Brief file: ${it.briefFile}`, level: "dim" });
@@ -92,6 +93,7 @@ export function footer(it) {
 
 /** What `a` asks before it acts. */
 export function confirmText(it) {
+  if (it.kind === "result" && it.lost) return `Put ${it.key} back on the board's finish line? It returns as ready to approve. Press a again, Esc to cancel.`;
   if (it.kind === "result") return `Approve ${it.key}? The board merges the PR it reviewed, then the drafts post on the brand accounts. Press a again, Esc to cancel.`;
   if (it.kind === "stuck") return `Repair ${it.key}? It is stopped and delegated again. Press f again, Esc to cancel.`;
   return `Approve ${it.key}? Its agent builds it now. Press a again, Esc to cancel.`;

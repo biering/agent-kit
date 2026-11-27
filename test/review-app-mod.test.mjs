@@ -86,6 +86,8 @@ describe('review list mod: the rows', () => {
     assert.doesNotMatch(n[0].text, /em dash/)
     assert.ok(n.some((x) => /approve the PR there first, then the result here/.test(x.text)))
     assert.ok(notes({ ...result, ready: true, boardSays: 'Review passed' }).some((x) => x.text === 'Ready to approve on the board: Review passed.'))
+    assert.ok(notes({ ...result, lost: true, boardSays: 'Conversation compacted' }).some((x) => x.level === 'warn' && /error after it was ready to approve/.test(x.text)))
+    assert.match(confirmText({ ...result, lost: true }), /back on the board's finish line/)
     assert.ok(notes({ ...spec, boardSays: 'Conversation compacted' }).some((x) => x.level === 'warn' && /marked it an error \(Conversation compacted\), but its last report stands/.test(x.text)))
     assert.ok(n.some((x) => x.text === 'OpenSpec change: /repo/openspec/changes/singing-bowl'))
     assert.ok(n.some((x) => x.text.startsWith('Brief file: ')))

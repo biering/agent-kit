@@ -18,7 +18,7 @@
  * agent-kit.config.json, so it does not load config.mjs. <id> is the board's (`repo/n` or `KEY-n`).
  */
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -102,7 +102,14 @@ const data = dataDir(env, home)
 const board = boardClient(boardBin(env, home, existsSync), (bin, a) =>
   spawnSync(bin, a, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }),
 )
-const waiting = () => collect({ board, data, readFile, mtime, exists: existsSync })
+const list = (dir) => {
+  try {
+    return readdirSync(dir)
+  } catch {
+    return []
+  }
+}
+const waiting = () => collect({ board, data, readFile, mtime, exists: existsSync, list })
 const run = promisify(execFile)
 const gh = async (a) => (await run('gh', a, { maxBuffer: 32 * 1024 * 1024, timeout: 60 * 1000 })).stdout
 const git = (root) => {
@@ -178,8 +185,8 @@ async function cmdApprove() {
     },
   })
   if (r.ok) {
-    const line = { told: 'Approved: the agent builds it now.', merging: r.posts ? 'Approved: the board merges it; the drafts post after the merge.' : r.warn ? `Approved: the board merges it; ${r.warn}.` : 'Approved: the board merges it.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
-    status(it.id, { ok: true, short: r.how === 'merging' ? 'merge' : 'build', line })
+    const line = { told: 'Approved: the agent builds it now.', finishing: 'Back on the board: it returns as ready to approve, then approve it.', merging: r.posts ? 'Approved: the board merges it; the drafts post after the merge.' : r.warn ? `Approved: the board merges it; ${r.warn}.` : 'Approved: the board merges it.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
+    status(it.id, { ok: true, short: r.how === 'merging' ? 'merge' : r.how === 'finishing' ? 'finish' : 'build', line })
     console.log(line)
   } else {
     status(it.id, { ok: false, short: 'fail', line: `Not building: ${r.error}` })
