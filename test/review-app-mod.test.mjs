@@ -22,6 +22,8 @@ import {
   notes,
   parseList,
   row,
+  afterRefresh,
+  target,
 } from '../herdr-app/review-list/rows.js'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -123,6 +125,57 @@ describe('review list mod: the keys', () => {
     assert.match(confirmText(spec), /Its agent builds it now/)
   })
 
+  it('a stuck row is repaired with f, as in the herdr pane, and a does nothing there', () => {
+    const stuck = { ...spec, kind: 'stuck', key: 'MB-7', id: 'maelstrom/7' }
+    assert.equal(keyAction('a', stuck), null)
+    assert.deepEqual(keyAction('f', stuck), { do: 'ask' })
+    assert.deepEqual(keyAction('f', stuck, { asking: true }), { do: 'approve' })
+    assert.deepEqual(keyAction('a', stuck, { asking: true }), { do: 'cancel' })
+    assert.equal(keyAction('f', spec), null)
+    assert.match(footer(stuck), /^f repair/)
+    assert.match(confirmText(stuck), /Press f again/)
+  })
+
+  it('the confirm acts on the row it asked about, never on the row the selection moved to', () => {
+    // The reviewer's case: a on spec MB-601, a refresh drops it (approved in the herdr pane), the selection
+    // moves to result MB-590, a again. Nothing may be approved, least of all the result (merge and post).
+    let items = [spec, result]
+    let sel = 0
+    assert.deepEqual(keyAction('a', items[sel]), { do: 'ask' })
+    const asking = items[sel]
+    assert.match(confirmText(asking), /^Approve MB-601?/)
+    items = [result]
+    sel = keepSelection(items, items[sel]?.id ?? asking.id, sel)
+    assert.equal(items[sel].key, 'MB-590', 'the selection did move')
+    const after = afterRefresh(items, asking, 'approve')
+    assert.deepEqual(after, { keep: false, status: 'MB-601 no longer waits for you (done elsewhere): nothing approved.' })
+    assert.equal(target(items, asking), null, 'the second a finds no row to approve')
+    // And with the row still there but listed elsewhere, the approve goes to it, not to the selected row.
+    items = [result, spec]
+    assert.equal(target(items, asking).key, 'MB-601')
+    assert.deepEqual(afterRefresh(items, asking, 'approve'), { keep: true })
+  })
+
+  it('the send-back field ends when a refresh drops its row; nothing is sent to another row', () => {
+    assert.deepEqual(afterRefresh([spec], result, 'back'), { keep: false, status: 'MB-590 no longer waits for you (done elsewhere): nothing sent.' })
+    assert.deepEqual(afterRefresh([spec, result], result, 'back'), { keep: true })
+    assert.deepEqual(afterRefresh([spec], null, 'back'), { keep: true })
+    assert.match(afterRefresh([], { key: 'MB-7', id: 'x' }, 'repair').status, /nothing repaired/)
+  })
+
+  it('main.js sends approve and back to the opened row (target), not this.current', () => {
+    const main = read('herdr-app/review-list/main.js')
+    const approve = main.slice(main.indexOf('a.do === "approve"'), main.indexOf('a.do === "back"'))
+    assert.match(approve, /target\(this\.items, opened\)/)
+    assert.doesNotMatch(approve, /this\.current/)
+    const back = main.slice(main.indexOf('  sendBack(cx) {'), main.indexOf('  closeBack() {'))
+    assert.match(back, /target\(this\.items, opened\)/)
+    assert.doesNotMatch(back, /this\.current/)
+    const refresh = main.slice(main.indexOf('  refresh(cx) {'), main.indexOf('  say(text, cx) {'))
+    assert.match(refresh, /afterRefresh\(items, this\.asking/)
+    assert.match(refresh, /afterRefresh\(items, this\.backFor, "back"\)/)
+  })
+
   it('b sends back a spec, design or result, not a PR or a stuck task', () => {
     assert.deepEqual(keyAction('b', spec), { do: 'back' })
     assert.equal(keyAction('b', pr), null)
@@ -141,7 +194,7 @@ describe('review list mod: the keys', () => {
     assert.deepEqual(kitArgv(cfg, 'approve', 'maelstrom/590'), ['/usr/local/bin/node', '/kit/bin/agent-kit.mjs', 'review', 'approve', 'maelstrom/590'])
     assert.deepEqual(kitArgv(cfg, 'doc', 'maelstrom/590').slice(2), ['review', 'doc', 'maelstrom/590'])
     const main = read('herdr-app/review-list/main.js')
-    for (const cmd of ['"list", "--json"', '["approve", it.id]', '["back", it.id, text]', '"doc", it.id']) assert.ok(main.includes(cmd), cmd)
+    for (const cmd of ['"list", "--json"', '["approve", t.id]', '["back", it.id, text]', '"doc", it.id']) assert.ok(main.includes(cmd), cmd)
     const cli = read('src/review.mjs')
     for (const c of ['list:', 'approve:', 'back:', 'doc:']) assert.ok(cli.includes(c), c)
   })
