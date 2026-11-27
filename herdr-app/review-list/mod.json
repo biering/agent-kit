@@ -1,0 +1,8 @@
+{
+  "place": "none",
+  "title": "Review list",
+  "focusable": true,
+  "palette": [
+    { "title": "Review list", "command": "pane.split", "args": { "direction": "down", "mod": "review-list" }, "words": "spec result approve design pr agent-kit" }
+  ]
+}

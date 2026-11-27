@@ -40,7 +40,7 @@
 | [projects] | [GET/POST /projects; GET/PATCH/DELETE /projects/{id}] | [projects_list, projects_get] | [api-key] | [tool with no route / route with no tool / ok] |
 | | | | | |
 
-**MCP budget** (`tool-budget.mjs`, per credential kind and selection): [N] tools, about [T] tokens of
+**MCP budget** (`tool-budget.mjs`, per credential kind): [N] tools, about [T] tokens of
 definitions, [P] tools with problems; largest: [names].
 
 ## 4. Scorecards

@@ -217,7 +217,7 @@ The directory name is the install key, so skills are not renamed here. The table
 | Ship | `dev-loop` (branch to green PR), `pr`, `ci`, `bugfix`, `result-pitch` (the owner ships it without reading code: user benefit, complexity and why it is worth it, risk and undo, a recommendation, with a video and desktop and phone screenshots of the real app; checked by `agent-kit review check`) |
 | Review | `review-code`, `review-api` (REST and MCP scorecards; the MCP half scores against `mcp-design`), `legal-review` (DE/EU, not legal advice), `onboarding-review` |
 | Harness | `improve` (a mistake becomes a guardrail), `retro` (up to three `improve` proposals) |
-| Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `mcp-design` (an MCP server for agents: tool budget and toolsets chosen by URL, names, descriptions, response shapes, errors that teach, write safety, scopes, contract tests and evals; `scripts/tool-budget.mjs` measures a tool list), `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
+| Build | `scaffold` (a new app on this kit's stack, Python services included), `design`, `mcp-design` (an MCP server for agents: tool budget and a small surface on one URL, names, descriptions, response shapes, errors that teach, write safety, scopes, contract tests and evals; `scripts/tool-budget.mjs` measures a tool list), `data-schema` (schemas and migrations on any engine: the house rules, routing to the official Postgres, Supabase, Cloudflare and Convex skills, a reference per engine with only what those lack; checked by `agent-kit migrations`) |
 | Write | `copywriting`, `unslop` (runs on every user-facing text before it ships: AI-sounding prose in German and English, specifics first, platform limits, a voice file per repo that learns from edits), `product-changelog`, `daily-log` (one short log a day of what is worth sharing, each entry with its why; fed by `agent-kit daylog collect`, a cheap digest, led by a per-product Stats block when configured) |
 | Market | `distribution-reuse` (a shipped change in a live product, told as the brand: an X post, a clip, a changelog entry or a launch asset, drafted inside the result pitch and posted on its approve), `aso`, `app-screenshots` (six layout templates: hero object, tilted device, panorama, feature callout, before and after, honest proof; sourced rules), `video` (a video studio: seven roles, six styles including agent films, measured QA, voice-over, X player cards, and `record.mjs` for explainers of the real app), `carousel` (intake, three covers, a 20-point scorecard that gates at 16, caption, alt text and reply script, angle batches tracked as experiments), `ad-creative` (the ad itself for paid social and search: sourced premises, target from ad libraries and reviews, a 17-element brief checked by `brief_check.mjs`, batches as a risk portfolio, no invented urgency or proof), `ads-landingpage` (the page the ad lands on) |
 | Decide | `spec` (a feature planned before any code: an OpenSpec change with WHEN/THEN scenarios, designs as Artifacts, one brief the owner approves in the review list), `value-score` (customer value against complexity, before anything is built), `value-loop` (keep only what moves customers or revenue) |
@@ -386,18 +386,30 @@ OpenSpec is a devDependency of the repo (`@fission-ai/openspec`, `npx openspec i
 
 ### Herdr desktop app
 
-The Herdr desktop app (0.1.18, the migration target) does not load herdr's plugins: no
-`herdr-plugin.toml`, so no plugin panes, actions, link handlers or events. It has its own extension
-point, **mods**: small JavaScript programs in `~/.config/herdr-app/mods/<name>/` (`main.js`, `mod.json`)
-that draw native panels (docked left, right, top or bottom, or as a pane beside terminals with
-`pane.split {direction, mod, props}`), run programs with `exec()`, keep state, open dialogs, and can show
-a live terminal in a block. They cannot run HTML or Node APIs. The nearest equivalent of this pane is a
-`review-list` mod docked under the board: it runs `agent-kit review list --json` with `exec()` on a timer,
-draws the same rows and detail natively, and calls `agent-kit review approve <id>` and
-`agent-kit review back <id> <text>` for `a` and `b`; `⏎` opens the brief in a terminal block running
-Plannotator. The list, the checks and the actions stay in this kit's CLI, so the mod is only the screen.
-Until it exists, the pane runs as it is in the app's terminal: `node vendor/agent-kit/bin/agent-kit.mjs
-review pane` in any split.
+The Herdr desktop app (0.1.18) does not load herdr's plugins: it reads no `herdr-plugin.toml`, so it has
+no plugin panes, actions, link handlers or events. Its own extension point is **mods**: small JavaScript
+programs in `~/.config/herdr-app/mods/<name>/` that draw native panels, run programs with `exec()` and
+run app commands. So the review list ships for it as a mod, `herdr-app/review-list`, as well:
+
+- Install: `herdr-app/install.sh` (`terminal/install.sh` runs it) copies it into the app's mods folder
+  and writes `kit.json`, the `node` and the `agent-kit` it runs. No app folder, nothing is done.
+- Open: focus the board's pane, then the palette's **Review list**. It splits that pane down, so the
+  list sits below the board. `herdr-app do pane.split '{"direction":"down","mod":"review-list"}'` does the
+  same from a shell.
+- The same list: it runs `agent-kit review list --json` every 30 seconds and draws its rows natively:
+  kind, product, age, one line, newest first, the detail with every link whole and "Not complete: …"
+  when the brief or pitch has gaps.
+- The same keys: `↑`/`↓` (or `j`/`k`) move, `⏎` opens the brief in Plannotator in a new tab
+  (`agent-kit review doc`) or a GitHub row in the browser, `a` asks once and then approves
+  (`agent-kit review approve`), `b` opens a one-line field for the words that go back
+  (`agent-kit review back`), `1` to `9` open a link, `r` reads the list again.
+- Commands: `review-list.down`, `.up`, `.open`, `.approve`, `.back` and `.refresh` take the same
+  actions from `keys.json` (`"alt-a": "review-list:approve"`) or a shell
+  (`herdr-app do review-list.approve`).
+
+The list, the checks and every action stay in this kit's CLI; the mod is only the screen, so the herdr
+pane and the mod never disagree. What it does not do yet: the `s` skip, `y` copy and `o` open-all keys
+of the herdr pane, and the per-row approve status (`build`, `ship`) the pane reads from its state folder.
 
 ### GitHub rows
 

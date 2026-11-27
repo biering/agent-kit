@@ -7,7 +7,7 @@
 //   node tool-budget.mjs --url https://host/mcp      ask a live server (streamable HTTP)
 //       [--token-env NAME]                          bearer token from this environment variable
 //   [--json]                                        machine-readable report
-//   [--check] [--max-tools 20] [--max-tokens 8000] [--max-description 500]
+//   [--check] [--max-tools 20] [--max-tokens 8000] [--max-description 500] [--max-first-sentence 200]
 //                                                   exit 1 when a budget or a check fails
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
@@ -16,6 +16,23 @@ const HINTS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHi
 
 /** About four characters per token for JSON tool definitions; close enough to budget with. */
 export const estimateTokens = (chars) => Math.round(chars / 4)
+
+const LOOKAROUND = /\(\?<?[=!]/
+
+/** Keywords some providers reject in a published schema, which fails the whole tool list. */
+export function unportable(schema, path = '') {
+  if (!schema || typeof schema !== 'object') return []
+  const found = []
+  if (typeof schema.pattern === 'string' && LOOKAROUND.test(schema.pattern)) found.push(`lookaround in ${path || 'pattern'}`)
+  if (typeof schema.$ref === 'string') found.push(`$ref at ${path || 'root'}`)
+  for (const [key, value] of Object.entries(schema)) {
+    if (value && typeof value === 'object') found.push(...unportable(value, path ? `${path}.${key}` : key))
+  }
+  return found
+}
+
+/** The first sentence: what a truncating client or a tool search reads first. */
+export const firstSentence = (text) => text.split(/(?<=[.!?])\s|\n/)[0]
 
 /** What a client puts in the model's context for one tool. */
 export function definitionSize(tool) {
@@ -27,6 +44,7 @@ export function analyze(tools, limits = {}) {
   const maxTools = limits.maxTools ?? 20
   const maxTokens = limits.maxTokens ?? 8000
   const maxDescription = limits.maxDescription ?? 500
+  const maxFirstSentence = limits.maxFirstSentence ?? 200
   const rows = tools.map((tool) => {
     const annotations = tool.annotations ?? {}
     const problems = []
@@ -40,12 +58,17 @@ export function analyze(tools, limits = {}) {
     const description = tool.description ?? ''
     if (!description) problems.push('no description')
     else if (description.length > maxDescription) problems.push(`description ${description.length} characters`)
+    const first = firstSentence(description)
+    if (first.length > maxFirstSentence) problems.push(`first sentence ${first.length} characters`)
+    const schemaProblems = [...new Set([...unportable(tool.inputSchema), ...unportable(tool.outputSchema)])]
+    if (schemaProblems.length) problems.push(`unportable schema: ${schemaProblems.slice(0, 3).join(', ')}`)
     return {
       name: tool.name,
       group: tool.name.split(/[_.-]/)[0],
       chars: definitionSize(tool),
       description: description.length,
       readOnly: annotations.readOnlyHint === true,
+      alwaysLoad: tool._meta?.['anthropic/alwaysLoad'] === true,
       problems,
     }
   })
@@ -55,9 +78,12 @@ export function analyze(tools, limits = {}) {
   const budget = []
   if (rows.length > maxTools) budget.push(`${rows.length} tools, budget ${maxTools}`)
   if (estimateTokens(chars) > maxTokens) budget.push(`about ${estimateTokens(chars)} tokens, budget ${maxTokens}`)
+  const alwaysLoad = rows.filter((row) => row.alwaysLoad).map((row) => row.name)
+  if (alwaysLoad.length > 5) budget.push(`${alwaysLoad.length} tools marked anthropic/alwaysLoad, at most 5`)
   return {
     tools: rows.length,
     readOnly: rows.filter((row) => row.readOnly).length,
+    alwaysLoad,
     chars,
     tokens: estimateTokens(chars),
     groups: Object.entries(groups).sort((a, b) => b[1] - a[1]),
@@ -101,6 +127,7 @@ function report(result) {
     `${result.tools} tools (${result.readOnly} read-only), ${result.chars} characters, about ${result.tokens} tokens of definitions`,
     `groups by name prefix: ${result.groups.map(([group, n]) => `${group} ${n}`).join(', ')}`,
     `largest: ${result.largest.map((t) => `${t.name} ${t.tokens}`).join(', ')}`,
+    `loaded upfront in Claude Code (anthropic/alwaysLoad): ${result.alwaysLoad.join(', ') || 'none'}`,
   ]
   if (result.budget.length) lines.push(`over budget: ${result.budget.join('; ')}`)
   if (result.problems.length) {
@@ -131,6 +158,7 @@ async function main(argv) {
     maxTools: value('--max-tools') ? Number(value('--max-tools')) : undefined,
     maxTokens: value('--max-tokens') ? Number(value('--max-tokens')) : undefined,
     maxDescription: value('--max-description') ? Number(value('--max-description')) : undefined,
+    maxFirstSentence: value('--max-first-sentence') ? Number(value('--max-first-sentence')) : undefined,
   }
   const result = analyze(tools, limits)
   console.log(flag('--json') ? JSON.stringify(result, null, 2) : report(result))

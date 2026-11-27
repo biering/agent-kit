@@ -129,7 +129,7 @@ api/
 
 ## MCP endpoint
 
-The design rules (tool budget and toolsets, names, descriptions, response shapes, errors, write
+The design rules (tool budget and scoping, names, descriptions, response shapes, errors, write
 safety, scopes, tests) are the `mcp-design` skill; read it before the first tool. What is specific
 to this stack:
 
@@ -141,9 +141,9 @@ to this stack:
    `StreamableHTTPServerTransport` is the Node wrapper and cannot run on an edge runtime. Let the
    transport read the body; a pre-read `Request` is consumed. Stateless: `sessionIdGenerator:
    undefined`, a fresh server per POST, 405 on GET and DELETE.
-2. **One registry** (`server/mcp/toolMeta.ts`): a `ToolName` union and, per tool, its toolset,
-   title, scope and annotations. Registration reads it, sets `annotations.title` from `title`, and
-   skips tools the token's scopes or the URL's `?toolsets=` do not select.
+2. **One registry** (`server/mcp/toolMeta.ts`): a `ToolName` union and, per tool, its title,
+   scope and annotations. Registration reads it, sets `annotations.title` from `title`, and skips
+   tools the token's scopes do not allow.
 3. **zod `inputSchema` from `core/`**, the same schemas as the REST routes; `z.coerce.*` for values
    that arrive as strings; no `as` casts on tool arguments.
 4. **One wrapper** (`runMcpTool(fn)`) maps a thrown error to an `isError` result with an actionable
@@ -152,9 +152,9 @@ to this stack:
 5. **No or a dead token is an HTTP 401 with `WWW-Authenticate`** (the OAuth metadata URL and the
    scope), never a 200 carrying a JSON-RPC error: that header is how a client signs in from the URL
    alone. A missing scope is a 403 `insufficient_scope`. Rate-limit per agent.
-6. **The contract test** (`server/mcp/tools.contract.test.ts`) snapshots names, toolsets, titles,
+6. **The contract test** (`server/mcp/tools.contract.test.ts`) snapshots names, titles,
    annotations and schemas, and runs `mcp-design`'s `scripts/tool-budget.mjs` budgets on the
-   default selection.
+   served list.
 7. **Optional, MCP Apps** (`@modelcontextprotocol/ext-apps`): interactive cards for hosts that render
    them, always with the text result for hosts that do not.
 

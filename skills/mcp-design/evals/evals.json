@@ -4,13 +4,13 @@
     {
       "id": 1,
       "prompt": "Add MCP tools for our invoices: list, get, refund and void.",
-      "expected_output": "Agent reads docs/agent-kit/mcp-design.md, names them invoices_list, invoices_get, invoices_refund, invoices_void in one toolset, sets title and annotations.title and all four hints (refund and void destructive, open world where money leaves), gives invoices_list limit and next_cursor, makes refund idempotent on an idempotency key with a human confirmation, and adds them to the contract test.",
+      "expected_output": "Agent reads docs/agent-kit/mcp-design.md, names them invoices_list, invoices_get, invoices_refund, invoices_void, sets title and annotations.title and all four hints (refund and void destructive, open world where money leaves; list and get read-only), gives invoices_list limit and next_cursor, makes refund idempotent on an idempotency key with a human confirmation, and adds them to the contract test.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "Our MCP server has 120 tools and agents keep picking the wrong one. Is there a way to not load all of them?",
-      "expected_output": "Agent measures the list with scripts/tool-budget.mjs, proposes toolsets of 3 to 15 tools with a core default of about 20 tools, selection by ?toolsets= in the URL, the toolset map in the instructions, tools_search plus a read-only call-through, scopes kept for permission, and explains why a runtime enable_toolset tool is not used (2026-07-28 forbids side-effect list changes, Cursor ignores list_changed).",
+      "prompt": "Our MCP server has 120 tools and is listed in the Claude and ChatGPT directories. Is there a way to not load all of them?",
+      "expected_output": "Agent measures the list with scripts/tool-budget.mjs, keeps every tool on the one listed URL (a directory user cannot pick a URL or toolset), and cuts the definitions first (schemas, then descriptions with a first line under about 200 characters), then the answers (limits, cursors, a detail selector), then helps searching clients (instructions that say when to search, alwaysLoad on three to five tools), and proposes merges in one batch. It rejects a runtime enable_toolset tool (2026-07-28 forbids side-effect list changes, Cursor ignores list_changed) and a search tool with a call-through (OpenAI guidelines 6.2b), and reports the measured saving of each step.",
       "files": []
     },
     {
@@ -28,7 +28,19 @@
     {
       "id": 5,
       "prompt": "Should our MCP server tell agents to read a guide resource before they start?",
-      "expected_output": "Agent says no: connector reviewers reject instructions that send the model to runtime guidance, and a needed guide means the descriptions are unclear; it moves single-tool facts into those tools' descriptions, keeps cross-tool rules and the toolset map in short, stable instructions, and keeps resources for data a person attaches.",
+      "expected_output": "Agent says no: connector reviewers reject instructions that send the model to runtime guidance, and a needed guide means the descriptions are unclear; it moves single-tool facts into those tools' descriptions, keeps cross-tool rules and what the server is for in short, stable instructions, and keeps resources for data a person attaches.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Our listings_search tool only reads, but it costs one credit per query. readOnlyHint true is right, isn't it?",
+      "expected_output": "Agent says no for a server listed in ChatGPT: OpenAI's review refuses readOnlyHint true on a tool that charges or starts background work, and destructiveHint false on an update that overwrites. It sets readOnlyHint false, destructiveHint false, idempotentHint and openWorldHint to match the handler, keeps the price in the description, and adds an estimate mode or a reported cost.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Add a loans_create tool. The REST route accepts iban and bank_contract_number, so take those too.",
+      "expected_output": "Agent leaves iban and bank_contract_number out of the tool schema unless the operation needs them (OpenAI flags data beyond the operation), reuses the REST schema minus those fields, and checks that no pattern in the published schema uses lookaround.",
       "files": []
     }
   ]

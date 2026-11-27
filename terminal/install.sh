@@ -61,3 +61,6 @@ if [ -f "$review/herdr-plugin.toml" ] && command -v herdr >/dev/null 2>&1 && her
     herdr plugin link "$review" >/dev/null && echo "ok herdr plugin agent-kit.review linked from $review"
   fi
 fi
+
+# The same list for the Herdr desktop app, as a mod (it loads no herdr plugins).
+"$here/../herdr-app/install.sh"
