@@ -1,7 +1,8 @@
 # Connector-directory readiness
 
-What Anthropic's **Connectors Directory** requires of a remote MCP server, and the traps that pass
-every local test and still come back flagged in review.
+What Anthropic's **Connectors Directory** and OpenAI's **ChatGPT directory** require of a remote MCP
+server, and the traps that pass every local test and still come back flagged in review. A server in
+both follows the stricter rule wherever the two differ.
 
 Treat this as **pass/fail compliance**, not a quality axis. A surface can score 9/10 on the MCP scorecard and
 still be rejected, because these are contract checks, not taste. Score quality in the rubric;
@@ -44,19 +45,22 @@ const { title, annotations } = TOOL_META[name]
 return { title, annotations: { ...annotations, title }, ...config }
 ```
 
-### A read-only-looking tool that writes
+### A read-only-looking tool that writes, or charges
 
-`readOnlyHint: true` is a promise about state, not about cost. A tool that persists a run by
-default is a write even when the caller thinks of it as a query. The inverse exists too: an export
-that mutates nothing may still be write-gated for cost. Annotation follows **state**, gating
-follows **cost**, and the two may disagree as long as the reason is written down.
+A tool that persists a run by default is a write even when the caller thinks of it as a query.
+OpenAI reads the hints stricter still (observed 2026-11-13): it refused `readOnlyHint: true` on a
+search that charges credits and starts background work, and `destructiveHint: false` on every
+update, because an update overwrites. Mark a paid or work-starting read `readOnlyHint: false,
+destructiveHint: false`, and every overwrite destructive (`../mcp-design/references/tools.md`).
 
 ### A tier-gated surface shown to an ungated reviewer
 
 Tools registered conditionally (subscription tier, a write flag, an internal-only client) mean the
 reviewer's account decides the tool list they see. A reviewer on a free account sees a surface
-that does not match the listing, which reads as an inaccurate description. Provision the test
-account at the tier that exposes everything the listing claims.
+that does not match the listing, which reads as an inaccurate description. Two fixes, best first:
+keep a plan-gated tool listed for every plan and refuse the call with a structured upgrade error
+(the code, the plan it needs, the upgrade link), so the list is the same for every account; and
+provision the test account at the tier that exposes everything the listing claims.
 
 ### Per-user connector URLs are credentials
 
@@ -84,10 +88,18 @@ as prompts that string existing tools together, with no document to read and not
 vendor unasked. Hold it with a contract test over the instructions, every tool description a
 client receives, and every prompt.
 
-A toolset map (one line per toolset and how to add it, `../mcp-design/references/scoping.md`)
-describes tools, so it belongs in the instructions and passes. Every toolset a reviewer can select
-follows the same rules, and the reviewer's connection should list the full surface the listing
-claims (`?toolsets=all` or the listed URL).
+## OpenAI's directory on top
+
+OpenAI's plugin guidelines and app review add three checks that pass Anthropic's review:
+
+- **Each operation is its own listed tool** (6.2b): "Do not use discovery, operation selection, or
+  schema fetching with a generic executor to enable operations not individually exposed for
+  review." A search tool with a call-through fails, whatever it saves.
+- **A tool asks only for what its operation needs.** Review flagged loan tools that took an IBAN
+  and a contract number the operation never used (observed 2026-11-13).
+- **The schema validates on OpenAI.** The whole tool list is validated before a model runs; one
+  unsupported keyword (regex lookaround, as in zod's default email pattern) fails every ChatGPT
+  session while Claude keeps working.
 
 ## Where the docs and the portal disagree
 
@@ -101,12 +113,14 @@ Report each as pass, fail or n/a with a citation. Anything failing is a submissi
 above the scorecard, not inside it.
 
 - [ ] Every tool has `annotations.title` **and** `title`
-- [ ] Every tool has `readOnlyHint` or `destructiveHint`, and it matches what the handler does
+- [ ] Every tool has `readOnlyHint` or `destructiveHint`, and it matches what the handler does (paid or work-starting reads not read-only, overwrites destructive)
 - [ ] No tool name exceeds 64 characters
 - [ ] No description promises behavior the handler does not implement
 - [ ] Connection instructions describe tools only: no "read this resource" line, no unprompted action for the vendor, sign-in described as the listing declares it
 - [ ] A tool that sends data to the vendor is called only on request and says what it sends
 - [ ] The server offers no document resource for a model to read, and every prompt names only tools that exist
+- [ ] Every operation is a listed tool: no search tool with a generic executor (OpenAI 6.2b)
+- [ ] No tool asks for data its operation does not use, and every published schema validates on OpenAI (no regex lookaround)
 - [ ] Transport is streamable HTTP
 - [ ] Unauthenticated request returns `401` + `WWW-Authenticate` with `resource_metadata`
 - [ ] Protected-resource metadata resolves and names a reachable authorization server

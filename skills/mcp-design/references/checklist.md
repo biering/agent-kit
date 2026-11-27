@@ -6,20 +6,20 @@ requirement.
 
 ## S. Surface and scoping (`scoping.md`)
 
-- **S1** The default selection has at most about 20 tools and about 8,000 tokens of definitions,
-  measured with `scripts/tool-budget.mjs`.
-- **S2** Every tool belongs to one toolset of 3 to 15 tools named for a job; tool names share the
-  set's resource prefix.
-- **S3** The URL selects toolsets (`?toolsets=a,b`, `all`); `core` is always in; an unknown name
-  fails with the valid list; one OAuth grant serves every selection.
-- **S4** The instructions carry the toolset map (one line per set, how to add it), and `core` has a
-  `tools_search` that returns full definitions. Any call-through runs read-only tools only.
+- **S1** The list a client loads has at most about 20 tools and about 8,000 tokens of definitions,
+  measured with `scripts/tool-budget.mjs`; over it, the levers apply in `scoping.md`'s order.
+- **S2** Schemas carry no parameter prose that restates the name and no paragraph repeated across
+  sibling tools; tools of one resource share its prefix.
+- **S3** The default URL serves every tool the listing claims. A URL selection (`?toolsets=`) is an
+  opt-in that only narrows, rejects an unknown name with the valid list, and shares one OAuth grant.
+- **S4** No generic executor: no search tool with a call-through standing in for listed tools.
+  **(gate: OpenAI 6.2b)**
 - **S5** Scopes decide permission and filter registration: a read grant's list holds no write
-  tool. Toolsets never grant.
+  tool.
 - **S6** The list never changes as a side effect of a call (no "enable toolset" tool), comes in a
   deterministic order and carries `ttlMs` and `cacheScope`.
-- **S7** Install lines give clients with their own tool search `toolsets=all` and the rest the
-  default URL.
+- **S7** The instructions say what the server is for and when to search for its tools;
+  `_meta["anthropic/alwaysLoad"]` marks only the three to five tools most sessions start with.
 
 ## N. Names, titles, descriptions (`tools.md`)
 
@@ -28,8 +28,9 @@ requirement.
 - **N2** One tool per job: chained steps consolidated, no two tools an agent could confuse, one
   risk level per tool. **(gate: no mixed read and write)**
 - **N3** Every tool has a verb-and-object `title` and the same `annotations.title`. **(gate)**
-- **N4** Descriptions: first sentence says what it does to which object and what it returns, then
-  only what changes the call (sibling, limit, cost, async); under 500 characters; no implementation
+- **N4** Descriptions: a first line under about 200 characters says what it does to which object
+  and what it returns, with the words a search would use; then only what changes the call
+  (sibling, limit, cost, async); under 500 characters; no implementation
   detail, no backing route, no orders to the model.
 - **N5** Descriptions match behaviour: no promised field, filter or side effect the handler lacks.
   **(gate)**
@@ -41,7 +42,10 @@ requirement.
 - **I2** One name per concept across tools (`project_id` everywhere), never a bare `id` beside
   other ids; parameters the connection already fixes are dropped.
 - **I3** Every argument is validated server-side (coercing string numbers and booleans); no-arg
-  tools declare an empty object schema with `additionalProperties: false`.
+  tools declare an empty object schema with `additionalProperties: false`; the published JSON
+  Schema uses no keyword a provider rejects (no lookaround in a `pattern`, no `$ref` into `$defs`).
+- **I4** A tool asks only for what its operation needs: no account numbers, contract numbers or
+  personal data the handler does not use. **(gate: OpenAI)**
 
 ## R. Responses (`responses.md`)
 
@@ -60,7 +64,8 @@ requirement.
 ## E. Errors (`responses.md`)
 
 - **E1** Tool failures are `isError: true` results saying what was wrong, the valid values or
-  state, and the next call. **(gate)**
+  state, and the next call; a refusal for plan, quota or rate carries a machine-readable code, the
+  numbers and whether a retry can pass. **(gate)**
 - **E2** No success-shaped errors (`{ "error": ... }` without `isError`); JSON-RPC errors only for
   protocol faults; no internals or stack traces.
 - **E3** 401 with `WWW-Authenticate` and `resource_metadata`; 403 `insufficient_scope` naming every
@@ -68,8 +73,9 @@ requirement.
 
 ## W. Writes and safety (`tools.md`)
 
-- **W1** All four annotation hints set explicitly on every tool and true to the handler (state,
-  not cost, decides `readOnlyHint`). **(gate)**
+- **W1** All four annotation hints set explicitly on every tool and true to the handler, read the
+  strict way: a tool that charges or starts background work is not read-only, an update that
+  overwrites is destructive. **(gate)**
 - **W2** Writes are idempotent on a natural key or an idempotency key, and the description says
   which.
 - **W3** Deletion, key minting, money and anything sent outside the product ask a human (hints,
@@ -90,9 +96,9 @@ requirement.
 
 ## Q. Quality (`testing.md`)
 
-- **Q1** A contract test snapshots names, toolsets, titles, annotations and schemas and checks the
+- **Q1** A contract test snapshots names, titles, annotations and schemas and checks the
   budgets in S1 and N4.
-- **Q2** Evals of realistic tasks run when descriptions or the default set change; results kept
+- **Q2** Evals of realistic tasks run when descriptions, schemas or the tool list change; results kept
   with the PR.
 - **Q3** Changes are additive; renames keep a "(Deprecated)" alias for a stated window; breaking
   changes bump the server version and the changelog.

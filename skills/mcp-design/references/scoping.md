@@ -1,150 +1,88 @@
-# Scoping: toolsets, a map, and search
+# Scoping: a small surface on one URL
 
-How a server with more tools than an agent should hold at once lets the agent load only what it
-needs. Sources and dates: `sources.md` (S-rows).
+How a server with more tools than an agent should hold at once keeps its context cost down without
+making the person who connects it choose anything. Sources and dates: `sources.md`.
 
-## What the protocol says (2026-07-28)
+## The constraint that decides the design
 
-- **There are no tool groups in MCP.** SEP-1300 (groups, tags, filtering) was rejected on
-  2025-12-01 in favour of a working group. The Progressive Disclosure working group (named so on
-  2026-09-21) documents grouping, tool search and code mode as patterns and picks none; its
-  "Grouping Convention v0.1" is a proposal, not spec. Grouping is a naming and serving convention.
-- **The tool list may vary by authorization, not by history.** The tools page: the set "MUST NOT
-  vary per-connection or as a side effect of other requests on the connection. The set MAY vary by
-  the authorization presented on the request". A different URL is a different request target, so a
-  toolset chosen in the URL is fine; a tool that turns on more tools is not.
-- **List results carry `ttlMs` and `cacheScope`.** A list filtered per credential is
-  `cacheScope: "private"`. Return tools in a deterministic order so client caches and prompt caches
-  hit.
-- **`notifications/tools/list_changed` still exists** (through `subscriptions/listen` in
-  2026-07-28). Clients honour it unevenly; treat it as a cache hint for deploys, never as a feature
-  a workflow depends on.
+**A server listed in a directory has one URL.** The person clicks "connect" in claude.ai or ChatGPT
+and gets whatever that URL serves; nobody edits a query string, and a second "lite" connector is a
+second thing to install, approve and explain. So the default URL must serve every tool the listing
+claims, and the savings have to come from the definitions and the answers, not from hiding tools.
+
+Two more facts close the other doors (late 2026):
+
+- **The protocol has no tool groups and no lazy schemas.** SEP-1300 (groups) was rejected on
+  2025-12-01; lazy tool hydration (#1978), dynamic discovery (SEP-1821) and token bloat (SEP-1576)
+  were all closed in 2026. The Progressive Disclosure working group explores
+  grouping, tool search and code mode and has shipped nothing. The 2026-07-28 tools page forbids a
+  list that changes "as a side effect of other requests"; it "MAY vary by the authorization
+  presented".
+- **OpenAI forbids a generic executor.** Plugin guidelines 6.2(b): "Expose each model-callable
+  operation as a separate tool ... Do not use discovery, operation selection, or schema fetching
+  with a generic executor to enable operations not individually exposed for review." A
+  `tools_search` + `tools_call` pair that stands in for unlisted tools fails ChatGPT review, and
+  Anthropic's review rejects one tool that runs both safe and unsafe methods.
 
 ## What clients do (late 2026)
 
-| Client | Defers or searches tools itself | Acts on `list_changed` | Count limit | Pick sets how |
-|---|---|---|---|---|
-| Claude Code | yes: MCP tools deferred by default, `ToolSearch` loads them (`ENABLE_TOOL_SEARCH`) | interactive sessions refetch; `-p` and SDK refresh tools only; stdio reports of misses | none fixed | URL in `claude mcp add`; `alwaysLoad` per server |
-| Claude API (MCP connector) | yes: tool search tool, `defer_loading` on `mcp_toolset` | n/a (per request) | 10,000 deferred | URL; per-tool `configs` |
-| OpenAI Responses | `tool_search` with `defer_loading` (newer models only); `allowed_tools` filter | n/a (per request) | not published | URL, `allowed_tools` |
-| Cursor | descriptions synced as files, read on demand (2026-01) | ignores it mid-session | historically 40 | URL; per-tool toggles |
-| VS Code Copilot | virtual tools group past a threshold | yes | 128 per request | URL; tool sets |
-| Windsurf | no | unverified | 100, extras dropped | URL |
-| Gemini CLI | no | unverified | none known | `includeTools` / `excludeTools` |
+| Client | Defers or searches tools itself | Server can help with | Count limit |
+|---|---|---|---|
+| claude.ai (web, desktop, mobile) | per connector, not per tool: "Auto" loads the connectors it judges relevant, "On demand" searches for a connector first; a loaded connector brings every tool | nothing documented: it pays the full definitions | none published |
+| Claude Code | yes: only tool names and server instructions load at start, `ToolSearch` loads the rest | instructions that say when to search; search words at the start of each description; `_meta["anthropic/alwaysLoad"]: true` on the few tools to load upfront | none fixed |
+| Claude API (MCP connector) | tool search with `defer_loading` | same as Claude Code | 10,000 deferred |
+| ChatGPT and Codex | the Responses API defers a whole server behind its name and description (`tool_search`, `defer_loading`); ChatGPT's own behaviour is not documented | a clear server description; OpenAI advises namespaces of fewer than 10 functions | not published |
+| Cursor | descriptions synced as files, read on demand | short first lines | historically 40 |
+| VS Code Copilot | virtual tool groups past a threshold | prefixes | 128 per request |
+| Windsurf, Gemini CLI | no | nothing | Windsurf 100 |
 
-So two populations: clients that search (load names, fetch definitions on demand) and clients that
-load the list as given. A server serves both with one design.
+So the largest client, claude.ai, pays the full definition size whenever it loads the connector.
+The levers that work everywhere are the server's own.
 
-## The patterns, compared
+## The levers, in order
 
-| Pattern | Who | Client with `list_changed` | Client without | Verdict |
-|---|---|---|---|---|
-| Toolsets in the URL (`?toolsets=`, `/x/<set>`) | GitHub remote, Supabase `features=` | fixed at connect | same | **base**: universal, stateless, cacheable |
-| Toolsets in a header (`X-MCP-Toolsets`) | GitHub remote | same | same | optional extra: many clients cannot set headers on a remote server |
-| By OAuth scope | Sentry skills, Linear `read` | same | same | **for permission only**: scopes are about what may happen, not what is relevant |
-| Discovery tool that enables a set | GitHub local `--dynamic-toolsets` (beta, not on remote) | list grows | agent never sees the tools | **no**: forbidden as a side effect in 2026-07-28, broken in Cursor, busts caches |
-| Map in the instructions | MCP client guidance, Claude tool-search docs | same | same | **yes**: a few lines, read once |
-| Search tool returning schemas, plus a call-through | Composio, AWS `call_aws`, MCP client guidance | same | same | **yes, read-only call-through** |
-| Client tool search / deferral | Claude Code, Claude API, OpenAI, Cursor, VS Code | independent | independent | free when present: help it with prefixes and keywords |
-| Code mode (`search` + `execute`) | Cloudflare (2,500+ endpoints in about 1,000 tokens) | not needed | works | only for very large APIs; needs a sandbox, loses per-call approval |
+1. **Smaller definitions** (every client, no cost to anyone). The input schemas are usually most of
+   the size: cut parameter descriptions that restate the name, long enum prose, nested shapes the
+   agent never fills, and the same paragraph repeated on sibling tools. Descriptions: first line
+   under about 200 characters with the words a search would use, the whole under 500. Measure
+   before and after with `scripts/tool-budget.mjs`.
+2. **Smaller answers** (every client). Bounded lists, a cursor, a `detail` selector, names beside
+   ids (`responses.md`). In a long chat the results cost more than the definitions.
+3. **Help the clients that search.** Instructions that say what the server is for and when to
+   search for its tools; resource prefixes so one query finds a family (`invoices_list`,
+   `invoices_get`); `_meta["anthropic/alwaysLoad"]: true` on the three to five tools most sessions
+   start with, and nowhere else.
+4. **Fewer tools where the job is one** (`tools.md`): merge steps an agent always chains, within
+   one risk level. Each merge renames a tool, which resets the "always allow" a person gave it and
+   breaks saved prompts, so do it in one batch with a version bump, not one tool at a time.
+5. **Scopes for permission.** A read-only grant lists no write tool (filter at registration). That
+   is about what may happen, never about relevance.
 
-## The recommended pattern
+## What not to do on a listed server
 
-### 1. One registry, one toolset per tool
+- **A runtime "enable a toolset" tool.** Forbidden as a side effect by 2026-07-28; Cursor ignores
+  `list_changed` mid-session, so the new tools never appear.
+- **`tools_search` + a call-through that replaces listed tools.** Fails OpenAI 6.2(b), and a
+  write behind it hides the destructive call from per-tool approval. Stripe's and AWS's servers do
+  it; they are API consoles, not products with a fixed tool list.
+- **A default URL that serves a subset.** Directory users never see the rest.
+- **`$ref` and `$defs` in input schemas to save bytes.** Several clients have failed on them
+  (2026 reports), with no measured gain.
 
-```ts
-type Toolset = 'core' | 'analytics' | 'billing' | 'admin'
+## Toolsets in the URL: only for clients the person configures
 
-export const TOOLSETS: Record<Toolset, string> = {
-  core: 'Projects, the headline numbers, the next actions, and tools_search to find the rest.',
-  analytics: 'Traffic over time, breakdowns by source and page, funnels, live visitors.',
-  billing: 'Plans, invoices and payment setup. Writes need the write scope.',
-  admin: 'Members, API keys and account deletion. Every write asks a human.',
-}
+For a server that is not in a directory, or as an extra for config-file clients (Claude Code,
+Codex, Cursor), `?toolsets=a,b` is a reasonable opt-in: GitHub's remote server and Supabase's
+`features=` work this way. Keep it additive and optional:
 
-export const TOOLS = {
-  projects_list: { set: 'core', title: 'List projects', annotations: READ },
-  analytics_breakdown: { set: 'analytics', title: 'Break down traffic', annotations: READ },
-  invoices_list: { set: 'billing', title: 'List invoices', annotations: READ },
-  keys_revoke: { set: 'admin', title: 'Revoke an API key', annotations: DESTRUCTIVE },
-} satisfies Record<string, { set: Toolset; title: string; annotations: ToolAnnotations }>
-```
+- the bare URL serves everything; a selection only narrows;
+- an unknown name is a 400 listing the valid ones; one OAuth grant serves every selection (validate
+  the audience against the URL without its query);
+- every tool belongs to one set named for a job, recorded in the registry even before anyone
+  selects, so the split stays a config change;
+- the instructions name the sets only when the server offers selection.
 
-- `core` holds the first call (`projects_list` or a `context_get`), the answers to the most common
-  questions, the main write of the product's loop, and `tools_search`. Pick it from usage data when
-  you have it: the tools that cover most calls.
-- A set is 3 to 15 tools for one job. Fewer than 3: merge it. More than 15: split by job, not by
-  verb.
-- Tool names start with the set's resource words (`analytics_breakdown`, `invoices_list`), so a
-  regex or BM25 tool search for "invoice" returns the billing set together.
+## Under about 20 tools and 8,000 tokens
 
-### 2. The URL selects, the credential filters
-
-```ts
-function selectTools(url: URL, scopes: Set<string>) {
-  const raw = url.searchParams.get('toolsets')
-  const wanted = raw === 'all' ? Object.keys(TOOLSETS) : (raw?.split(',') ?? ['core'])
-  const unknown = wanted.filter((s) => !(s in TOOLSETS))
-  if (unknown.length) throw badRequest(`Unknown toolset ${unknown.join(', ')}. Valid: all, ${Object.keys(TOOLSETS).join(', ')}`)
-  const sets = new Set(['core', ...wanted])
-  return Object.entries(TOOLS)
-    .filter(([, t]) => sets.has(t.set))
-    .filter(([name]) => allowedByScope(name, scopes)) // permission, separate from relevance
-    .map(([name]) => name)
-}
-```
-
-- `core` is always included; `tools=a,b` (single tools) is a useful extra for operators.
-- **OAuth**: the protected resource is the canonical server URL without the query. Validate the
-  token audience against that, so one grant serves `/mcp` and `/mcp?toolsets=all`. Serve the
-  protected-resource metadata for the canonical path.
-- **Filter writes at registration by scope**: a read grant's list has no write tools, so no tool
-  call can fail on a scope the agent could not see. Mark that list `cacheScope: "private"`.
-- A `readonly=true` selector (GitHub, Supabase, Linear all have one) is cheap to add and lets a
-  person connect a read-only agent with a full-scope account.
-
-### 3. The map in the instructions
-
-```text
-Tools come in toolsets. This connection has: core. Others (add ?toolsets=<name> to the server URL,
-or call tools_search to find one tool):
-- analytics: traffic over time, breakdowns by source and page, funnels, live visitors
-- billing: plans, invoices and payment setup
-- admin: members, API keys, account deletion
-```
-
-It names tools and sets only, so it passes a connector-directory review, and it stays the same for
-every session (no dates, no counts that change), so it caches.
-
-### 4. `tools_search` and a read-only `tools_call`
-
-```ts
-tools_search({ query: 'refund invoice', toolset?: 'billing', limit?: 5 })
-// → { tools: [{ name, toolset, title, description, inputSchema, annotations, loaded: false }] }
-
-tools_call({ name: 'invoices_list', arguments: { status: 'open' } })
-// runs only tools whose annotations say readOnlyHint: true and whose scope the caller holds;
-// a write returns isError: "invoices_refund is a write. Connect with ?toolsets=billing to call it
-// by name, where your client asks for approval."
-```
-
-- Search by words over name, title, description and parameter names; return full definitions so
-  the agent can build valid arguments.
-- The call-through validates arguments with the tool's own schema and returns its own result. It
-  counts as that tool in logs and rate limits.
-- Why reads only: a client shows a write's annotations and asks for approval per tool name. A
-  generic `tools_call` would hide a destructive call behind a read-looking tool.
-
-### 5. Install lines per client
-
-A connect page or prompt knows the client. Give searching clients everything, the rest the default:
-
-```text
-claude mcp add --transport http example https://api.example.com/mcp?toolsets=all
-# Cursor, Windsurf, VS Code: https://api.example.com/mcp   (core + tools_search)
-```
-
-## When the pattern is overkill
-
-Under about 20 tools and 8,000 tokens of definitions: one set, no search tool, no selector. Add
-the registry field anyway; it costs nothing and makes the split a config change later.
+None of this is needed. Keep the levers 1 and 2 anyway: they are what directory reviewers read
+as "frugal with tokens".
