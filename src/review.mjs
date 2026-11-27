@@ -169,7 +169,7 @@ async function cmdApprove() {
   })
   if (r.ok) {
     const line = { told: 'Approved: the agent builds it now.', shipping: 'Approved: the agent ships it now.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
-    status(it.id, { ok: true, short: 'build', line })
+    status(it.id, { ok: true, short: r.how === 'shipping' ? 'ship' : 'build', line })
     console.log(line)
   } else {
     status(it.id, { ok: false, short: 'fail', line: `Not building: ${r.error}` })

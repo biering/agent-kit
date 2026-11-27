@@ -60,6 +60,7 @@ config. What it writes:
    # Spec: <what changes, in a line>
 
    Product: <product>
+
    Change: openspec/changes/<name>
 
    ## Why

@@ -49,7 +49,7 @@ under `claude --agent`). A repo that gates every session wires it in its own
    `loop` is read by the `dev-loop` skill, not the CLI: `verify` is the local
    check before a PR, `docs` the extra one when docs or skills changed, `gate`
    an optional script that reports what the branch still owes (`null` when
-   hooks do that job). Three more blocks belong to skills: `carousel` (the brands
+   hooks do that job). Four more blocks belong to skills: `review` (`media`, the command the `result-pitch` skill uploads its video and screenshots with; README "Review list"), `carousel` (the brands
    folder, where Playwright lives), `ads` (the landing-page register and the
    URL pattern per brand, for `ads-landingpage`) and `unslop` (`voice`, the
    repo's voice file, default `docs/agent-kit/voice.md`).

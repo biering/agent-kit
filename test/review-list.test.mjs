@@ -368,10 +368,11 @@ describe('agent-kit review with a spec and a result (the CLI against a fake boar
   })
 
   it('approve a result: the tell says ship; back a spec: the tell carries the line', (t) => {
-    const { run } = setup(t)
+    const { dir, run } = setup(t)
     const a = run('approve', 'MB-2')
     assert.equal(a.status, 0, a.stderr)
     assert.match(a.stdout, /Approved: the agent ships it now\./)
+    assert.equal(JSON.parse(readFileSync(join(dir, 'state', 'agent-kit', 'review', 'status', 'mb-2.json'), 'utf8')).short, 'ship', 'the row says ship')
     const b = run('back', 'mb/1', 'Drop', 'the', 'second', 'bowl')
     assert.equal(b.status, 0, b.stderr)
     const tells = a.calls.concat(b.calls).filter((c) => c[0] === 'tell')

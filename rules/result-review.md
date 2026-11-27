@@ -41,6 +41,7 @@ When the PR is open, green and reviewed:
    # Result: <what the user gets, in a line>
 
    Product: <product>
+
    Change: openspec/changes/<name>        (when it had a spec)
 
    ## What the user gets

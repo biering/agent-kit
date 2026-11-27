@@ -78,7 +78,7 @@ The form is in `rules/spec-review.md` §2; every section is required:
 | Complexity | what it adds (concepts, screens, tables, dependencies, code to keep) and why that is worth it, or what you cut to keep it small; the section the owner reads hardest |
 | Open | what he has to decide; "Nothing open." when nothing is |
 
-Also a `Product: <name>` line and a `Change: openspec/changes/<name>` line under the title.
+Also a `Product: <name>` line and a `Change: openspec/changes/<name>` line under the title, each a paragraph of its own (a blank line between them, so Plannotator does not join them).
 
 Run the `unslop` skill on the brief (no em dashes, specifics first), then:
 
