@@ -299,7 +299,7 @@ else the title). Kinds:
 |---|---|---|---|
 | `spec` | `Spec ready for review: …` | the closing note: why, user benefit, scenarios, design links, tasks, complexity | one `tell`: build it now, in the same conversation |
 | `design` | `Design ready: …`, on a task with `Design review: yes` | the closing note with the artifacts | one `tell`: build it now |
-| `result` | `Result ready for review: …` | the closing note: the pitch, its video, screenshots, PR and drafts | one `tell`: archive the change, merge under the repo's rules, post the drafts on the brand accounts |
+| `result` | `Result ready for review: …` | the closing note: the pitch, its video, screenshots, PR and drafts | one `tell`: merge under the repo's rules, post the drafts on the brand accounts, archive the change once it lands |
 | `plan` | the board's plan step (`plan.approve you`) with a design brief | the plan | the board's `approve`, then a check that the build starts |
 | `stuck` | (an approved plan whose build never started) | the plan | `f` repairs: `stop`, then `delegate` |
 | `GitHub` | (an open PR whose merge waits for his GitHub approval) | the PR | nothing here: `⏎` opens it to approve on GitHub |
@@ -367,18 +367,30 @@ OpenSpec is a devDependency of the repo (`@fission-ai/openspec`, `npx openspec i
 
 ### Herdr desktop app
 
-The Herdr desktop app (0.1.18, the migration target) does not load herdr's plugins: no
-`herdr-plugin.toml`, so no plugin panes, actions, link handlers or events. It has its own extension
-point, **mods**: small JavaScript programs in `~/.config/herdr-app/mods/<name>/` (`main.js`, `mod.json`)
-that draw native panels (docked left, right, top or bottom, or as a pane beside terminals with
-`pane.split {direction, mod, props}`), run programs with `exec()`, keep state, open dialogs, and can show
-a live terminal in a block. They cannot run HTML or Node APIs. The nearest equivalent of this pane is a
-`review-list` mod docked under the board: it runs `agent-kit review list --json` with `exec()` on a timer,
-draws the same rows and detail natively, and calls `agent-kit review approve <id>` and
-`agent-kit review back <id> <text>` for `a` and `b`; `⏎` opens the brief in a terminal block running
-Plannotator. The list, the checks and the actions stay in this kit's CLI, so the mod is only the screen.
-Until it exists, the pane runs as it is in the app's terminal: `node vendor/agent-kit/bin/agent-kit.mjs
-review pane` in any split.
+The Herdr desktop app (0.1.18) does not load herdr's plugins: it reads no `herdr-plugin.toml`, so it has
+no plugin panes, actions, link handlers or events. Its own extension point is **mods**: small JavaScript
+programs in `~/.config/herdr-app/mods/<name>/` that draw native panels, run programs with `exec()` and
+run app commands. So the review list ships for it as a mod, `herdr-app/review-list`, as well:
+
+- Install: `herdr-app/install.sh` (`terminal/install.sh` runs it) copies it into the app's mods folder
+  and writes `kit.json`, the `node` and the `agent-kit` it runs. No app folder, nothing is done.
+- Open: focus the board's pane, then the palette's **Review list**. It splits that pane down, so the
+  list sits below the board. `herdr-app do pane.split '{"direction":"down","mod":"review-list"}'` does the
+  same from a shell.
+- The same list: it runs `agent-kit review list --json` every 30 seconds and draws its rows natively:
+  kind, product, age, one line, newest first, the detail with every link whole and "Not complete: …"
+  when the brief or pitch has gaps.
+- The same keys: `↑`/`↓` (or `j`/`k`) move, `⏎` opens the brief in Plannotator in a new tab
+  (`agent-kit review doc`) or a GitHub row in the browser, `a` asks once and then approves
+  (`agent-kit review approve`), `b` opens a one-line field for the words that go back
+  (`agent-kit review back`), `1` to `9` open a link, `r` reads the list again.
+- Commands: `review-list.down`, `.up`, `.open`, `.approve`, `.back` and `.refresh` take the same
+  actions from `keys.json` (`"alt-a": "review-list:approve"`) or a shell
+  (`herdr-app do review-list.approve`).
+
+The list, the checks and every action stay in this kit's CLI; the mod is only the screen, so the herdr
+pane and the mod never disagree. What it does not do yet: the `s` skip, `y` copy and `o` open-all keys
+of the herdr pane, and the per-row approve status (`build`, `ship`) the pane reads from its state folder.
 
 ### GitHub rows
 
