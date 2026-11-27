@@ -519,8 +519,8 @@ describe('the rules, the skills and the README name the same reports', () => {
       assert.match(read(f), /Spec ready for review/, f)
     }
     assert.match(read('rules/spec-review.md'), /--msg "Spec ready for review: <one line>"/)
-    assert.match(read('rules/spec-review.md'), /openspec archive <name> --yes/)
-    assert.match(read('skills/spec/SKILL.md'), /-D @fission-ai\/openspec/)
+    assert.match(read('rules/spec-review.md'), /agent-kit\.mjs spec archive <name>/)
+    assert.match(read('skills/spec/SKILL.md'), /-D -E @fission-ai\/openspec@/)
     assert.doesNotMatch(read('skills/spec/SKILL.md') + read('rules/spec-review.md'), /^\s*curl [^\n]*\|\s*(?:ba)?sh/m, 'never an installer piped to a shell')
   })
   it('result: report, media, screenshots at both widths, brand accounts only', () => {

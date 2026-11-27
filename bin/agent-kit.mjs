@@ -10,6 +10,8 @@
  *   agent-kit daylog collect  one UTC day of a repo as a compact digest, with a per-product Stats block (daily-log skill)
  *   agent-kit migrations      check changed schema files against the data-schema rules
  *   agent-kit review …        the design review gate: the herdr pane, approve to build, send back
+ *   agent-kit plan-review …   a plan or an OpenSpec change to the owner in Plannotator, over his tailnet
+ *   agent-kit spec archive    archive a shipped OpenSpec change, never one with unticked tasks
  *   agent-kit sync <repo>     vendor this kit into a repo (run from the kit's checkout)
  *
  * Each command is a module in src/ that reads its own arguments; this file
@@ -24,6 +26,8 @@ const COMMANDS = {
   daylog: '../src/daylog.mjs',
   migrations: '../src/migrations.mjs',
   review: '../src/review.mjs',
+  'plan-review': '../src/plan-review.mjs',
+  spec: '../src/spec.mjs',
   sync: '../src/sync.mjs',
 }
 

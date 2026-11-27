@@ -1,27 +1,33 @@
 # Spec review before the build
 
-A feature or a bigger improvement gets the owner's yes on its spec before any code is written. The
-agent writes the spec as an OpenSpec change, with the designs when screens change, and stops. The
-owner reads one brief in Plannotator from the **review list** (README, "Review list"), approves it or
-sends back comments. His yes starts the build in the same conversation. This is the first of the two
+A feature, a bigger improvement or a bigger bugfix gets the owner's yes on its spec before any code is
+written. It is the standard loop, not something anyone has to ask for: the agent that takes the work
+runs the test below, writes the spec as an OpenSpec change, with the designs when screens change, and
+stops. The owner reads it in Plannotator, from the **review list** (README, "Review list") for a board
+task or from the address `agent-kit plan-review` gives him (README, "Plan review") anywhere else, and
+approves it or sends back comments. His yes starts the build in the same conversation. This is the first of the two
 points where the owner is in the loop; the second is the result ([`result-review.md`](result-review.md)).
 
-## 1. Which work gets a spec (the CEO decides)
+## 1. Which work gets a spec (the agent that takes it decides)
 
-The CEO, or whoever puts the work on the board, flags a task for a spec when it is any of these:
+The agent that takes the work (the `dev-loop` and `bugfix` skills, step one) gives it a spec, unasked,
+when it is any of these:
 
 - a new feature or a new screen;
 - a schema change (a new table, a column that changes what is stored, a migration that rewrites data);
 - pricing: a new price, a plan, a paywall, a trial;
 - work that will take more than one PR;
 - real added complexity: a new service, a new dependency, a new concept users have to learn, a second
-  way to do something that already has one.
+  way to do something that already has one;
+- a bigger bugfix: the fix changes behavior a user relies on, the data model or an API, or it meets any
+  line above. A fix that only restores what was meant stays with the `bugfix` skill's own plan.
 
-A fix (it restores what was meant), an SEO page, content (copy, posts, articles) and a chore do not get
+A small fix (it restores what was meant), an SEO page, content (copy, posts, articles) and a chore do not get
 a spec. When in doubt, the test is: would the owner want to say "not like that" before a day of work
 goes in? Then it gets one.
 
-The task's description carries this line, on its own:
+The CEO, or whoever puts the work on the board, can force a spec for work the test would let through.
+The task's description then carries this line, on its own:
 
 ```text
 Spec review: yes
@@ -45,7 +51,8 @@ config. What it writes:
 
 1. `openspec/changes/<name>/` with the OpenSpec CLI (a devDependency, `npx openspec`; never an
    installer piped to a shell):
-   - `proposal.md`: why, what changes, the capabilities, the impact;
+   - `proposal.md`: the `value-score` skill's five lines first, as they open a plan, then why, what
+     changes, the capabilities, the impact;
    - `specs/<capability>/spec.md`: the requirements, each with scenarios in **WHEN / THEN** form;
    - `design.md`: the decisions, the options left out and why, the risks;
    - `tasks.md`: the build as checkboxes, in order, each small enough for one sitting.
@@ -102,9 +109,14 @@ config. What it writes:
    The message must start with `Spec ready`: that is what the review list looks for. The one line is
    what the owner reads in the list, so it says what the user gets, not "spec done".
 
-## 3. In the review list
+## 3. In the review list, or in Plannotator directly
 
-The task shows as a `spec` row: product, age, the one line. Enter opens the brief in Plannotator (in a
+Outside the board (a chat, a ticket, a Claude Code remote-control session) there is no closing note and
+no review list: the agent opens the change itself, assembled into one document (proposal, specs, design,
+tasks), with `agent-kit plan-review openspec/changes/<name>` and acts on its exit code (README, "Plan
+review"). The proposal then also carries the design links, the complexity and what is open.
+
+On the board, the task shows as a `spec` row: product, age, the one line. Enter opens the brief in Plannotator (in a
 new tab of the CEO's workspace), where `A` approves and `E` sends the comments back; in the list, `a`
 approves and `b` sends back one line. The detail shows every link whole and the change's folder.
 
@@ -123,17 +135,25 @@ approves and `b` sends back one line. The detail shows every link whole and the 
 Specs describe the product as it is. Once the build ships, its change moves into `openspec/specs/`:
 
 ```sh
-npx openspec archive <name> --yes
+node vendor/agent-kit/bin/agent-kit.mjs spec archive <name>
 ```
 
-The agent runs it after the owner approves the result and before the merge, as the last commit of the
+It refuses while `tasks.md` has an unticked task, because `openspec archive --yes` archives one without
+asking (2.0.0 and 2.2.0 both do): tick what landed, move what did not into a new change. The agent runs it after the owner approves the result and before the merge, as the last commit of the
 PR, so the change reaches `main` together with the code it describes: `main` never has a shipped change
 that is not archived, nor an archived one that did not ship. A change split over several PRs is
 archived with its last PR.
 
 ## Setup in a repo, once
 
-- `npm i -D @fission-ai/openspec` (or the repo's package manager), then
-  `npx openspec init --tools none`. The `spec` skill is the agent's instruction, so OpenSpec's own
-  agent files are not needed. Set `OPENSPEC_TELEMETRY=0` where the agents run.
+- `npm i -D -E @fission-ai/openspec@2.0.0` (or the repo's package manager, always the exact version),
+  then `npx openspec init --tools none`. Only a release older than two weeks goes in: 2.0.0 is the pin
+  as of 2026-11-27, when 2.2.0 was three days old. A bump is its own change, the version here, in the
+  `spec` skill and in `src/lib/spec.mjs` together.
+- `--tools none`: the `spec` skill is the agent's instruction, so OpenSpec's own agent files are not
+  needed. With `--tools claude,codex` 2.0.0 writes `.agents/skills/openspec-*` and `.claude/skills`
+  links but no `.codex/skills` links, so Codex would not see them; keep `none` unless that changes.
+- Set `OPENSPEC_TELEMETRY=0` and `OPENSPEC_NO_UPDATE_CHECK=1` where the agents run (`agent-kit spec`
+  sets both).
+- On the machine the agents run on, once: `agent-kit plan-review --install` (README, "Plan review").
 - The repo's CEO manual points to this rule in one line.
