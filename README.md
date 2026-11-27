@@ -261,7 +261,7 @@ CLI only) that lists everything waiting for him, across repos, newest first.
 2. **The result, before the merge** ([`rules/result-review.md`](rules/result-review.md), the
    `result-pitch` and `distribution-reuse` skills): specced work and every PR a user would notice comes
    with a pitch, a video and desktop and phone screenshots of the real app, and the drafts for the
-   product's brand accounts. His approve ships it and posts the drafts as the brand.
+   product's brand accounts. His approve is the board's merge; the drafts post as the brand after it.
 
 Screen work without a spec still gets its design approved first ([`rules/design-review.md`](rules/design-review.md)),
 and PRs that need his approval on GitHub (a CODEOWNERS path, a new runtime dependency) show in the same
@@ -289,7 +289,7 @@ list, to open, not to approve.
   Brief file (⏎ opens it in Plannotator)
  ~/.herdr-projects/data/tasks/maelstrom/590/closing-note.md
  ──────────────────────────────────────────────────────────────
-  ⏎/p review in Plannotator  a approve + ship  b send back
+  ⏎/p review in Plannotator  a approve + merge  b send back
   1-9 open link  o open all  y1-9 copy link  s skip  S skipped
 ```
 
@@ -301,7 +301,7 @@ else the title). Kinds:
 |---|---|---|---|
 | `spec` | `Spec ready for review: …` | the closing note: why, user benefit, scenarios, design links, tasks, complexity | one `tell`: build it now, in the same conversation |
 | `design` | `Design ready: …`, on a task with `Design review: yes` | the closing note with the artifacts | one `tell`: build it now |
-| `result` | `Result ready for review: …` | the closing note: the pitch, its video, screenshots, PR and drafts | one `tell`: archive the change, merge under the repo's rules, post the drafts on the brand accounts |
+| `result` | (the board's **ready to approve**, for work the owner reviews: a `# Result` pitch in the closing note, or a task flagged for a spec or design review) | the closing note: the pitch, its video, screenshots and drafts; the PR link comes from the board | the board's `approve`, which merges the reviewed head; then a task, `--after` it, posts the drafts on the brand accounts |
 | `plan` | the board's plan step (`plan.approve you`) with a design brief | the plan | the board's `approve`, then a check that the build starts |
 | `stuck` | (an approved plan whose build never started) | the plan | `f` repairs: `stop`, then `delegate` |
 | `GitHub` | (an open PR whose merge waits for his GitHub approval) | the PR | nothing here: `⏎` opens it to approve on GitHub |
@@ -325,16 +325,33 @@ narrower than the URL, and a terminal hyperlink either way. The pane refreshes w
 task (it watches the board's `tasks/` folder) and every 30 s.
 
 **Approve, in detail.**
-- A spec, a design or a result gets one `tell` (the words are in `src/lib/review.mjs`), and the agent goes
-  on in the same conversation with its usual access.
+- A spec or a design gets one `tell` (the words are in `src/lib/review.mjs`), and the agent goes on in
+  the same conversation with its usual access.
+- A result gets the board's `approve`: the board merges the head its reviewer saw, and nothing is told
+  to the agent, so the PR head does not move after the yes. A result whose PR also waits on GitHub is
+  refused until it is approved there. When the pitch has drafts, a research task `--after` the result
+  posts them once the merge is done.
 - A plan gets the board's `approve`. The pane then sends nothing until the build has started (the
   task's `plan.built`), because a message in that window cancels the build and leaves the agent in
   Claude's plan mode on a read-only worktree. If the build still does not start, it repairs: `stop`, then
   `delegate --now --plan.approve none`, which builds the approved plan with normal access.
 - An approve runs on its own, so closing the pane does not cut it off. Its progress shows on the row.
 - **Send back** is a `tell` with the owner's words and what to do next: revise and stop again at the same
-  report (`Spec ready for review`, `Design ready`, `Result ready for review`); a plan goes back to its plan
-  step.
+  report (`Spec ready for review`, `Design ready`); a result is changed on the same branch and the turn
+  ends normally, so the board updates the PR and brings it back as ready to approve; a plan goes back to
+  its plan step.
+
+**The order of stops is the board's.** An agent never reports `Result ready`: it writes the pitch,
+archives its change and ends its turn. The board checks, pushes, opens the PR, runs its reviewer and
+shows "ready to approve"; the list builds the result row from that. Every other ready-to-approve task (a
+fix, an SEO page, content, a chore) stays the CEO's, and the CEO's merge gate blocks his
+`herdr-projects approve` of a result (`agent-kit review owner <id>`: exit 0 when it is the owner's).
+
+**False errors.** When a spec or design stop is followed by an idle compaction, the board reads the
+compaction as a turn without a summary and marks the task an error ("Conversation compacted"). The row
+stays: the list reads the agent's last real report from the task's own file and shows the board's word
+beside it. The fix belongs in the board (herdr-projects): its worker settings file could turn
+`idleCompaction` off, or its turn-end could skip a compaction.
 
 **Notifications.** A herdr notification arrives when a spec, a design, a plan or a result becomes ready,
 even with the pane closed: the plugin's `pane.agent_status_changed` hook, at most one board read every 20

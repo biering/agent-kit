@@ -29,6 +29,12 @@ switch (cmd) {
   case 'approve':
     if (!d) fail(`no task ${id}`)
     if (state.onApprove === 'fail') fail('refused')
+    // Finished work that waits for its yes (stage approval): the board merges it.
+    if (!d.plan) {
+      d.task.stage = 'merging'
+      save()
+      break
+    }
     d.plan.approvedAt = Date.now()
     if (state.onApprove === 'build') Object.assign(d.plan, { built: Date.now(), locked: false }), (d.task.stage = 'working')
     else if (state.onApprove === 'stuck') d.task.stage = 'working'
@@ -50,6 +56,12 @@ switch (cmd) {
     if (d.plan?.approvedAt) Object.assign(d.plan, { built: Date.now(), locked: false })
     d.task.stage = 'working'
     save()
+    break
+  case 'add':
+    // add <title> [options]: a new task, numbered after the last one
+    state.added = [...(state.added ?? []), [id, ...rest]]
+    save()
+    console.log('added')
     break
   default:
     fail(`fake board: ${cmd}?`)

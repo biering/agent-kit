@@ -21,8 +21,9 @@ step 1 decides. A new feature, a bigger improvement or a bigger bugfix (the test
 `rules/spec-review.md` §1), or a task with the line `Spec review: yes`, starts with the `spec` skill:
 an OpenSpec change, no code, and the owner's approval in Plannotator (a board task stops at
 `Spec ready for review`). A specced task, or any PR that
-changes what a user sees, ends with the `result-pitch` skill and a stop at `Result ready for review`
-before the merge (`rules/result-review.md`).
+changes what a user sees, ends with the `result-pitch` skill: the pitch in the closing note, the
+change archived, then the turn ends normally; the board opens the PR and brings it to the owner as
+ready to approve (`rules/result-review.md`).
 
 ## 0. Read the repo's version of each step
 
@@ -134,7 +135,7 @@ For a run longer than a few minutes, poll with the built-in `/loop` instead of b
 One message: PR URL, CI status, one-line summary, review verdicts. Merge only the way
 `AGENTS.md` says. If it holds a class of change for a person (schema, prices, a first launch),
 hand it over and stop. A specced or user-visible PR does not merge before the owner approved its
-result pitch (`result-pitch` skill); after his yes, archive its OpenSpec change as the last commit.
+result pitch (`result-pitch` skill); its OpenSpec change is archived before that, in the same PR.
 
 ## Pitfalls
 

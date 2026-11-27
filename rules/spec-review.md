@@ -124,8 +124,9 @@ approves and `b` sends back one line. The detail shows every link whole and the 
 
 - **"Spec approved. Build it now…"**: build it in the same conversation, from `tasks.md`, ticking each
   task as it is done. Notes in that message are guidance, not a send back. The build follows the
-  repo's dev loop and ends at the result review (`result-review.md`): the PR is open, the pitch is
-  written, the agent stops with `Result ready for review`.
+  repo's dev loop and ends at the result review (`result-review.md`): the pitch is written, the change
+  is archived, and the agent ends its turn normally. The board opens the PR, reviews it and brings it
+  to the owner as ready to approve.
 - **"Spec sent back…"**: revise the same change (and the same artifact URLs where you can), write the
   brief again, run both checks (`openspec validate --strict`, `agent-kit review check --kind spec`), and stop again with `Spec ready for review`. Still no code.
 - The owner may answer on the board in his own words. That counts the same.
@@ -139,10 +140,21 @@ node vendor/agent-kit/bin/agent-kit.mjs spec archive <name>
 ```
 
 It refuses while `tasks.md` has an unticked task, because `openspec archive --yes` archives one without
-asking (2.0.0 and 2.2.0 both do): tick what landed, move what did not into a new change. The agent runs it after the owner approves the result and before the merge, as the last commit of the
-PR, so the change reaches `main` together with the code it describes: `main` never has a shipped change
-that is not archived, nor an archived one that did not ship. A change split over several PRs is
-archived with its last PR.
+asking (2.0.0 and 2.2.0 both do): tick what landed, move what did not into a new change.
+
+The agent archives it before it ends the turn that brings the result, as a commit of its own on the
+branch. So the archive is part of the PR the board reviews and the owner approves, and the change
+reaches `main` together with the code it describes: `main` never has a shipped change that is not
+archived, nor an archived one that did not ship. On a send back that moves the spec, the agent
+`git revert`s the archive commit, revises the change and archives it again. A change split over several
+PRs is archived with its last PR.
+
+Why not after his yes: a commit after the approve moves the PR's head. GitHub drops an approval at head
+on a new commit (Maelstrom requires the owner's approval at head for a CODEOWNERS path and a new
+runtime dependency), CI starts again, and the board would merge a head its reviewer never saw. Why not
+as a docs-only commit on `main` right after the merge: `main` is merged through PRs only, the agent is
+gone once the board merges, and for that window `main` would hold a shipped change that is not
+archived. Before the stop has none of these costs; its only cost is the revert on a send back.
 
 ## Setup in a repo, once
 

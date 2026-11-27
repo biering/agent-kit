@@ -128,24 +128,25 @@ describe('which tasks wait (spec and result)', () => {
   const data = '/data'
   const list = [
     { id: 'mb/1', state: 'blocked', kind: 'permission', stage: 'working', title: 'feat(tinybreath): singing bowl', msg: 'Spec ready for review: a singing bowl ends a session' },
-    { id: 'mb/2', state: 'blocked', kind: 'permission', stage: 'working', title: 'feat(tinybreath): bowl build', msg: 'Result ready for review: the bowl ships' },
+    { id: 'mb/2', state: 'blocked', kind: 'permission', stage: 'approval', title: 'feat(tinybreath): bowl build', msg: 'Review passed', pr: PR },
     { id: 'mb/3', state: 'blocked', kind: 'permission', stage: 'working', title: 'no marker', msg: 'Design ready: needs the marker' },
     { id: 'mb/4', state: 'working', stage: 'working', title: 'still working', msg: 'Spec ready for review: an old message' },
     { id: 'mb/5', state: 'blocked', kind: 'question', stage: 'working', title: 'a question', msg: 'Should the old settings file be removed' },
   ]
   const details = {
     'mb/1': { task: { id: 'MB-1', title: 'feat(tinybreath): singing bowl', stage: 'working', description: 'Spec review: yes' }, worktree: '/wt/mb-1' },
-    'mb/2': { task: { id: 'MB-2', title: 'feat(tinybreath): bowl build', stage: 'working', description: '' }, pr: { url: PR }, worktree: '/wt/mb-2' },
+    'mb/2': { task: { id: 'MB-2', title: 'feat(tinybreath): bowl build', stage: 'approval', description: '' }, pr: PR, worktree: '/wt/mb-2' },
     'mb/3': { task: { id: 'MB-3', title: 'no marker', stage: 'working', description: 'nothing' } },
   }
   const files = {
     '/data/tasks/mb/1/closing-note.md': SPEC_BRIEF,
     '/data/tasks/mb/2/closing-note.md': PITCH.replace(`- Pull request: ${PR}.\n`, ''),
   }
+  files['/data/tasks/mb/2/task.json'] = JSON.stringify({ since: NOW - 5 * MIN })
   const times = { '/data/tasks/mb/1/closing-note.md': NOW - 90 * MIN, '/data/tasks/mb/2/closing-note.md': NOW - 5 * MIN }
   const items = collect({ board: memBoard({ list, details }), data, ...io(files, times), now: NOW })
 
-  it('takes a spec stop and a result stop without a marker; a design stop still needs one', () => {
+  it('takes a spec stop and a ready-to-approve result without a marker; a design stop still needs one', () => {
     assert.deepEqual(items.map((i) => [i.id, i.kind]), [['mb/2', 'result'], ['mb/1', 'spec']], 'newest first')
   })
 
@@ -154,7 +155,8 @@ describe('which tasks wait (spec and result)', () => {
     assert.equal(spec.product, 'tinybreath')
     assert.equal(spec.line, 'a singing bowl ends a session')
     assert.equal(spec.at, NOW - 90 * MIN)
-    assert.equal(result.line, 'the bowl ships')
+    assert.equal(result.line, 'the singing bowl ships', 'a result row reads its pitch title: no report message')
+    assert.equal(result.ready, true)
   })
 
   it('a spec names its OpenSpec change in its worktree and its brief file; a result gets its PR from the board', () => {
@@ -197,12 +199,12 @@ describe('the list: every kind, newest first', () => {
     assert.match(t, /  GitHub app +3h  feat\(app\): refund button/)
   })
 
-  it('a result: the approve key ships, and the question says what ship means', () => {
+  it('a result: the approve key merges, and the question says what that means', () => {
     const r = task({ kind: 'result', line: 'the bowl ships', brief: PITCH, links: allLinks(PITCH) })
     const list = render({ items: [r], sel: 0, now: NOW }, 100, 40).map((l) => l.t).join('\n')
-    assert.match(list, /a approve \+ ship/)
+    assert.match(list, /a approve \+ merge/)
     const ask = render({ items: [r], sel: 0, now: NOW, mode: 'confirm' }, 100, 40).map((l) => l.t).join('\n')
-    assert.match(ask, /Approve MB-1 and ship it \(merge, then post the drafts\)\? y \/ n/)
+    assert.match(ask, /Approve MB-1: the board merges it, then the drafts post\? y \/ n/)
     const spec = render({ items: [task()], sel: 0, now: NOW }, 100, 40).map((l) => l.t).join('\n')
     assert.match(spec, /a approve \+ build/)
   })
@@ -229,7 +231,7 @@ describe('the list: every kind, newest first', () => {
   it('a result whose PR also waits on GitHub says both are needed', () => {
     const r = task({ kind: 'result', github: 'app#88' })
     const t = render({ items: [r], sel: 0, now: NOW }, 120, 40).map((l) => l.t).join('\n')
-    assert.match(t, /also waits for your approval on GitHub \(app#88\)/)
+    assert.match(t, /also waits for your approval on GitHub \(app#88\): approve the PR there first/)
   })
 })
 
@@ -240,19 +242,15 @@ describe('approve and send back (spec and result)', () => {
     assert.deepEqual(r, { ok: true, how: 'told' })
     assert.equal(board.calls.length, 1)
     assert.match(board.calls[0][2], /^Spec approved\. Build it now, in this conversation/)
-    assert.match(board.calls[0][2], /Result ready for review/)
+    assert.match(board.calls[0][2], /archive the change \(node vendor\/agent-kit\/bin\/agent-kit\.mjs spec archive <name>\) and commit it/)
+    assert.match(board.calls[0][2], /end your turn normally\. Do not report "Result ready"/)
   })
 
-  it('a result approve: one tell that says ship: archive, merge under the repo rules, post as the brand', async () => {
+  it('a result approve: the board’s approve (it merges), no message to the agent', async () => {
     const board = memBoard()
-    const r = await approve({ id: 'mb/2', kind: 'result' }, { board, sleep: async () => {}, notes: 'Shorter caption.' })
-    assert.deepEqual(r, { ok: true, how: 'shipping' })
-    const text = board.calls[0][2]
-    assert.match(text, /^Result approved\. Ship it/)
-    assert.match(text, /openspec archive <name> --yes/)
-    assert.match(text, /still waits for the owner's approval on GitHub/)
-    assert.match(text, /brand accounts, never as the owner/)
-    assert.match(text, /Shorter caption\./)
+    const r = await approve({ id: 'mb/2', kind: 'result', ready: true, brief: PITCH }, { board, sleep: async () => {} })
+    assert.deepEqual(r, { ok: true, how: 'merging' })
+    assert.deepEqual(board.calls, [['approve', 'mb/2']], 'no tell: the PR head does not move')
   })
 
   it('a PR is never approved from here', async () => {
@@ -267,7 +265,7 @@ describe('approve and send back (spec and result)', () => {
     assert.ok(sendBack(board, { id: 'mb/1', kind: 'spec' }, 'Drop the second bowl.').ok)
     assert.ok(sendBack(board, { id: 'mb/2', kind: 'result' }, 'The phone shot is cut off.').ok)
     assert.match(board.calls[0][2], /^Spec sent back\.[\s\S]*Drop the second bowl\.[\s\S]*Spec ready for review[\s\S]*Change no code yet/)
-    assert.match(board.calls[1][2], /^Result sent back\.[\s\S]*The phone shot is cut off\.[\s\S]*Result ready for review[\s\S]*Do not merge or post/)
+    assert.match(board.calls[1][2], /^Result sent back\.[\s\S]*The phone shot is cut off\.[\s\S]*git revert[\s\S]*end your turn normally[\s\S]*Do not report "Result ready", merge or post/)
     assert.equal(sendBack(board, { id: 'mb/2', kind: 'result' }, '  ').ok, false)
   })
 
@@ -320,11 +318,11 @@ describe('agent-kit review with a spec and a result (the CLI against a fake boar
       JSON.stringify({
         list: [
           { id: 'mb/1', state: 'blocked', kind: 'permission', stage: 'working', title: 'feat(tinybreath): singing bowl', msg: 'Spec ready for review: a singing bowl' },
-          { id: 'mb/2', state: 'blocked', kind: 'permission', stage: 'working', title: 'feat(tinybreath): bowl build', msg: 'Result ready for review: the bowl ships' },
+          { id: 'mb/2', state: 'blocked', kind: 'permission', stage: 'approval', title: 'feat(tinybreath): bowl build', msg: 'Review passed', pr: PR },
         ],
         details: {
           'mb/1': { task: { id: 'MB-1', title: 'feat(tinybreath): singing bowl', stage: 'working', description: 'Spec review: yes' }, worktree: join(dir, 'wt') },
-          'mb/2': { task: { id: 'MB-2', title: 'feat(tinybreath): bowl build', stage: 'working', description: '' }, pr: { url: PR } },
+          'mb/2': { task: { id: 'MB-2', title: 'feat(tinybreath): bowl build', stage: 'approval', description: '' }, pr: PR },
         },
       }),
     )
@@ -363,20 +361,21 @@ describe('agent-kit review with a spec and a result (the CLI against a fake boar
     const r = run('list')
     assert.equal(r.status, 0, r.stderr)
     assert.match(r.stdout, /^spec {4}tinybreath +\d+m {2}a singing bowl {2}\(MB-1\)$/m)
-    assert.match(r.stdout, /^result {2}tinybreath +\d+m {2}the bowl ships {2}\(MB-2\)$/m)
+    assert.match(r.stdout, /^result {2}tinybreath +\d+m {2}the singing bowl ships {2}\(MB-2\)$/m)
     assert.match(r.stdout, new RegExp(`video: Video, the changed flow: ${VIDEO.replace(/[.]/g, '\\.')}`))
   })
 
-  it('approve a result: the tell says ship; back a spec: the tell carries the line', (t) => {
+  it('approve a result: the board approves (merges); back a spec: the tell carries the line', (t) => {
     const { dir, run } = setup(t)
     const a = run('approve', 'MB-2')
     assert.equal(a.status, 0, a.stderr)
-    assert.match(a.stdout, /Approved: the agent ships it now\./)
-    assert.equal(JSON.parse(readFileSync(join(dir, 'state', 'agent-kit', 'review', 'status', 'mb-2.json'), 'utf8')).short, 'ship', 'the row says ship')
+    assert.match(a.stdout, /Approved: the board merges it\./)
+    assert.equal(JSON.parse(readFileSync(join(dir, 'state', 'agent-kit', 'review', 'status', 'mb-2.json'), 'utf8')).short, 'merge', 'the row says merge')
+    assert.ok(a.calls.some((c) => c[0] === 'approve' && c[1] === 'mb/2'), 'the board’s approve')
+    assert.ok(!a.calls.some((c) => c[0] === 'tell'), 'nothing told: the PR head stays')
     const b = run('back', 'mb/1', 'Drop', 'the', 'second', 'bowl')
     assert.equal(b.status, 0, b.stderr)
-    const tells = a.calls.concat(b.calls).filter((c) => c[0] === 'tell')
-    assert.match(tells.find((c) => c[1] === 'mb/2')[2], /^Result approved\. Ship it/)
+    const tells = b.calls.filter((c) => c[0] === 'tell')
     assert.match(tells.find((c) => c[1] === 'mb/1')[2], /^Spec sent back\.[\s\S]*Drop the second bowl/)
   })
 })
@@ -523,14 +522,14 @@ describe('the rules, the skills and the README name the same reports', () => {
     assert.match(read('skills/spec/SKILL.md'), /-D -E @fission-ai\/openspec@/)
     assert.doesNotMatch(read('skills/spec/SKILL.md') + read('rules/spec-review.md'), /^\s*curl [^\n]*\|\s*(?:ba)?sh/m, 'never an installer piped to a shell')
   })
-  it('result: report, media, screenshots at both widths, brand accounts only', () => {
+  it('result: no report by hand, media, screenshots at both widths, brand accounts only', () => {
     for (const f of ['rules/result-review.md', 'skills/result-pitch/SKILL.md']) {
-      assert.match(read(f), /Result ready for review/, f)
+      assert.match(read(f), /Result ready/, f)
+      assert.doesNotMatch(read(f), /--msg "Result ready/, f)
       assert.match(read(f), /1440/, f)
       assert.match(read(f), /390/, f)
       assert.match(read(f), /review\.media/, f)
     }
-    assert.match(read('rules/result-review.md'), /--msg "Result ready for review: <one line>"/)
     assert.match(read('skills/distribution-reuse/SKILL.md'), /Never as the owner/)
   })
   it('the README lists the rules and the skills, and no rule or skill has an em dash', () => {

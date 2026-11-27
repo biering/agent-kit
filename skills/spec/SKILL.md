@@ -120,9 +120,11 @@ is the decision JSON), 3 a dismissed tab: open it again.
 ## 6. The answer
 
 - **Spec approved**: build it now, from `tasks.md`, ticking each box as it lands (the `dev-loop`
-  skill). When the PR is open, the result review starts (the `result-pitch` skill).
+  skill). When it is built, the result review starts (the `result-pitch` skill): the pitch, the archive,
+  then the turn ends normally and the board opens the PR.
 - **Spec sent back**: revise the same change and the same artifacts, write the brief again, check,
   stop again. Still no code.
-- **After the result is approved**: `node vendor/agent-kit/bin/agent-kit.mjs spec archive <name>` as
-  the PR's last commit, before the merge (`rules/spec-review.md` §5). It refuses while `tasks.md` has an
-  unticked task: OpenSpec itself would archive it without asking.
+- **Before the turn that brings the result ends**: `node vendor/agent-kit/bin/agent-kit.mjs spec archive <name>`,
+  as a commit of its own on the branch (`rules/spec-review.md` §5), so the PR the owner approves already
+  has it. It refuses while `tasks.md` has an unticked task: OpenSpec itself would archive it without
+  asking. A send back that moves the spec: `git revert` that commit first.
