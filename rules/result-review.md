@@ -18,8 +18,9 @@ meant), an SEO page, content (copy, posts, articles, docs) and a chore (deps, CI
 The CEO approves a ready-to-approve task only when it needs no result review. A task whose closing
 note is a result pitch (`# Result: …`), whose description says `Spec review: yes` or
 `Design review: yes`, or that wrote an OpenSpec change is the owner's, in the review list. The CEO's
-merge gate enforces it: before `herdr-projects approve <id>` it asks `agent-kit review owner <id>`, and
-blocks the approve of a result, or of a task it cannot place.
+merge gate enforces it: before `herdr-projects approve <id>` or `agent-kit review approve <id>` (which
+calls the board's) it asks `agent-kit review owner <id>`, and blocks the approve of a result, or of a task
+it cannot place (an id built at run time or fed through `xargs`).
 
 GitHub approval stays required only where it is required today: a path of the repo's `CODEOWNERS` and
 a new runtime dependency (the repo's merge-gate rule, for example Maelstrom's `docs/merge-gate.md`).
@@ -125,7 +126,14 @@ An idle compaction after the result was ready can make the board mark it an erro
 compacted", stage `nosummary`), and the board refuses an approve there. The row stays, from the board's
 own review in the task's file (its reviewed head and PR), and says so. `a` then runs the board's
 `finish`, which takes the work as it is and brings it back as ready to approve; nothing merges before
-his next `a`.
+his next `a`. It stays only while it is still the work the reviewer saw: the worktree's HEAD is the
+reviewed commit with nothing uncommitted (the board's own test), and the list did not send it back since
+that review. A result he sent back whose next turn then ends without a summary is the agent's unfinished
+turn, not a lost result: it is not listed, and the board shows its error.
+
+A spec stage whose agent ended its turn instead of stopping (the brief says `Spec ready for review`) also
+reaches ready to approve, with a PR for the spec alone. The list shows it as a `spec` row and says so:
+`a` tells the agent to build, never the board's merge.
 
 ## 4. What his approve covers
 

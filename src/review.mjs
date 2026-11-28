@@ -39,7 +39,7 @@ import {
   fromAnnotation,
   merge,
   paneSpot,
-  sendBack,
+  sendBack as sendBackTo,
   toNotify,
 } from './lib/review.mjs'
 import { check, passes } from './lib/review-check.mjs'
@@ -109,7 +109,24 @@ const list = (dir) => {
     return []
   }
 }
-const waiting = () => collect({ board, data, readFile, mtime, exists: existsSync, list })
+/** A worktree's HEAD and whether anything is uncommitted, as the board reads it (git rev-parse, status --porcelain). */
+const headOf = (wt) => {
+  if (!wt || !existsSync(wt)) return null
+  const h = spawnSync('git', ['-C', wt, 'rev-parse', 'HEAD'], { encoding: 'utf8' })
+  const st = spawnSync('git', ['-C', wt, 'status', '--porcelain'], { encoding: 'utf8' })
+  if (h.status !== 0 || st.status !== 0) return null
+  return { head: h.stdout.trim(), dirty: st.stdout.trim() !== '' }
+}
+/** The results the owner sent back, each at the board review it answered (reviewToken): a later error is his unfinished turn. */
+const backsFile = () => join(STATE, 'sent-back.json')
+const backAt = (id) => readJson(backsFile(), {})[id] ?? ''
+/** Send back, and for a result record which review it answered. Every send back goes through here (CLI, pane, Plannotator, the app mod). */
+function sendBack(b, it, text) {
+  const r = sendBackTo(b, it, text)
+  if (r.ok && it.kind === 'result' && it.reviewToken) writeJson(backsFile(), { ...readJson(backsFile(), {}), [it.id]: it.reviewToken })
+  return r
+}
+const waiting = () => collect({ board, data, readFile, mtime, exists: existsSync, list, headOf, backAt })
 const run = promisify(execFile)
 const gh = async (a) => (await run('gh', a, { maxBuffer: 32 * 1024 * 1024, timeout: 60 * 1000 })).stdout
 const git = (root) => {

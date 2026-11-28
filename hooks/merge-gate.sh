@@ -10,7 +10,7 @@
 # Those are blocked outright: file `pnpm linear ask approval …` and the owner
 # merges them. Everything else merges only with every check green.
 #
-# Also blocks the CEO's `herdr-projects approve` of a result the owner reviews (agent-kit review owner).
+# Also blocks the CEO's `herdr-projects approve` (or `agent-kit review approve`) of a result the owner reviews (agent-kit review owner).
 #
 # Also blocks the commands that change live prices: `pnpm iap … --apply` and
 # `pnpm release … --price … --apply`.
@@ -45,7 +45,8 @@ fi
 # The board's approve merges finished work. A result the owner reviews (a pitch, a task flagged Spec review
 # or Design review) is his to approve in the review list, never the CEO's (rules/result-review.md §1).
 # hooks/merge-gate-parse.mjs --approves reads the command like the shell does: quotes, flags such as
-# --anyway, bash -c, eval, wrappers and pipes into a shell; an echo or a commit message is not an approve.
+# --anyway, bash -c, eval, wrappers and pipes into a shell, the kit's own `agent-kit review approve` (it calls the
+# board's), and ids fed through xargs; an echo or a commit message is not an approve.
 if printf '%s\n' "$CMD" | grep -q 'approve'; then
   if ! command -v node >/dev/null 2>&1; then
     echo "BLOCKED: node is needed to read this command for the approve gate." >&2

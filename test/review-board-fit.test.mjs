@@ -22,8 +22,10 @@ import {
   readyToApprove,
   render,
   resultBackWords,
+  reviewToken,
   sendBack,
   specApprovedWords,
+  specInNote,
 } from '../src/lib/review.mjs'
 
 const KIT = fileURLToPath(new URL('../bin/agent-kit.mjs', import.meta.url))
@@ -296,9 +298,11 @@ describe('3b. a result that was ready to approve, then marked an error by a comp
   const details = { 'mb/593': { task: { id: 'MB-593', title: 'fix(wavedance): launch film', stage: 'nosummary', description: 'Spec review: yes' }, pr: PR, worktree: '/wt/593' } }
   const files = {
     '/data/tasks/mb/593/closing-note.md': pitch({ change: '' }),
-    '/data/tasks/mb/593/task.json': JSON.stringify({ blocked: null, reviewedHead: '938ba45e', pr: PR, since: NOW - 40 * MIN, description: 'Spec review: yes' }),
+    '/data/tasks/mb/593/task.json': JSON.stringify({ blocked: null, reviewedHead: '938ba45e', review: { at: NOW - 30 * MIN, head: '938ba45e' }, pr: PR, since: NOW - 40 * MIN, description: 'Spec review: yes' }),
   }
-  const run = (row) => collect({ board: memBoard({ list: [row], details }), data: '/data', ...io(files), now: NOW })
+  // The worktree as the board's reviewer left it: HEAD at the reviewed commit, nothing uncommitted.
+  const tree = (head = '938ba45e', dirty = false) => (wt) => (wt === '/wt/593' ? { head, dirty } : null)
+  const run = (row, more = {}) => collect({ board: memBoard({ list: [row], details }), data: '/data', ...io(files), headOf: tree(), ...more, now: NOW })
 
   it('the row stays a result after the compaction, with the board’s word', () => {
     assert.deepEqual(run(ready).map((i) => [i.key, i.kind, Boolean(i.ready)]), [['MB-593', 'result', true]])
@@ -321,6 +325,20 @@ describe('3b. a result that was ready to approve, then marked an error by a comp
     assert.deepEqual(collect({ board: memBoard({ list: [lostRow], details: plain }), data: '/data', ...io(fix), now: NOW }), [])
   })
 
+  it('a result sent back, whose next turn then ends without a summary, is not lost: it stays with the agent (review round 2)', () => {
+    // The board keeps reviewedHead and the PR after a send back (actions/talk.rs), so they alone do not tell.
+    const back = { ...files, '/data/tasks/mb/593/task.json': JSON.stringify({ ...JSON.parse(files['/data/tasks/mb/593/task.json']), said: 'Result sent back. The owner reviewed the pitch and wrote: …', msg: 'Stopped without a summary' }) }
+    const sentBack = { ...lostRow, msg: 'Stopped without a summary' }
+    const at = (more) => collect({ board: memBoard({ list: [sentBack], details }), data: '/data', ...io(back), headOf: tree(), ...more, now: NOW })
+    assert.deepEqual(at({ headOf: tree('51c0ffee') }), [], 'it committed since the review')
+    assert.deepEqual(at({ headOf: tree('938ba45e', true) }), [], 'it has uncommitted work')
+    assert.deepEqual(at({ backAt: (id) => (id === 'mb/593' ? `938ba45e@${NOW - 30 * MIN}` : '') }), [], 'nothing changed yet, but the kit sent it back after this review')
+    assert.deepEqual(at({ headOf: () => null }), [], 'no worktree to look at: not taken as unchanged')
+    // Sent back once, then the board reviewed it again: the new review is a new ready to approve.
+    assert.equal(at({ backAt: () => `938ba45e@${NOW - 90 * MIN}` })[0]?.lost, true)
+    assert.equal(reviewToken(JSON.parse(back['/data/tasks/mb/593/task.json'])), `938ba45e@${NOW - 30 * MIN}`)
+  })
+
   it('approve is the board’s finish (approve refuses a task in nosummary), and nothing merges yet', async () => {
     const calls = []
     const board = { finish: (id) => (calls.push(['finish', id]), { ok: true }), approve: () => assert.fail('no merge'), add: () => assert.fail('no post yet') }
@@ -329,16 +347,47 @@ describe('3b. a result that was ready to approve, then marked an error by a comp
     assert.deepEqual(calls, [['finish', 'mb/593']])
   })
 
-  it('the CLI: list keeps it, approve runs finish on the fake board', (t) => {
+  // A real worktree, so the CLI reads its HEAD and status as the board does.
+  function cliBoard(t) {
     const dir = mkdtempSync(join(tmpdir(), 'review-lost-'))
     t.after(() => rmSync(dir, { recursive: true, force: true }))
     copyFileSync(FAKE, join(dir, 'board.mjs'))
     chmodSync(join(dir, 'board.mjs'), 0o755)
-    writeFileSync(join(dir, 'board.json'), JSON.stringify({ list: [lostRow], details }))
+    const wt = join(dir, 'wt')
+    mkdirSync(wt)
+    const git = (...a) => spawnSync('git', ['-C', wt, '-c', 'user.name=t', '-c', 'user.email=t@example.com', ...a], { encoding: 'utf8' })
+    git('init', '-q')
+    writeFileSync(join(wt, 'a.txt'), 'a\n')
+    git('add', '.')
+    git('commit', '-qm', 'the result')
+    const head = git('rev-parse', 'HEAD').stdout.trim()
+    const det = { 'mb/593': { ...details['mb/593'], worktree: wt } }
+    const put = (list) => writeFileSync(join(dir, 'board.json'), JSON.stringify({ list, details: det }))
+    put([lostRow])
     const data = join(dir, 'data')
     mkdirSync(join(data, 'tasks', 'mb', '593'), { recursive: true })
-    for (const [f, text] of Object.entries(files)) writeFileSync(join(data, f.replace('/data/', '')), text)
-    const kit = (...a) => spawnSync(process.execPath, [KIT, 'review', ...a], { encoding: 'utf8', env: { ...process.env, HERDR_PROJECTS_BIN: join(dir, 'board.mjs'), HERDR_PROJECTS_DATA_DIR: data, XDG_STATE_HOME: join(dir, 'state'), FAKE_BOARD_DIR: dir } })
+    for (const [f, text] of Object.entries(files)) writeFileSync(join(data, f.replace('/data/', '')), text.replaceAll('938ba45e', head))
+    const kit = (...a) =>
+      spawnSync(process.execPath, [KIT, 'review', ...a], { encoding: 'utf8', env: { ...process.env, HERDR_PROJECTS_BIN: join(dir, 'board.mjs'), HERDR_PROJECTS_DATA_DIR: data, XDG_STATE_HOME: join(dir, 'state'), FAKE_BOARD_DIR: dir } })
+    return { dir, wt, kit, put }
+  }
+
+  it('the CLI: a sent-back result in error is not listed; a dirty worktree is not either', (t) => {
+    const { wt, kit, put } = cliBoard(t)
+    assert.equal(JSON.parse(kit('list', '--json').stdout).items[0]?.lost, true, 'unchanged since the review')
+    writeFileSync(join(wt, 'b.txt'), 'half done\n')
+    assert.deepEqual(JSON.parse(kit('list', '--json').stdout).items, [], 'uncommitted work: the agent’s turn')
+    rmSync(join(wt, 'b.txt'))
+    put([ready])
+    const b = kit('back', 'MB-593', 'make the bowl louder')
+    assert.equal(b.status, 0, b.stderr)
+    put([lostRow])
+    assert.deepEqual(JSON.parse(kit('list', '--json').stdout).items, [], 'sent back after this review: the agent’s turn, even with nothing changed yet')
+    assert.equal(kit('approve', 'MB-593').status, 1, 'and approve cannot finish it')
+  })
+
+  it('the CLI: list keeps it, approve runs finish on the fake board', (t) => {
+    const { dir, kit } = cliBoard(t)
     const l = kit('list', '--json')
     assert.equal(l.status, 0, l.stderr)
     assert.equal(JSON.parse(l.stdout).items[0]?.lost, true)
@@ -458,10 +507,50 @@ describe('the CEO approves only what needs no result review (agent-kit review ow
       assert.equal(r.status, 2, cmd)
       assert.match(r.stderr, /MB-7 is a result|maelstrom\/7 is a result/, cmd)
     }
+    // The kit's own approve calls the board's, and xargs adds ids the gate cannot see (review round 2).
+    for (const cmd of ['node vendor/agent-kit/bin/agent-kit.mjs review approve MB-7', 'agent-kit review approve --notes "ok" MB-7', 'npx agent-kit review approve "MB-7"']) {
+      const r = gate(t, cmd)
+      assert.equal(r.status, 2, cmd)
+      assert.match(r.stderr, /MB-7 is a result/, cmd)
+    }
+    for (const cmd of ['printf MB-7 | xargs herdr-projects approve', 'printf MB-7 | xargs herdr-projects approve MB-8', 'echo MB-7 | xargs -I{} herdr-projects approve {}']) {
+      const r = gate(t, cmd)
+      assert.equal(r.status, 2, cmd)
+      assert.match(r.stderr, /cannot be read/, cmd)
+    }
+    assert.equal(gate(t, 'node vendor/agent-kit/bin/agent-kit.mjs review approve MB-8').status, 0, 'the kit’s approve of a fix is the CEO’s')
+    assert.equal(gate(t, 'agent-kit review list').status, 0)
     assert.equal(gate(t, 'h=MB-7; herdr-projects approve "$h"').status, 2, 'an id built at run time is refused')
     assert.equal(gate(t, 'herdr-projects approve --anyway "MB-8"').status, 0, 'a quoted fix is still the CEO’s')
     assert.equal(gate(t, 'git commit -m "approve the bowl"').status, 0, 'a commit message that says approve')
     assert.equal(gate(t, 'echo "herdr-projects approve MB-7 is the owner’s"').status, 0, 'a mention is not an approve')
+  })
+})
+
+describe('a spec stage that ended its turn normally (review round 2, minor)', () => {
+  // MB-613: the agent wrote the spec and ended normally, so the board opened a spec-only PR and shows ready to approve.
+  const list = [{ id: 'mb/613', state: 'blocked', kind: 'permission', stage: 'approval', title: 'feat: channel accounts', msg: 'Review passed', pr: PR }]
+  const details = { 'mb/613': { task: { id: 'MB-613', title: 'feat: channel accounts', description: '' }, pr: PR, worktree: '/wt/613' } }
+  const note = 'research done, spec written. Nothing built.\n\nSpec ready for review: openspec/changes/add-channel-account-system/'
+  const files = { '/data/tasks/mb/613/closing-note.md': note }
+  const items = collect({ board: memBoard({ list, details }), data: '/data', ...io(files), now: NOW })
+
+  it('is a spec row, not a result the board would merge', () => {
+    assert.deepEqual(items.map((i) => [i.key, i.kind, Boolean(i.ready)]), [['MB-613', 'spec', false]])
+    assert.equal(items[0].specEnded, true)
+    assert.equal(specInNote('# Spec: a bowl ends a session\n\nProduct: tinybreath'), 'Spec ready for review: a bowl ends a session')
+    assert.equal(specInNote(pitch()), '', 'a result pitch is never a spec')
+    const t = render({ items, sel: 0, now: NOW }, 120, 50).map((l) => l.t).join('\n')
+    assert.match(t, /ended its turn instead of stopping, so the board opened a PR for the spec alone/)
+    assert.match(render({ items, sel: 0, now: NOW, mode: 'confirm' }, 120, 50).map((l) => l.t).join('\n'), /Approve MB-613 and start the build/)
+  })
+
+  it('its approve tells the agent to build; nothing merges', async () => {
+    const board = memBoard({ list, details })
+    const r = await approve(items[0], { board, sleep: async () => {} })
+    assert.equal(r.ok, true)
+    assert.deepEqual(board.calls.map((c) => c[0]), ['tell'])
+    assert.match(board.calls[0][2], /^Spec approved/)
   })
 })
 

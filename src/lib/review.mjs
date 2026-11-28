@@ -243,6 +243,19 @@ export const readyToApprove = (row) => row?.stage === 'approval' && row?.state =
 /** A closing note that is a result pitch (`# Result: …`, rules/result-review.md §2). */
 export const isPitch = (text = '') => /^#\s+result\b/im.test(String(text))
 
+/**
+ * A spec brief as a closing note (`# Spec: …`, or a note that says "Spec ready for review"), never a result pitch:
+ * the report line it stands for ("Spec ready for review: <line>"), else ''.
+ */
+export function specInNote(note = '') {
+  const n = String(note)
+  if (!n.trim() || isPitch(n)) return ''
+  const said = /\bspec ready for review\s*[:\-–—]\s*(.+)/i.exec(n)?.[1]?.trim()
+  const title = /^#\s+spec\s*[:\-–—]\s*(.+)$/im.exec(n)?.[1]?.trim()
+  if (!said && !title && !/\bspec ready\b/i.test(n)) return ''
+  return `Spec ready for review: ${title || said || 'the spec'}`
+}
+
 /** The line that marks a task whose result the owner reviews before it merges (rules/spec-review.md §1). */
 export const SPEC_MARKER = /^\s*[-*]?\s*spec review:\s*yes\b/im
 
@@ -301,10 +314,30 @@ export function approverOf(id, { board, data, readFile }) {
 }
 
 /**
- * Every task waiting for the owner's decision, newest first.
- * io: { board, data, readFile(path) → string|null, mtime(path) → ms|null, exists(path) → bool, list(dir) → names, now }
+ * Which board review a task's result is at: the head it saw and when. A send back is recorded against it
+ * (`backAt`), and the board's next review gives a new one.
  */
-export function collect({ board, data, readFile, mtime, exists = () => false, list = () => [], now = Date.now() }) {
+export const reviewToken = (task) => (task?.reviewedHead ? `${task.reviewedHead}@${task.review?.at ?? ''}` : '')
+
+/**
+ * Is a result that the board marked an error still the work its reviewer saw? The board's own test
+ * (herdr-projects 1.2.12, hook.rs missed_turn): the worktree's HEAD is the reviewed commit and nothing is
+ * uncommitted. A send back since that review (recorded by the kit when it sent one, `backAt`) means the
+ * agent's turn is unfinished even when nothing changed yet. Unknown (no worktree, git fails) is not unchanged.
+ */
+export function unchangedSinceReview(task, worktree, { headOf = () => null, backAt = '' } = {}) {
+  const token = reviewToken(task)
+  if (!token || (backAt && backAt === token)) return false
+  const at = worktree ? headOf(worktree) : null
+  return Boolean(at?.head) && at.head === task.reviewedHead && !at.dirty
+}
+
+/**
+ * Every task waiting for the owner's decision, newest first.
+ * io: { board, data, readFile(path) → string|null, mtime(path) → ms|null, exists(path) → bool, list(dir) → names,
+ *       headOf(worktree) → { head, dirty }|null, backAt(id) → the reviewToken a result was sent back at, or '', now }
+ */
+export function collect({ board, data, readFile, mtime, exists = () => false, list = () => [], headOf = () => null, backAt = () => '', now = Date.now() }) {
   const items = []
   for (const row of board.list()) {
     if (!row?.id || row.stage === 'done' || row.archivedAt) continue
@@ -334,10 +367,23 @@ export function collect({ board, data, readFile, mtime, exists = () => false, li
     }
     // Finished work the board brought as "ready to approve", then marked an error: an idle compaction after
     // the result was ready reads as a turn without a summary (stage nosummary). No report was filed (the agent
-    // ended normally), but the board's own review is in its file: reviewedHead and the PR.
+    // ended normally), but the board's own review is in its file: reviewedHead and the PR. The board keeps both
+    // after a send back too (actions/talk.rs), so this is only a candidate, confirmed below by the worktree.
     const lost = !stopped && row.state === 'error' && row.stage === 'nosummary' && Boolean(taskFile().reviewedHead) && Boolean(taskFile().pr || row.pr)
     // Finished work the board brings as "ready to approve": a result when the owner reviews it, else the CEO's.
-    const ready = !stopped && readyToApprove(row)
+    let ready = !stopped && readyToApprove(row)
+    // A spec stage whose agent ended its turn instead of stopping: the board opened a PR and brings it as ready
+    // to approve, but its approve would merge a spec without the build. It is a spec row: a tells it to build.
+    let specEnded = false
+    if (ready) {
+      const s = specInNote(readFile(join(dir, 'closing-note.md')) ?? '')
+      if (s) {
+        ready = false
+        stopped = 'spec'
+        msg = s
+        specEnded = true
+      }
+    }
     const planReady = !stopped && !ready && row.stage === 'plan'
     let maybeStuck = false
     if (!stopped && !ready && !lost && !planReady) {
@@ -350,6 +396,9 @@ export function collect({ board, data, readFile, mtime, exists = () => false, li
     const d = board.details(row.id)
     if (!d?.task) continue
     if ((ready || lost) && !ownersResult({ note: readFile(note) ?? '', description: `${taskFile().description ?? ''}\n${d.task.description ?? ''}`, said: taskFile().said ?? '' })) continue
+    // Still the work the board reviewed, and not sent back since: else it is the agent's unfinished turn, and
+    // the board's finish would ship it half done. It stays with the agent (the board shows its error).
+    if (lost && !unchangedSinceReview(taskFile(), d.worktree || taskFile().worktree, { headOf, backAt: backAt(row.id) })) continue
     const base = {
       id: row.id,
       key: d.task.id || row.id,
@@ -362,6 +411,7 @@ export function collect({ board, data, readFile, mtime, exists = () => false, li
       prUrl: prOf(d) || row.pr || '',
       worktree: d.worktree ?? '',
       ...(boardSays ? { boardSays } : {}),
+      ...(specEnded ? { specEnded } : {}),
     }
     if (maybeStuck) {
       if (stuck(d)) items.push({ ...base, kind: 'stuck', brief: d.plan?.text ?? '', at: d.plan?.approvedAt })
@@ -369,13 +419,13 @@ export function collect({ board, data, readFile, mtime, exists = () => false, li
     }
     if (lost) {
       const brief = readFile(note) ?? ''
-      items.push({ ...base, kind: 'result', lost: true, msg: '', boardSays: row.msg ?? '', prUrl: base.prUrl || taskFile().pr || '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
+      items.push({ ...base, kind: 'result', lost: true, reviewToken: reviewToken(taskFile()), msg: '', boardSays: row.msg ?? '', prUrl: base.prUrl || taskFile().pr || '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
       continue
     }
     if (ready) {
       const brief = readFile(note) ?? ''
       // The board's own words when the review failed or a check is red: shown, never hidden.
-      items.push({ ...base, kind: 'result', ready: true, msg: '', boardSays: row.msg ?? '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
+      items.push({ ...base, kind: 'result', ready: true, reviewToken: reviewToken(taskFile()), msg: '', boardSays: row.msg ?? '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
       continue
     }
     if (planReady) {
@@ -834,6 +884,7 @@ function detailBlocks(it, state, W, now) {
   if (it.github) for (const l of wrap(`Its PR also waits for your approval on GitHub (${it.github}): approve the PR there first, then the result here (the board merges it).`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   if (it.ready) for (const l of wrap(`Ready to approve on the board${it.boardSays ? `: ${it.boardSays}` : ''}`, W - 1)) head.push({ t: ` ${l}`, s: 'dim' })
   else if (it.lost) for (const l of wrap(`The board marked it an error after it was ready to approve (${it.boardSays || 'no message'}). a puts it back on the board's finish line (herdr-projects finish): it returns as ready to approve, and nothing merges before your next a.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  else if (it.specEnded) for (const l of wrap(`Its agent ended its turn instead of stopping, so the board opened a PR for the spec alone. a tells it to build (nothing merges), b sends the spec back.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   else if (it.boardSays) for (const l of wrap(`The board marked it an error (${it.boardSays}), but its last report stands: approve or send back as usual.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   blocks.push(head)
   const links = it.links ?? []

@@ -77,6 +77,7 @@ export function notes(it) {
   if (it.github) out.push({ text: `Its PR also waits for your approval on GitHub (${it.github}): approve the PR there first, then the result here (the board merges it).`, level: "warn" });
   if (it.ready) out.push({ text: `Ready to approve on the board${it.boardSays ? `: ${it.boardSays}` : ""}.`, level: "dim" });
   else if (it.lost) out.push({ text: `The board marked it an error after it was ready to approve (${it.boardSays || "no message"}). a puts it back on the board's finish line: it returns as ready to approve, and nothing merges before your next a.`, level: "warn" });
+  else if (it.specEnded) out.push({ text: "Its agent ended its turn instead of stopping, so the board opened a PR for the spec alone. a tells it to build (nothing merges), b sends the spec back.", level: "warn" });
   else if (it.boardSays) out.push({ text: `The board marked it an error (${it.boardSays}), but its last report stands: approve or send back as usual.`, level: "warn" });
   if (it.change) out.push({ text: `OpenSpec change: ${it.change}`, level: "dim" });
   if (it.briefFile) out.push({ text: `Brief file: ${it.briefFile}`, level: "dim" });

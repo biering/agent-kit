@@ -345,14 +345,18 @@ task (it watches the board's `tasks/` folder) and every 30 s.
 archives its change and ends its turn. The board checks, pushes, opens the PR, runs its reviewer and
 shows "ready to approve"; the list builds the result row from that. Every other ready-to-approve task (a
 fix, an SEO page, content, a chore) stays the CEO's, and the CEO's merge gate blocks his
-`herdr-projects approve` of a result (`agent-kit review owner <id>`: exit 0 when it is the owner's).
+`herdr-projects approve` or `agent-kit review approve` of a result (`agent-kit review owner <id>`: exit 0
+when it is the owner's). A spec stage that ended its turn instead of stopping is shown as a spec row: `a`
+tells it to build, nothing merges.
 
 **False errors.** When a spec or design stop is followed by an idle compaction, the board reads the
 compaction as a turn without a summary and marks the task an error ("Conversation compacted"). The row
 stays: the list reads the agent's last real report from the task's own file and shows the board's word
 beside it. A result that was already ready to approve has no such report (its agent ended normally), so
 it is kept from the board's own review in that file (its reviewed head and PR); there `a` runs the
-board's `finish`, which brings it back as ready to approve, and the next `a` merges it. The fix belongs in the board (herdr-projects): its worker settings file could turn
+board's `finish`, which brings it back as ready to approve, and the next `a` merges it. That holds only
+while its worktree is still at the reviewed commit, clean, and the list has not sent it back since that
+review; otherwise it is the agent's unfinished turn and is not listed. The fix belongs in the board (herdr-projects): its worker settings file could turn
 `idleCompaction` off, or its turn-end could skip a compaction.
 
 **Notifications.** A herdr notification arrives when a spec, a design, a plan or a result becomes ready,
