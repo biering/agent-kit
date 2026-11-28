@@ -6,7 +6,8 @@
  *   agent-kit review prs [--json]          only the PRs (open, not draft, where your approval blocks), across repos
  *   agent-kit review pane                  the review list pane (the plugin runs it)
  *   agent-kit review open-pane             open that pane below the work board (else beside the focused pane), or focus it
- *   agent-kit review approve <id> [--notes "…"]   approve: a spec or design builds, a result ships (repairs a stuck plan)
+ *   agent-kit review approve <id> [--notes "…"]   approve: a spec or design builds, a result merges (the board's approve) and its drafts post after (repairs a stuck plan)
+ *   agent-kit review owner <id>            exit 0 when the owner approves this task's result (not the CEO), 1 when not, 2 unknown
  *   agent-kit review back <id> <text…>     send the spec, design or result back to its agent with these words
  *   agent-kit review annotate <id>         the brief in Plannotator, in a new tab of the CEO's workspace
  *   agent-kit review doc                   what runs in that tab (the plugin's `doc` pane)
@@ -17,7 +18,7 @@
  * agent-kit.config.json, so it does not load config.mjs. <id> is the board's (`repo/n` or `KEY-n`).
  */
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -27,8 +28,10 @@ import { herdr, notify } from './lib/herdr.mjs'
 import {
   age,
   approve,
+  approverOf,
   briefDoc,
   boardBin,
+  changeOf,
   boardClient,
   ceoWorkspace,
   collect,
@@ -36,7 +39,7 @@ import {
   fromAnnotation,
   merge,
   paneSpot,
-  sendBack,
+  sendBack as sendBackTo,
   toNotify,
 } from './lib/review.mjs'
 import { check, passes } from './lib/review-check.mjs'
@@ -99,7 +102,31 @@ const data = dataDir(env, home)
 const board = boardClient(boardBin(env, home, existsSync), (bin, a) =>
   spawnSync(bin, a, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }),
 )
-const waiting = () => collect({ board, data, readFile, mtime })
+const list = (dir) => {
+  try {
+    return readdirSync(dir)
+  } catch {
+    return []
+  }
+}
+/** A worktree's HEAD and whether anything is uncommitted, as the board reads it (git rev-parse, status --porcelain). */
+const headOf = (wt) => {
+  if (!wt || !existsSync(wt)) return null
+  const h = spawnSync('git', ['-C', wt, 'rev-parse', 'HEAD'], { encoding: 'utf8' })
+  const st = spawnSync('git', ['-C', wt, 'status', '--porcelain'], { encoding: 'utf8' })
+  if (h.status !== 0 || st.status !== 0) return null
+  return { head: h.stdout.trim(), dirty: st.stdout.trim() !== '' }
+}
+/** The results the owner sent back, each at the board review it answered (reviewToken): a later error is his unfinished turn. */
+const backsFile = () => join(STATE, 'sent-back.json')
+const backAt = (id) => readJson(backsFile(), {})[id] ?? ''
+/** Send back, and for a result record which review it answered. Every send back goes through here (CLI, pane, Plannotator, the app mod). */
+function sendBack(b, it, text) {
+  const r = sendBackTo(b, it, text)
+  if (r.ok && it.kind === 'result' && it.reviewToken) writeJson(backsFile(), { ...readJson(backsFile(), {}), [it.id]: it.reviewToken })
+  return r
+}
+const waiting = () => collect({ board, data, readFile, mtime, exists: existsSync, list, headOf, backAt })
 const run = promisify(execFile)
 const gh = async (a) => (await run('gh', a, { maxBuffer: 32 * 1024 * 1024, timeout: 60 * 1000 })).stdout
 const git = (root) => {
@@ -156,6 +183,13 @@ function approveDetached(id, notes = '') {
 async function cmdApprove() {
   const notes = option('notes') ?? ''
   const it = find(args[0])
+  // A result whose PR also waits on GitHub is approved there first (the board's merge would fail).
+  if (it.kind === 'result' && it.prUrl) {
+    try {
+      const pr = (await waitingPrs()).items.find((p) => p.url === it.prUrl)
+      if (pr) it.github = pr.key
+    } catch {}
+  }
   status(it.id, { short: 'wait…', line: it.kind === 'stuck' ? 'Repairing: stop, then delegate…' : 'Approving…' })
   const r = await approve(it, {
     board,
@@ -168,8 +202,8 @@ async function cmdApprove() {
     },
   })
   if (r.ok) {
-    const line = { told: 'Approved: the agent builds it now.', shipping: 'Approved: the agent ships it now.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
-    status(it.id, { ok: true, short: r.how === 'shipping' ? 'ship' : 'build', line })
+    const line = { told: 'Approved: the agent builds it now.', finishing: 'Back on the board: it returns as ready to approve, then approve it.', merging: r.posts ? 'Approved: the board merges it; the drafts post after the merge.' : r.warn ? `Approved: the board merges it; ${r.warn}.` : 'Approved: the board merges it.', built: 'Approved: building.', repaired: 'Building (it was stuck: stopped and delegated again).' }[r.how]
+    status(it.id, { ok: true, short: r.how === 'merging' ? 'merge' : r.how === 'finishing' ? 'finish' : 'build', line })
     console.log(line)
   } else {
     status(it.id, { ok: false, short: 'fail', line: `Not building: ${r.error}` })
@@ -289,7 +323,7 @@ function cmdDoc() {
   const what = fromAnnotation(readJson(result, null))
   if (what.action === 'approve') {
     approveDetached(it.id, what.notes)
-    return pause(`${it.key}: approved. ${it.kind === 'result' ? 'It ships now' : 'The build starts'}; the review list shows how it goes.`)
+    return pause(`${it.key}: approved. ${it.kind === 'result' ? 'The board merges it' : 'The build starts'}; the review list shows how it goes.`)
   }
   if (what.action === 'back') {
     const b = sendBack(board, it, what.text)
@@ -340,7 +374,7 @@ function cmdNotify() {
   const skipped = readJson(skipsFile, {})
   for (const it of toNotify(items, seen)) {
     if (skipped[it.id] === it.hash) continue
-    notify({ spec: 'Spec ready for review', result: 'Result ready for review', plan: 'Plan ready for design review' }[it.kind] ?? 'Design ready for review', `${it.key} ${it.title}`)
+    notify({ spec: 'Spec ready for review', result: 'Result ready to approve', plan: 'Plan ready for design review' }[it.kind] ?? 'Design ready for review', `${it.key} ${it.title}`)
   }
   writeJson(seenFile, Object.fromEntries(items.map((it) => [it.id, it.hash])))
 }
@@ -359,13 +393,32 @@ function cmdCheck() {
   if (text === null) die(`${file}: cannot read it`)
   const k = kind || (/^#\s+result\b/im.test(text) ? 'result' : /^#\s+spec\b/im.test(text) ? 'spec' : '')
   if (!k) die(`${file}: say --kind spec or --kind result (the title starts with neither "# Spec" nor "# Result")`)
-  const findings = check(k, text)
+  // Run in the repo's root (or the worktree): a change still under openspec/changes/ is not archived yet.
+  const change = changeOf(text)
+  const findings = check(k, text, { unarchived: k === 'result' && Boolean(change) && existsSync(join('openspec', 'changes', change)) })
   for (const f of findings) console.log(`${f.level === 'error' ? 'missing' : 'note   '}  ${f.what}`)
   if (!passes(findings)) process.exit(1)
   console.log(`ok: the ${k === 'spec' ? 'brief' : 'pitch'} has what the owner needs to decide${findings.length ? ' (notes above)' : ''}.`)
 }
 
+/**
+ * Who approves this task's finished work (the merge gate asks before the CEO runs `herdr-projects approve`):
+ * exit 0 and "owner" when it is a result the owner reviews in the review list, 1 and "ceo" when not, 2 when
+ * the board cannot tell.
+ */
+function cmdOwner() {
+  try {
+    const r = approverOf(args[0], { board, data, readFile })
+    console.log(r.who)
+    process.exit(r.who === 'owner' ? 0 : 1)
+  } catch (e) {
+    console.error(e.message)
+    process.exit(2)
+  }
+}
+
 const commands = {
+  owner: cmdOwner,
   check: cmdCheck,
   list: cmdList,
   prs: cmdPrs,

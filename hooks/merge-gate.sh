@@ -10,6 +10,8 @@
 # Those are blocked outright: file `pnpm linear ask approval …` and the owner
 # merges them. Everything else merges only with every check green.
 #
+# Also blocks the CEO's `herdr-projects approve` (or `agent-kit review approve`) of a result the owner reviews (agent-kit review owner).
+#
 # Also blocks the commands that change live prices: `pnpm iap … --apply` and
 # `pnpm release … --price … --apply`.
 #
@@ -38,6 +40,35 @@ if has "(app-store-iap\.mjs|${PNPM}iap)[^;|&]*--apply" \
   || has "(app-store-release\.mjs|${PNPM}release)[^;|&]*--apply[^;|&]*--price"; then
   echo "BLOCKED: this changes a live App Store price, which the owner approves (ops/CEO.md). Run it without --apply, then file \`pnpm linear ask approval\` with the report." >&2
   exit 2
+fi
+
+# The board's approve merges finished work. A result the owner reviews (a pitch, a task flagged Spec review
+# or Design review) is his to approve in the review list, never the CEO's (rules/result-review.md §1).
+# hooks/merge-gate-parse.mjs --approves reads the command like the shell does: quotes, flags such as
+# --anyway, bash -c, eval, wrappers and pipes into a shell, the kit's own `agent-kit review approve` (it calls the
+# board's), and ids fed through xargs; an echo or a commit message is not an approve.
+if printf '%s\n' "$CMD" | grep -q 'approve'; then
+  if ! command -v node >/dev/null 2>&1; then
+    echo "BLOCKED: node is needed to read this command for the approve gate." >&2
+    exit 2
+  fi
+  APPROVES="$(printf '%s' "$CMD" | node "$(dirname "$0")/merge-gate-parse.mjs" --approves 2>/dev/null)" || {
+    echo "BLOCKED: could not read this command for the approve gate. Approve one task per command: herdr-projects approve <id>." >&2
+    exit 2
+  }
+  while IFS=$'\x1f' read -r kind id; do
+    [ -n "$kind" ] || continue
+    if [ "$kind" = UNSAFE_APPROVE ]; then
+      echo "BLOCKED: a board approve whose task cannot be read ($id). Approve one task per command, its id written out: herdr-projects approve <id>." >&2
+      exit 2
+    fi
+    who="$(node "$(dirname "$0")/../bin/agent-kit.mjs" review owner "$id" 2>&1)"
+    case $? in
+      0) echo "BLOCKED: $id is a result: the owner approves it in the review list (rules/result-review.md). Leave it there." >&2; exit 2 ;;
+      1) ;;
+      *) echo "BLOCKED: cannot tell who approves $id ($who). Leave it for the owner's review list." >&2; exit 2 ;;
+    esac
+  done <<<"$APPROVES"
 fi
 
 # Which merges does the command really run? hooks/merge-gate-parse.mjs reads it

@@ -1,13 +1,18 @@
 ---
 name: spec
 description: >-
-  Plan a feature before any code: an OpenSpec change (proposal, WHEN/THEN scenarios, design, tasks), designs as private Artifacts when screens change, and one brief the owner approves in the review list. Use for a task with 'Spec review: yes', 'write the spec', 'plan this feature', '/spec'.
+  Plan bigger work before any code: an OpenSpec change (score, proposal, WHEN/THEN scenarios, design, tasks), designs as private Artifacts when screens change, and the owner's approval in Plannotator. Use, unasked, when a new feature, a bigger improvement or a bigger bugfix comes in (the dev-loop sends it here), for a task with 'Spec review: yes', 'write the spec', 'plan this feature', '/spec'.
 ---
 
 # Spec
 
 Read the repo's `AGENTS.md` and `docs/agent-kit/spec.md` first; they win where they differ from this
 skill. The rule this skill carries out is the kit's `rules/spec-review.md`.
+
+**Nobody has to ask for this.** When a new feature, a bigger improvement or a bigger bugfix comes in
+(the test is `rules/spec-review.md` §1), the `dev-loop` and `bugfix` skills start here on their own,
+whether the work came as a board task, a ticket or a chat message. A `Spec review: yes` line only
+forces it for work the test would let through.
 
 The job: turn a task into a spec the owner can approve in two minutes, without opening a file. You
 write the OpenSpec change, make the designs when screens change, write one brief, and stop. **You
@@ -18,10 +23,12 @@ owner's yes, in this same conversation.
 
 - The task runs in auto mode, not the board's plan mode (plan mode cannot write files or publish an
   artifact). If you find yourself in plan mode, report that and stop.
-- OpenSpec is a devDependency of the repo. Check with `npx --no-install openspec --version`. Missing:
-  add it the repo's way (`pnpm add -D @fission-ai/openspec`, `npm i -D @fission-ai/openspec`), then
-  `npx openspec init --tools none`. That one devDependency is the only file outside `openspec/` you
-  may touch, and only when it is missing. Never `openspec install`, never a `curl … | sh` installer.
+- OpenSpec is a devDependency of the repo, pinned exactly. Check with `npx --no-install openspec --version`.
+  Missing: add it the repo's way (`pnpm add -D -E @fission-ai/openspec@2.0.0`,
+  `npm i -D -E @fission-ai/openspec@2.0.0`), then `npx openspec init --tools none`. That one
+  devDependency and its lockfile are the only files outside `openspec/` you may touch, and only when it
+  is missing. Never `openspec install`, never a `curl … | sh` installer. The pin is the kit's
+  (`rules/spec-review.md`, Setup); a newer release goes in on purpose, never as a side effect.
 - Set `OPENSPEC_TELEMETRY=0` and `OPENSPEC_NO_UPDATE_CHECK=1` for every `openspec` call.
 
 ## 1. Understand before writing
@@ -46,7 +53,7 @@ Then write, in `openspec/changes/<name>/`:
 
 | File | What it holds |
 |---|---|
-| `proposal.md` | **Why** (one or two sentences), **What Changes** (bullets, `BREAKING` marked), **Capabilities** (new and modified, each becomes a spec file), **Impact** (code, APIs, data, dependencies) |
+| `proposal.md` | The `value-score` skill's five lines first, above everything (`agent-kit plan-review` refuses a proposal without them). Then **Why** (one or two sentences), **What Changes** (bullets, `BREAKING` marked), **Capabilities** (new and modified, each becomes a spec file), **Impact** (code, APIs, data, dependencies) |
 | `specs/<capability>/spec.md` | `## ADDED` / `## MODIFIED` / `## REMOVED Requirements`; each `### Requirement:` has at least one `#### Scenario:` with `- **WHEN** …` and `- **THEN** …` lines. Behavior a user or another system can observe, no function names |
 | `design.md` | Context, Goals and Non-Goals, Decisions (each with the option you left out and why), Risks and Trade-offs |
 | `tasks.md` | `## 1. <group>` with `- [ ] 1.1 <task>` checkboxes, in build order, each small enough for one sitting; mark which PR each group lands in when it is more than one |
@@ -66,7 +73,9 @@ design is not ready: the owner decides on what he sees.
 
 ## 4. The brief
 
-Write it into the task's closing note (the board's `closing-note.md`, the path the task's rules give).
+In a board task, write it into the task's closing note (the board's `closing-note.md`, the path the
+task's rules give). Outside the board there is no closing note: the owner reads the change itself, so
+`proposal.md` also carries the design links, the complexity and what is open, and this section is done.
 The form is in `rules/spec-review.md` §2; every section is required:
 
 | Section | It holds |
@@ -86,7 +95,9 @@ Run the `unslop` skill on the brief (no em dashes, specifics first), then:
 node vendor/agent-kit/bin/agent-kit.mjs review check <closing-note.md> --kind spec   # exit 0 to stop
 ```
 
-## 5. Stop
+## 5. Stop for the owner
+
+**A board task** (it has a herdr-projects id) stops with the report; the review list opens the brief:
 
 ```bash
 herdr-projects report <id> --state blocked --kind permission --msg "Spec ready for review: <one line>"
@@ -94,11 +105,26 @@ herdr-projects report <id> --state blocked --kind permission --msg "Spec ready f
 
 The one line is what the owner reads in the review list: what the user gets, in under 70 characters.
 
+**Any other session** (a chat, a ticket, a Claude Code remote-control session) opens the change itself
+in Plannotator, over the owner's tailnet (README "Plan review"):
+
+```bash
+node vendor/agent-kit/bin/agent-kit.mjs plan-review openspec/changes/<name> --detach /tmp/plan-review-<name>
+```
+
+Give the owner the printed `review:` address and wait for `<prefix>.exit`. In a session that reaps
+detached processes (a Claude Code remote-control session does), run the same command without
+`--detach` as a tracked background task instead. Exit 0 is the approval, 1 a send back (the feedback
+is the decision JSON), 3 a dismissed tab: open it again.
+
 ## 6. The answer
 
 - **Spec approved**: build it now, from `tasks.md`, ticking each box as it lands (the `dev-loop`
-  skill). When the PR is open, the result review starts (the `result-pitch` skill).
+  skill). When it is built, the result review starts (the `result-pitch` skill): the pitch, the archive,
+  then the turn ends normally and the board opens the PR.
 - **Spec sent back**: revise the same change and the same artifacts, write the brief again, check,
   stop again. Still no code.
-- **After it lands on `main`**: `npx openspec archive <name> --yes` on a new branch from the updated
-  `main`, one commit, a chore PR (`rules/spec-review.md` §5).
+- **Before the turn that brings the result ends**: `node vendor/agent-kit/bin/agent-kit.mjs spec archive <name>`,
+  as a commit of its own on the branch (`rules/spec-review.md` §5), so the PR the owner approves already
+  has it. It refuses while `tasks.md` has an unticked task: OpenSpec itself would archive it without
+  asking. A send back that moves the spec: `git revert` that commit first.

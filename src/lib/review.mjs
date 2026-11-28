@@ -12,8 +12,13 @@
  *           change) and stopped. Approve is a `tell`: build it now, in the same conversation.
  *   design  "Design ready": the agent made the artifacts with its usual access and stopped with a report
  *           whose message starts with "Design ready". Approve and send back are a `tell`.
- *   result  "Result ready": the work is built, its PR is open, and the pitch (video, screenshots,
- *           distribution drafts) is the closing note. Approve is a `tell`: ship it.
+ *   result  the board's "ready to approve" for work the owner reviews (a result pitch in the closing note,
+ *           or a task flagged for a spec or design review): the agent wrote the pitch and ended its turn, the
+ *           board opened the PR and ran its reviewer. Approve is the board's `approve` (it merges); the
+ *           distribution drafts go out as a task of their own after the merge. Every other ready-to-approve
+ *           (a fix, an SEO page, content, a chore) is the CEO's and does not show here.
+ * A spec or design stop that the board then marked an error (an idle compaction read as a turn without a
+ * summary) keeps its row: its last real report is read from the task's own file (lastReport).
  *   plan    "Plan ready" (stage plan, plan.approve you) whose plan is a design brief. Approve is the
  *           board's approve, then a check that the build really starts.
  *   stuck   approved, but no build runs: the yes was given, `plan.built` never came, the worktree is still
@@ -22,7 +27,7 @@
  */
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { check } from './review-check.mjs'
+import { check, section } from './review-check.mjs'
 
 /** A Claude Artifact link, matched whole: https://claude.ai/artifact/<id> (or /code/artifact/<id>). */
 export const ARTIFACT = /https:\/\/claude\.ai\/(?:code\/)?artifact\/[A-Za-z0-9_-]+/g
@@ -197,7 +202,15 @@ export function boardClient(bin, run) {
     tell: (id, text) => call(['tell', id, text]),
     stop: (id) => call(['stop', id]),
     delegate: (id, extra = []) => call(['delegate', id, ...extra]),
+    add: (title, extra = []) => call(['add', title, ...extra]),
+    finish: (id) => call(['finish', id]),
   }
+}
+
+/** A result's one line: its pitch's title after `# Result:`, else the task's title. */
+export function pitchLine(brief = '', fallback = '') {
+  const m = /^#\s+result\s*[:\-–—]?\s*(.+)$/im.exec(String(brief))
+  return m?.[1]?.trim() || fallback
 }
 
 /**
@@ -221,41 +234,198 @@ export function stuck(details) {
 const folder = (data, id) => join(data, 'tasks', ...String(id).split('/'))
 
 /**
- * Every task waiting for the owner's decision, newest first.
- * io: { board, data, readFile(path) → string|null, mtime(path) → ms|null, now }
+ * The board's "ready to approve" (herdr-projects 1.2.12, crates/flow/src/shown/states.rs, awaits_yes): the agent
+ * ended its turn, the board ran its check, pushed, opened the PR and ran its reviewer, and the merge waits for one
+ * yes. A list row shows it as stage `approval`, state `blocked`, kind `permission`.
  */
-export function collect({ board, data, readFile, mtime, now = Date.now() }) {
+export const readyToApprove = (row) => row?.stage === 'approval' && row?.state === 'blocked'
+
+/** A closing note that is a result pitch (`# Result: …`, rules/result-review.md §2). */
+export const isPitch = (text = '') => /^#\s+result\b/im.test(String(text))
+
+/**
+ * A spec brief as a closing note (`# Spec: …`, or a note that says "Spec ready for review"), never a result pitch:
+ * the report line it stands for ("Spec ready for review: <line>"), else ''.
+ */
+export function specInNote(note = '') {
+  const n = String(note)
+  if (!n.trim() || isPitch(n)) return ''
+  const said = /\bspec ready for review\s*[:\-–—]\s*(.+)/i.exec(n)?.[1]?.trim()
+  const title = /^#\s+spec\s*[:\-–—]\s*(.+)$/im.exec(n)?.[1]?.trim()
+  if (!said && !title && !/\bspec ready\b/i.test(n)) return ''
+  return `Spec ready for review: ${title || said || 'the spec'}`
+}
+
+/** The line that marks a task whose result the owner reviews before it merges (rules/spec-review.md §1). */
+export const SPEC_MARKER = /^\s*[-*]?\s*spec review:\s*yes\b/im
+
+/**
+ * Does this finished work wait for the owner's result review, or is it the CEO's to approve? The owner's: a
+ * result pitch, a task flagged `Spec review: yes` or `Design review: yes`, or one that wrote an OpenSpec change.
+ * Everything else (a fix, an SEO page, content, a chore) is the CEO's (rules/result-review.md §1).
+ */
+export function ownersResult({ note = '', description = '', said = '' } = {}) {
+  return isPitch(note) || SPEC_MARKER.test(description) || isDesign(description) || Boolean(changeOf(`${note}\n${said}`))
+}
+
+/** The board's PR for a task: `details` gives it as a URL (1.2.12), older ones as { url }. */
+export const prOf = (d) => (typeof d?.pr === 'string' ? d.pr : d?.pr?.url) || ''
+
+/**
+ * The agent's own last report, kept in its task.json as `blocked: { at, kind, msg }` (actions/filing.rs) until the
+ * next message to it (actions/talk.rs). It outlives a turn end the board then reads wrong: an idle compaction
+ * after the stop ("Conversation compacted") is taken as a turn that ended without a summary, so the row reads
+ * state `error`, stage `nosummary`, with the screen's last lines as its message (finish/turn_ended.rs).
+ */
+export function lastReport(task) {
+  const b = task?.blocked
+  return b && typeof b.msg === 'string' && b.msg.trim() ? { at: b.at ?? null, kind: b.kind ?? '', msg: b.msg } : null
+}
+
+/**
+ * The board row for `repo/n` or `KEY-n` (any case), or null. A key is the board's own (details answers it as
+ * `task.id`), so a row with the same number is asked which key it has.
+ */
+export function findRow(board, id, rows = board.list()) {
+  const want = String(id ?? '').trim().toLowerCase()
+  if (!want) return null
+  const direct = rows.find((r) => String(r.id).toLowerCase() === want)
+  if (direct) return direct
+  const n = /^[a-z][a-z0-9]*-(\d+)$/i.exec(want)?.[1]
+  if (!n) return null
+  for (const r of rows.filter((r) => String(r.id).endsWith(`/${n}`))) if (String(board.details(r.id)?.task?.id ?? '').toLowerCase() === want) return r
+  return null
+}
+
+/**
+ * Who approves a task's finished work: 'owner' (a result review, rules/result-review.md §1) or 'ceo'.
+ * io: { board, data, readFile }. Throws when the task is not on the board.
+ */
+export function approverOf(id, { board, data, readFile }) {
+  const row = findRow(board, id)
+  if (!row) throw new Error(`${id} is not on the work board`)
+  const dir = folder(data, row.id)
+  let task = {}
+  try {
+    task = JSON.parse(readFile(join(dir, 'task.json')) ?? '{}') ?? {}
+  } catch {}
+  const note = readFile(join(dir, 'closing-note.md')) ?? ''
+  return { id: row.id, who: ownersResult({ note, description: task.description ?? '', said: task.said ?? '' }) ? 'owner' : 'ceo' }
+}
+
+/**
+ * Which board review a task's result is at: the head it saw and when. A send back is recorded against it
+ * (`backAt`), and the board's next review gives a new one.
+ */
+export const reviewToken = (task) => (task?.reviewedHead ? `${task.reviewedHead}@${task.review?.at ?? ''}` : '')
+
+/**
+ * Is a result that the board marked an error still the work its reviewer saw? The board's own test
+ * (herdr-projects 1.2.12, hook.rs missed_turn): the worktree's HEAD is the reviewed commit and nothing is
+ * uncommitted. A send back since that review (recorded by the kit when it sent one, `backAt`) means the
+ * agent's turn is unfinished even when nothing changed yet. Unknown (no worktree, git fails) is not unchanged.
+ */
+export function unchangedSinceReview(task, worktree, { headOf = () => null, backAt = '' } = {}) {
+  const token = reviewToken(task)
+  if (!token || (backAt && backAt === token)) return false
+  const at = worktree ? headOf(worktree) : null
+  return Boolean(at?.head) && at.head === task.reviewedHead && !at.dirty
+}
+
+/**
+ * Every task waiting for the owner's decision, newest first.
+ * io: { board, data, readFile(path) → string|null, mtime(path) → ms|null, exists(path) → bool, list(dir) → names,
+ *       headOf(worktree) → { head, dirty }|null, backAt(id) → the reviewToken a result was sent back at, or '', now }
+ */
+export function collect({ board, data, readFile, mtime, exists = () => false, list = () => [], headOf = () => null, backAt = () => '', now = Date.now() }) {
   const items = []
   for (const row of board.list()) {
     if (!row?.id || row.stage === 'done' || row.archivedAt) continue
-    const stopped = row.state === 'blocked' ? kindOf(row.msg ?? '') : null
-    const planReady = !stopped && row.stage === 'plan'
-    let maybeStuck = false
-    if (!stopped && !planReady) {
-      // Only a task whose own file says "approved, not built" is worth a details call.
-      const raw = readFile(join(folder(data, row.id), 'task.json'))
+    const dir = folder(data, row.id)
+    let task = null
+    const taskFile = () => {
+      if (task) return task
       try {
-        const p = raw ? JSON.parse(raw).plan : null
-        maybeStuck = Boolean(p?.approvedAt && !p?.built && p?.locked)
-      } catch {}
+        task = JSON.parse(readFile(join(dir, 'task.json')) ?? 'null') ?? {}
+      } catch {
+        task = {}
+      }
+      return task
+    }
+    let msg = row.msg ?? ''
+    let stopped = row.state === 'blocked' && !readyToApprove(row) ? kindOf(msg) : null
+    // A stop the board then marked an error: its last real report still stands (see lastReport).
+    let boardSays = ''
+    if (!stopped && row.state === 'error') {
+      const r = lastReport(taskFile())
+      const k = r ? kindOf(r.msg) : null
+      if (k) {
+        stopped = k
+        boardSays = msg
+        msg = r.msg
+      }
+    }
+    // Finished work the board brought as "ready to approve", then marked an error: an idle compaction after
+    // the result was ready reads as a turn without a summary (stage nosummary). No report was filed (the agent
+    // ended normally), but the board's own review is in its file: reviewedHead and the PR. The board keeps both
+    // after a send back too (actions/talk.rs), so this is only a candidate, confirmed below by the worktree.
+    const lost = !stopped && row.state === 'error' && row.stage === 'nosummary' && Boolean(taskFile().reviewedHead) && Boolean(taskFile().pr || row.pr)
+    // Finished work the board brings as "ready to approve": a result when the owner reviews it, else the CEO's.
+    let ready = !stopped && readyToApprove(row)
+    // A spec stage whose agent ended its turn instead of stopping: the board opened a PR and brings it as ready
+    // to approve, but its approve would merge a spec without the build. It is a spec row: a tells it to build.
+    let specEnded = false
+    if (ready) {
+      const s = specInNote(readFile(join(dir, 'closing-note.md')) ?? '')
+      if (s) {
+        ready = false
+        stopped = 'spec'
+        msg = s
+        specEnded = true
+      }
+    }
+    const planReady = !stopped && !ready && row.stage === 'plan'
+    let maybeStuck = false
+    if (!stopped && !ready && !lost && !planReady) {
+      // Only a task whose own file says "approved, not built" is worth a details call.
+      const p = taskFile().plan
+      maybeStuck = Boolean(p?.approvedAt && !p?.built && p?.locked)
       if (!maybeStuck) continue
     }
+    const note = join(dir, 'closing-note.md')
     const d = board.details(row.id)
     if (!d?.task) continue
+    if ((ready || lost) && !ownersResult({ note: readFile(note) ?? '', description: `${taskFile().description ?? ''}\n${d.task.description ?? ''}`, said: taskFile().said ?? '' })) continue
+    // Still the work the board reviewed, and not sent back since: else it is the agent's unfinished turn, and
+    // the board's finish would ship it half done. It stays with the agent (the board shows its error).
+    if (lost && !unchangedSinceReview(taskFile(), d.worktree || taskFile().worktree, { headOf, backAt: backAt(row.id) })) continue
     const base = {
       id: row.id,
       key: d.task.id || row.id,
       repo: String(row.id).split('/')[0],
       title: d.task.title || row.title || '',
-      msg: row.msg ?? '',
+      msg,
       description: d.task.description ?? '',
       reportLink: d.report?.link ?? '',
       planLink: d.plan?.link ?? '',
-      prUrl: d.pr?.url ?? '',
+      prUrl: prOf(d) || row.pr || '',
       worktree: d.worktree ?? '',
+      ...(boardSays ? { boardSays } : {}),
+      ...(specEnded ? { specEnded } : {}),
     }
     if (maybeStuck) {
       if (stuck(d)) items.push({ ...base, kind: 'stuck', brief: d.plan?.text ?? '', at: d.plan?.approvedAt })
+      continue
+    }
+    if (lost) {
+      const brief = readFile(note) ?? ''
+      items.push({ ...base, kind: 'result', lost: true, reviewToken: reviewToken(taskFile()), msg: '', boardSays: row.msg ?? '', prUrl: base.prUrl || taskFile().pr || '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
+      continue
+    }
+    if (ready) {
+      const brief = readFile(note) ?? ''
+      // The board's own words when the review failed or a check is red: shown, never hidden.
+      items.push({ ...base, kind: 'result', ready: true, reviewToken: reviewToken(taskFile()), msg: '', boardSays: row.msg ?? '', brief, briefFile: brief ? note : '', at: taskFile().since || mtime(note) || now })
       continue
     }
     if (planReady) {
@@ -268,36 +438,37 @@ export function collect({ board, data, readFile, mtime, now = Date.now() }) {
     }
     // A design stop counts only on a task flagged for a design review; a spec or a result stop always does.
     if (stopped === 'design' && !isDesign(base.description)) continue
-    const note = join(folder(data, row.id), 'closing-note.md')
     let brief = readFile(note)
     let at = mtime(note)
     let briefFile = brief ? note : ''
     if (!brief && d.report?.file) {
-      const file = join(folder(data, row.id), 'artifacts', 'report', d.report.file)
+      const file = join(dir, 'artifacts', 'report', d.report.file)
       brief = readFile(file)
       at = d.report.at || mtime(file)
       if (brief) briefFile = file
     }
     // The report is the newer word when the note was not rewritten (a send back, then Design ready again).
-    const reported = (() => {
-      try {
-        return JSON.parse(readFile(join(folder(data, row.id), 'task.json')) ?? '{}').at
-      } catch {
-        return null
-      }
-    })()
-    items.push({ ...base, kind: stopped, brief: brief || base.msg, briefFile, at: Math.max(at || 0, reported || 0) || now })
+    const reported = taskFile().at ?? null
+    items.push({ ...base, kind: stopped, byHand: stopped === 'result', brief: brief || base.msg, briefFile, at: Math.max(at || 0, reported || 0) || now })
   }
   for (const it of items) {
     it.links = allLinks(`${it.brief}\n${it.msg}`)
-    // The PR the board knows for the task, when the brief does not link it.
+    // The PR the board knows for the task: the board opens it after the agent ends, so the pitch cannot link it.
     if (it.prUrl && !it.links.some((l) => l.url === it.prUrl)) it.links.push({ url: it.prUrl, type: 'pr', label: 'Pull request' })
-    it.line = ['spec', 'result', 'design'].includes(it.kind) ? oneLine(it.msg, it.title) : it.title
+    it.line = ['spec', 'design'].includes(it.kind) || (it.kind === 'result' && it.msg) ? oneLine(it.msg, it.title) : it.kind === 'result' ? pitchLine(it.brief, it.title) : it.title
     it.product = productOf([it.brief, it.description], it.repo)
     const change = changeOf(it.brief)
-    it.change = change ? (it.worktree ? join(it.worktree, 'openspec', 'changes', change) : `openspec/changes/${change}`) : ''
+    const open = change && it.worktree ? join(it.worktree, 'openspec', 'changes', change) : ''
+    // Archived (spec-review.md §5): the folder moved to changes/archive/<date>-<name>; point there.
+    const archive = open ? join(it.worktree, 'openspec', 'changes', 'archive') : ''
+    const archived = open && !exists(open) ? list(archive).filter((n) => n === change || n.endsWith(`-${change}`)).sort().pop() : ''
+    it.change = change ? (archived ? join(archive, archived) : open || `openspec/changes/${change}`) : ''
     // What the brief or the pitch still lacks (review-check.mjs), shown on the detail.
-    it.findings = it.kind === 'spec' || it.kind === 'result' ? check(it.kind, it.brief) : []
+    it.findings = it.kind === 'spec' || it.kind === 'result' ? check(it.kind, it.brief, { unarchived: it.kind === 'result' && Boolean(open) && exists(open) }) : []
+    if (it.kind === 'result' && !it.links.some((l) => l.type === 'pr'))
+      it.findings.push({ level: 'error', what: 'no pull request yet: the board opens it once the agent ends its turn' })
+    // rules/result-review.md §2: nothing reports "Result ready" by hand; the board brings the result once its PR is open.
+    if (it.byHand) it.findings.push({ level: 'error', what: 'stopped by hand with "Result ready": send it back so it ends its turn normally and the board opens the PR' })
     // The brief and the report together: a new "Design ready" with the same note is a new round.
     it.hash = briefHash(`${it.brief}\n${it.msg}`)
   }
@@ -331,17 +502,34 @@ export const backWords = (text) =>
 
 /** What the agent hears on a spec approve and send back (rules/spec-review.md §4). */
 export const specApprovedWords = (notes = '') =>
-  `Spec approved. Build it now, in this conversation, from the OpenSpec change and its tasks.md (tick each task as it is done). When the PR is open, stop with the result pitch (rules/result-review.md) and a report whose message starts "Result ready for review".${notes.trim() ? `\n\nNotes from the review (guidance, not a send back):\n\n${notes.trim()}` : ''}`
+  `Spec approved. Build it now, in this conversation, from the OpenSpec change and its tasks.md (tick each task as it is done). When it is built: record the video and screenshots, write the result pitch in your closing note (rules/result-review.md), archive the change (node vendor/agent-kit/bin/agent-kit.mjs spec archive <name>) and commit it, run agent-kit review check on the pitch, then end your turn normally. Do not report "Result ready": the board opens the PR, reviews it and brings the result to the owner.${notes.trim() ? `\n\nNotes from the review (guidance, not a send back):\n\n${notes.trim()}` : ''}`
 export const specBackWords = (text) =>
   `Spec sent back. The owner reviewed it and wrote:\n\n${text.trim()}\n\nRevise the same OpenSpec change (and the same artifact URLs where you can), write the brief again, run the checks, then stop again with a report whose message starts "Spec ready for review". Change no code yet.`
 
-/** What the agent hears on a result approve and send back (rules/result-review.md §5). */
-export const resultApprovedWords = (notes = '') =>
-  `Result approved. Ship it: merge once CI is green under the repo's own merge rules (a CODEOWNERS path or a new runtime dependency still waits for the owner's approval on GitHub), then post the distribution drafts from the pitch on the product's brand accounts, never as the owner. Once it has landed on main, archive its OpenSpec change if it has one (openspec archive <name> --yes on a new branch from main, one commit, a chore PR). Report the merged PR, the post links and the archive PR when done.${notes.trim() ? `\n\nNotes from the review (guidance, not a send back):\n\n${notes.trim()}` : ''}`
+/** What the agent hears on a result send back (rules/result-review.md §5). An approve is the board's merge, no message. */
 export const resultBackWords = (text) =>
-  `Result sent back. The owner reviewed the pitch and wrote:\n\n${text.trim()}\n\nChange the work on the same branch and PR, record the video and screenshots again where the change shows, write the pitch again, then stop again with a report whose message starts "Result ready for review". Do not merge or post anything.`
+  `Result sent back. The owner reviewed the pitch and wrote:\n\n${text.trim()}\n\nChange the work on the same branch. If the change to make touches its OpenSpec change, undo the archive commit first (git revert <its sha>), revise the change, tick its tasks and archive it again. Record the video and screenshots again where the change shows, write the pitch again, run agent-kit review check on it, then end your turn normally: the board updates the PR, reviews it and brings it back. Do not report "Result ready", merge or post anything.`
 
-const APPROVED = { design: approvedWords, spec: specApprovedWords, result: resultApprovedWords }
+/**
+ * The task that posts a result's distribution drafts once its PR is merged (rules/result-review.md §4): added on the
+ * owner's approve, `--after` the result, research only (it changes nothing in the repo). Null when there is nothing
+ * to post (no Distribution section, or "Not live yet").
+ */
+export function postTask(it, notes = '') {
+  const dist = section(it.brief ?? '', 'Distribution') ?? ''
+  if (!dist.trim() || /\bnot live\b|\bno post\b/i.test(dist)) return null
+  const title = cut(`post: ${it.line || it.title}`.replace(/\s+/g, ' '), 60)
+  const desc = [
+    `Post the distribution drafts of ${it.key} (${it.product || it.repo}) on the product's brand accounts, as approved by the owner in the review list. Never as the owner: his own accounts are his to post.`,
+    `Start only once ${it.key} is merged${it.prUrl ? ` (${it.prUrl})` : ''}, and once the change is live where the post sends people. Change nothing in the repo. Report each post's link.`,
+    `## Distribution (from the pitch)\n\n${dist}`,
+    notes.trim() ? `## Notes from the review\n\n${notes.trim()}` : '',
+    `Product: ${it.product || it.repo}`,
+  ].filter(Boolean)
+  return { title, description: desc.join('\n\n') }
+}
+
+const APPROVED = { design: approvedWords, spec: specApprovedWords }
 const BACK = { design: backWords, spec: specBackWords, result: resultBackWords }
 
 /** Send the work back with the owner's words. The board turns a plan-ready task back to its plan step itself. */
@@ -366,11 +554,12 @@ export function sendBack(board, item, text) {
  * io: { board, sleep(ms) → Promise, now() → ms, log(line), timeoutMs, pollMs }
  */
 export async function approve(item, { board, sleep, now = Date.now, log = () => {}, notes = '', timeoutMs = 4 * MINUTE, pollMs = 3000 }) {
+  if (item.kind === 'result') return approveResult(item, { board, log, notes })
   if (APPROVED[item.kind]) {
     const r = board.tell(item.id, APPROVED[item.kind](notes))
     if (!r.ok) return { ok: false, error: r.error }
-    log(item.kind === 'result' ? 'approved: told the agent to ship' : 'approved: told the agent to build')
-    return { ok: true, how: item.kind === 'result' ? 'shipping' : 'told' }
+    log('approved: told the agent to build')
+    return { ok: true, how: 'told' }
   }
   if (item.kind === 'pr') return { ok: false, error: 'a PR is approved on GitHub, not here' }
   let repaired = false
@@ -409,6 +598,37 @@ export async function approve(item, { board, sleep, now = Date.now, log = () => 
     }
   }
   return { ok: false, error: 'the build did not start in time: look at the task on the board' }
+}
+
+/**
+ * A result's approve is the board's own yes on its ready-to-approve: the board merges the PR under its rules
+ * (the reviewed head, its checks). Nothing is told to the agent, so the PR head does not move. Before: a PR that
+ * still waits for the owner's approval on GitHub (a CODEOWNERS path, a new runtime dependency) is approved there
+ * first, or the board's merge would fail. After: the drafts go out as a task of their own, after the merge.
+ */
+export function approveResult(item, { board, log = () => {}, notes = '' }) {
+  // Marked an error after it was ready (an idle compaction): the board's finish takes the work as it is, runs
+  // its finish line again and brings it back as ready to approve. Nothing merges until the owner's next yes.
+  if (item.lost) {
+    const f = board.finish(item.id)
+    if (!f.ok) return { ok: false, error: f.error }
+    log('back on the board: it returns as ready to approve, then approve it')
+    return { ok: true, how: 'finishing' }
+  }
+  if (!item.ready) return { ok: false, error: 'the board has not brought it as ready to approve yet (its PR, check or review is not done): send it back so it ends its turn' }
+  if (item.github) return { ok: false, error: `approve its PR on GitHub first (${item.github}), then here` }
+  const r = board.approve(item.id)
+  if (!r.ok) return { ok: false, error: r.error }
+  log('approved: the board merges it')
+  const post = postTask(item, notes)
+  if (!post) return { ok: true, how: 'merging' }
+  const a = board.add(post.title, ['--desc', post.description, '--repo', item.repo, '--after', item.id, '--research', '--delegate'])
+  if (!a.ok) {
+    log(`the post task was not added: ${a.error}`)
+    return { ok: true, how: 'merging', warn: `post the drafts by hand: ${a.error}` }
+  }
+  log('the drafts go out after the merge (a task of their own)')
+  return { ok: true, how: 'merging', posts: true }
 }
 
 /**
@@ -518,7 +738,7 @@ export function linkName(link) {
 }
 
 /** What approve does, by kind, for the footer and the question before it. */
-const APPROVES = { spec: 'approve + build', design: 'approve + build', plan: 'approve + build', result: 'approve + ship' }
+const APPROVES = { spec: 'approve + build', design: 'approve + build', plan: 'approve + build', result: 'approve + merge' }
 
 /** The CI state of a PR, in a word. */
 const CI = { passing: 'CI green', failing: 'CI failing', pending: 'CI running', none: 'no CI' }
@@ -593,7 +813,7 @@ export function render(state, cols, rows) {
   const foot = [sep]
   const cur = items[sel]
   if (mode === 'confirm')
-    foot.push({ t: cut(cur?.kind === 'result' ? ` Approve ${cur?.key} and ship it (merge, then post the drafts)? y / n` : ` Approve ${cur?.key} and start the build? y / n`, W), s: 'warn' })
+    foot.push({ t: cut(cur?.kind === 'result' && cur?.lost ? ` Put ${cur?.key} back on the board's finish line (it returns as ready to approve)? y / n` : cur?.kind === 'result' ? ` Approve ${cur?.key}: the board merges it, then the drafts post? y / n` : ` Approve ${cur?.key} and start the build? y / n`, W), s: 'warn' })
   else if (mode === 'input') {
     foot.push({ t: cut(' Send back (Enter sends, Esc cancels):', W), s: 'warn' })
     for (const l of wrap(`> ${state.input ?? ''}▏`, W)) foot.push({ t: l, s: '' })
@@ -661,7 +881,11 @@ function detailBlocks(it, state, W, now) {
     const shown = errors.slice(0, 3).map((f) => f.what).join('; ')
     for (const l of wrap(`Not complete: ${shown}${errors.length > 3 ? `; and ${errors.length - 3} more` : ''}. Send it back or ask the agent.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   }
-  if (it.github) for (const l of wrap(`Its PR also waits for your approval on GitHub (${it.github}): approve the result here, the PR there.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  if (it.github) for (const l of wrap(`Its PR also waits for your approval on GitHub (${it.github}): approve the PR there first, then the result here (the board merges it).`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  if (it.ready) for (const l of wrap(`Ready to approve on the board${it.boardSays ? `: ${it.boardSays}` : ''}`, W - 1)) head.push({ t: ` ${l}`, s: 'dim' })
+  else if (it.lost) for (const l of wrap(`The board marked it an error after it was ready to approve (${it.boardSays || 'no message'}). a puts it back on the board's finish line (herdr-projects finish): it returns as ready to approve, and nothing merges before your next a.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  else if (it.specEnded) for (const l of wrap(`Its agent ended its turn instead of stopping, so the board opened a PR for the spec alone. a tells it to build (nothing merges), b sends the spec back.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
+  else if (it.boardSays) for (const l of wrap(`The board marked it an error (${it.boardSays}), but its last report stands: approve or send back as usual.`, W - 1)) head.push({ t: ` ${l}`, s: 'warn' })
   blocks.push(head)
   const links = it.links ?? []
   if (links.length) {
@@ -755,7 +979,7 @@ function helpBlocks(W) {
     ['J K PgDn PgUp space', 'scroll the details'],
     ['GitHub rows', '⏎, 1 or o open the pull request in the browser, y then 1 copies its URL. Nothing approves from here: approval stays on GitHub'],
     ['⏎ or p', 'open the brief or the pitch for review in Plannotator, in a new tab of the CEO workspace: A approves, E sends the comments back'],
-    ['a', 'approve (asks first): a spec or a design starts the build, a result ships (merge, then the drafts go out on the brand accounts)'],
+    ['a', 'approve (asks first): a spec or a design starts the build; a result is the board\'s approve, which merges it, and its drafts go out on the brand accounts after the merge'],
     ['b', 'send back with a one-line comment, to the same agent'],
     ['1-9 / o', 'open one link (artifact, video, screenshot, PR) / all of them in the browser'],
     ['y then 1-9', 'copy a link, whole'],

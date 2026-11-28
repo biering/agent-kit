@@ -11,6 +11,8 @@ agent in the repo.
 | `agent-kit herdr ceo` / `new <slug>` / `worker <slug> --brief f` / `list` / `sync` / `cleanup` | The CEO and every topic session as herdr panes, each in its own worktree, cleaned up when finished, and closed when their checkout is gone; the plugin re-syncs PR, CI and issue on every agent status change, at most once a minute |
 | `agent-kit herdr open-link <url>` | A ctrl+click on this repo's PR or Linear issue link in herdr: the session working on it, else the browser (the plugin's link handlers) |
 | `agent-kit review` / `review pane` / `prs` / `check <file>` / `approve <id>` / `back <id> <text>` / `annotate <id>` | Everything that waits for the owner, across repos, newest first: the herdr **review list** pane (`prefix+y`, below the work board) with specs to approve before the build, designs, results to ship (approve or send back with a key) and PRs to approve on GitHub (Review list below) |
+| `agent-kit plan-review <plan.md \| openspec/changes/<name>> [--detach <prefix>]` / `--install` / `--status` | A plan or a whole OpenSpec change to the owner in Plannotator, on his phone or laptop over his tailnet; the decision comes back as an exit code and JSON (Plan review below) |
+| `agent-kit spec archive <name>` | Archive a shipped OpenSpec change, never one whose `tasks.md` still has an unticked task |
 | `agent-kit herdr install-cursor-hooks` | Cursor chats report their state for the control panel |
 | `agent-kit ceo-schedule install` / `status` / `run` | The CEO's daily run (launchd), in its own checkout on `origin/main` |
 | `agent-kit stats [--json]` | Daily numbers: Claude Code tokens and lines, Cursor's AI lines, commits on `main` |
@@ -259,7 +261,7 @@ CLI only) that lists everything waiting for him, across repos, newest first.
 2. **The result, before the merge** ([`rules/result-review.md`](rules/result-review.md), the
    `result-pitch` and `distribution-reuse` skills): specced work and every PR a user would notice comes
    with a pitch, a video and desktop and phone screenshots of the real app, and the drafts for the
-   product's brand accounts. His approve ships it and posts the drafts as the brand.
+   product's brand accounts. His approve is the board's merge; the drafts post as the brand after it.
 
 Screen work without a spec still gets its design approved first ([`rules/design-review.md`](rules/design-review.md)),
 and PRs that need his approval on GitHub (a CODEOWNERS path, a new runtime dependency) show in the same
@@ -287,7 +289,7 @@ list, to open, not to approve.
   Brief file (⏎ opens it in Plannotator)
  ~/.herdr-projects/data/tasks/maelstrom/590/closing-note.md
  ──────────────────────────────────────────────────────────────
-  ⏎/p review in Plannotator  a approve + ship  b send back
+  ⏎/p review in Plannotator  a approve + merge  b send back
   1-9 open link  o open all  y1-9 copy link  s skip  S skipped
 ```
 
@@ -299,7 +301,7 @@ else the title). Kinds:
 |---|---|---|---|
 | `spec` | `Spec ready for review: …` | the closing note: why, user benefit, scenarios, design links, tasks, complexity | one `tell`: build it now, in the same conversation |
 | `design` | `Design ready: …`, on a task with `Design review: yes` | the closing note with the artifacts | one `tell`: build it now |
-| `result` | `Result ready for review: …` | the closing note: the pitch, its video, screenshots, PR and drafts | one `tell`: merge under the repo's rules, post the drafts on the brand accounts, archive the change once it lands |
+| `result` | (the board's **ready to approve**, for work the owner reviews: a `# Result` pitch in the closing note, or a task flagged for a spec or design review) | the closing note: the pitch, its video, screenshots and drafts; the PR link comes from the board | the board's `approve`, which merges the reviewed head; then a task, `--after` it, posts the drafts on the brand accounts |
 | `plan` | the board's plan step (`plan.approve you`) with a design brief | the plan | the board's `approve`, then a check that the build starts |
 | `stuck` | (an approved plan whose build never started) | the plan | `f` repairs: `stop`, then `delegate` |
 | `GitHub` | (an open PR whose merge waits for his GitHub approval) | the PR | nothing here: `⏎` opens it to approve on GitHub |
@@ -323,16 +325,39 @@ narrower than the URL, and a terminal hyperlink either way. The pane refreshes w
 task (it watches the board's `tasks/` folder) and every 30 s.
 
 **Approve, in detail.**
-- A spec, a design or a result gets one `tell` (the words are in `src/lib/review.mjs`), and the agent goes
-  on in the same conversation with its usual access.
+- A spec or a design gets one `tell` (the words are in `src/lib/review.mjs`), and the agent goes on in
+  the same conversation with its usual access.
+- A result gets the board's `approve`: the board merges the head its reviewer saw, and nothing is told
+  to the agent, so the PR head does not move after the yes. A result whose PR also waits on GitHub is
+  refused until it is approved there. When the pitch has drafts, a research task `--after` the result
+  posts them once the merge is done.
 - A plan gets the board's `approve`. The pane then sends nothing until the build has started (the
   task's `plan.built`), because a message in that window cancels the build and leaves the agent in
   Claude's plan mode on a read-only worktree. If the build still does not start, it repairs: `stop`, then
   `delegate --now --plan.approve none`, which builds the approved plan with normal access.
 - An approve runs on its own, so closing the pane does not cut it off. Its progress shows on the row.
 - **Send back** is a `tell` with the owner's words and what to do next: revise and stop again at the same
-  report (`Spec ready for review`, `Design ready`, `Result ready for review`); a plan goes back to its plan
-  step.
+  report (`Spec ready for review`, `Design ready`); a result is changed on the same branch and the turn
+  ends normally, so the board updates the PR and brings it back as ready to approve; a plan goes back to
+  its plan step.
+
+**The order of stops is the board's.** An agent never reports `Result ready`: it writes the pitch,
+archives its change and ends its turn. The board checks, pushes, opens the PR, runs its reviewer and
+shows "ready to approve"; the list builds the result row from that. Every other ready-to-approve task (a
+fix, an SEO page, content, a chore) stays the CEO's, and the CEO's merge gate blocks his
+`herdr-projects approve` or `agent-kit review approve` of a result (`agent-kit review owner <id>`: exit 0
+when it is the owner's). A spec stage that ended its turn instead of stopping is shown as a spec row: `a`
+tells it to build, nothing merges.
+
+**False errors.** When a spec or design stop is followed by an idle compaction, the board reads the
+compaction as a turn without a summary and marks the task an error ("Conversation compacted"). The row
+stays: the list reads the agent's last real report from the task's own file and shows the board's word
+beside it. A result that was already ready to approve has no such report (its agent ended normally), so
+it is kept from the board's own review in that file (its reviewed head and PR); there `a` runs the
+board's `finish`, which brings it back as ready to approve, and the next `a` merges it. That holds only
+while its worktree is still at the reviewed commit, clean, and the list has not sent it back since that
+review; otherwise it is the agent's unfinished turn and is not listed. The fix belongs in the board (herdr-projects): its worker settings file could turn
+`idleCompaction` off, or its turn-end could skip a compaction.
 
 **Notifications.** A herdr notification arrives when a spec, a design, a plan or a result becomes ready,
 even with the pane closed: the plugin's `pane.agent_status_changed` hook, at most one board read every 20
@@ -452,6 +477,84 @@ herdr notification for PRs (that would be a GitHub call on every agent status ch
 repo's other packages (the repo's own check does). A rename is judged by its new path. `gh` must be
 logged in on the machine that runs the pane.
 
+## Plan review
+
+A plan or an OpenSpec change that needs the owner's yes goes to him in [Plannotator](https://plannotator.ai),
+not only as text in the chat. He reads it in the browser, marks passages, comments, and presses
+**Approve** or **Send Feedback**; the decision comes back to the agent. The review list (above) shows
+board tasks in the terminal; `agent-kit plan-review` is for everything else: a chat, a ticket, a Claude
+Code remote-control session, a repo script such as a schema review.
+
+```bash
+r=/tmp/plan-review-<name>   # any path prefix: the review's files go next to it
+node vendor/agent-kit/bin/agent-kit.mjs plan-review openspec/changes/<name> --detach "$r"
+```
+
+- **What it reviews.** A Markdown file (its frontmatter `name:` is the tab's title), or an OpenSpec change
+  folder: `proposal.md`, each `specs/**/spec.md`, `design.md` and `tasks.md`, in that order, each under
+  a heading of its own with its headings one level down, as one document titled with the change id. A
+  change whose `proposal.md` does not open with the `value-score` lines is refused (exit 2).
+- **What it does.** Installs the pinned Plannotator when it is missing, opens a gated review on the
+  tailnet, prints its address (`https://<machine>.<tailnet>.ts.net:<port>`) and waits for the decision,
+  which can take hours. Tell the owner the address.
+- **`--detach <prefix>`** runs the review in a session and process group of its own (setsid), so it
+  outlives the agent's turn and Claude Code's 2-hour background limit (`nohup … &` does not: it dies
+  with the agent's process group). It returns once the page is up and prints `review: <address>`. It
+  waits at most 90 s, so give the Bash call a timeout above that. Exit 4: no address in time, the review
+  still runs; read `$r.err`. A second run on a prefix whose review still runs refuses with exit 2.
+  The decision JSON goes to `$r.out`, stderr to `$r.err`, the pid to `$r.pid`, the exit code to
+  `$r.exit` when it ends. Wait on the pid in a background command
+  (`while kill -0 "$(cat "$r.pid")" 2>/dev/null; do sleep 60; done`), then read `$r.exit`.
+- **Sessions that reap detached processes.** In a Claude Code remote-control session (the bridge, its
+  worktree is `.claude/worktrees/bridge-*`) a `--detach` review was killed within minutes, twice, on
+  2026-11-27. There, run the same command **without `--detach`** as a tracked background task (Bash
+  `run_in_background`, `timeout: 7200000`); that survived. The task's notification carries the exit
+  code and the decision JSON. A task that hits its time limit ends the review: open it again. No
+  `$r.exit` once the pid is gone means the same thing anywhere, and the next `--detach` run on that
+  prefix says so.
+- **To cancel** a detached review, kill its whole process group: `kill -- -"$(cat "$r.pid")"`. Killing
+  only the pid stops the shell that records the exit code and leaves the page open. `tailscale serve
+  status` shows a port a killed run left published; `tailscale serve --https=<port> off` removes it.
+
+| Exit | Meaning | Next |
+|---|---|---|
+| 0 | Approved | Go on; notes on an approval are guidance, not change requests |
+| 1 | Feedback | Revise from the feedback in the decision JSON (stdout, `$r.out`), then open it again |
+| 2 | The review could not start, or left no decision | Read stderr (`$r.err`); often the tailnet (`plan-review --status`) |
+| 3 | Dismissed: the tab was closed, or the phone sat in the background for 30 s | Open it again; there is nothing to revise |
+
+**Why the tailnet.** Plannotator listens on `127.0.0.1` of the agent's machine; the owner reviews from
+his phone or laptop. `--tailscale` publishes the session with `tailscale serve` over HTTPS to tailnet
+devices only, so nothing is public. Rejected: Cloudflare Access (a tunnel, DNS and an Access app for one
+reviewer) and `PLANNOTATOR_REMOTE=1` (plain HTTP with no sign-in; Plannotator's docs say never to
+expose it).
+
+**Setup, once per machine.**
+1. The Tailscale app (Mac App Store, or `brew install --cask tailscale-app`; not the `tailscale` formula,
+   whose daemon needs root), signed in to the owner's tailnet, with HTTPS certificates on for the
+   tailnet (admin console, DNS).
+2. `agent-kit plan-review --install`: installs the pinned Plannotator, sets `"tailscale": true` in
+   `~/.plannotator/config.json` (so Claude Code's plan-mode plugin publishes over the tailnet too), and
+   pins the plugin's marketplace in `~/.claude/settings.json` to the release tag when the plugin is
+   there (it never adds it).
+3. `agent-kit plan-review --status` says the pinned version and `on the tailnet, HTTPS serve available`.
+   Anything else names the missing step. `--status` installs nothing.
+
+**Pinned release.** `PLANNOTATOR_VERSION` in [`src/lib/plan-review.mjs`](src/lib/plan-review.mjs) is
+the release every machine installs. The installer comes from that release's tag on GitHub, is downloaded
+to its own folder and runs only when its sha256 matches `INSTALLER_SHA256`, with `--verify-attestation`
+(the binary's build provenance, checked with `gh attestation verify`), wiring Claude Code only. Bump
+the version and the hash together, after reading the release notes and the new installer.
+
+**Privacy.** Plans stay on the machine: Plannotator has no telemetry and keeps its data in
+`~/.plannotator`. The page leaves the machine only over the tailnet. Reviews start with
+`PLANNOTATOR_SHARE=disabled`; do not use its share links or Ask AI, both send the content to a third
+party.
+
+**From a repo script.** `vendor/agent-kit/src/lib/plan-review.mjs` exports `install`, `gatedReview`,
+`detach` and `withoutDetach`, so a repo's own review (a schema review that stamps its migrations) uses
+the same pin, tailnet and detach without a copy.
+
 ## Rules
 
 Rules that apply to every app of a kind, vendored with the kit. Read the one that
@@ -459,8 +562,9 @@ matches the work.
 
 - [`rules/mobile-apps.md`](rules/mobile-apps.md): analytics consent (not ATT),
   the review prompt, onboarding.
-- [`rules/spec-review.md`](rules/spec-review.md): a feature or a bigger improvement gets an OpenSpec
-  change and one brief the owner approves before any code (which work, the stage, the brief, the archive).
+- [`rules/spec-review.md`](rules/spec-review.md): a feature, a bigger improvement or a bigger bugfix
+  gets an OpenSpec change the owner approves before any code, unasked (which work, the stage, the brief,
+  the archive, the OpenSpec pin).
 - [`rules/result-review.md`](rules/result-review.md): specced work and every PR a user would notice
   gets a result pitch, a video and screenshots before it merges; his approve also covers the brand posts.
 - [`rules/design-review.md`](rules/design-review.md): work that changes screens gets a design

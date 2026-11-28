@@ -21,6 +21,39 @@ export const SECTIONS = {
  */
 export const NO_SCREENS = /^[ \t]*[-*]?[ \t]*(?:no (?:screens?|ui|visible|user-visible) changes?|nothing (?:a user sees|visible) changes)[ \t]*[.!]?[ \t]*$/im
 
+/**
+ * What the app is, from a `Platform: <kind>` line in the pitch (rules/result-review.md §2, "Native apps"), and
+ * the screenshots each kind needs. Default web.
+ *   web      a Playwright recording of the branch; screenshots at desktop and phone width
+ *   ios      an Expo, React Native or Swift app: the simulator (xcrun simctl io <udid> recordVideo); phone screenshots
+ *   desktop  a Tauri or Electron app: its frontend in the browser (IPC mocked); desktop screenshots, and a still
+ *            of the real window ("window") or the line "No window still: <why>"
+ *   menubar  a menu bar app: the video skill's product-ui recorder of its real components; the same stills as desktop
+ */
+export const PLATFORMS = {
+  web: ['desktop', 'phone'],
+  ios: ['phone'],
+  desktop: ['desktop', 'window'],
+  menubar: ['desktop', 'window'],
+}
+const SHOT = {
+  desktop: [/desktop|1440|wide/i, 'no desktop screenshot (label it "desktop")'],
+  phone: [/phone|mobile|390|iphone/i, 'no phone screenshot (label it "phone")'],
+  window: [/window/i, 'no still of the real window (label it "window"), or the line "No window still: <why>" under See it'],
+}
+const ALIASES = { expo: 'ios', 'react-native': 'ios', iphone: 'ios', tauri: 'desktop', electron: 'desktop', mac: 'desktop', macos: 'desktop', 'menu-bar': 'menubar', tray: 'menubar' }
+
+/** The platform a pitch names (`Platform: tauri` → desktop), or web. An unknown name is returned as it is. */
+export function platformOf(text = '') {
+  const m = /^\s*[-*]?\s*\**platform\**\s*:\s*\**\s*([a-z][a-z-]*)/im.exec(String(text))
+  if (!m) return 'web'
+  const k = m[1].toLowerCase()
+  return ALIASES[k] ?? k
+}
+
+/** "No window still: <why>" on a line of its own: the session could not capture the real window. */
+export const NO_WINDOW = /^[ \t]*[-*]?[ \t]*no window still[ \t]*:[ \t]*\S.*$/im
+
 /** The body of a `## name` section, up to the next heading of the same or a higher level. */
 export function section(text, name) {
   const lines = String(text).split('\n')
@@ -40,7 +73,7 @@ export function section(text, name) {
  * error: the owner cannot decide from it (a missing section, a missing link, a placeholder).
  * warn: it reads worse than it should (an em dash, a long one line).
  */
-export function check(kind, text = '') {
+export function check(kind, text = '', { unarchived = false } = {}) {
   const t = String(text)
   const out = []
   const err = (what) => out.push({ level: 'error', what })
@@ -64,15 +97,21 @@ export function check(kind, text = '') {
     if (complexity && !/\b(?:worth|because|cut|instead|so that|keeps?)\b/i.test(complexity)) warn('Complexity says what it adds but not why it is worth it (or what was cut)')
   }
   if (kind === 'result') {
+    // No pull request link is needed: the board opens the PR after the agent ends, and the review list adds it.
     const see = section(t, 'See it') ?? ''
     const noScreens = NO_SCREENS.test(see)
-    if (!links.some((l) => l.type === 'pr')) err('no pull request link')
+    const platform = platformOf(t)
+    if (!PLATFORMS[platform]) err(`unknown Platform "${platform}" (web, ios, desktop or menubar)`)
     if (!noScreens) {
       if (!links.some((l) => l.type === 'video')) err('no video link (an .mp4 of the changed flow); with no screen change, put "No screen changes." on a line of its own under See it')
       const shots = links.filter((l) => l.type === 'image')
-      if (!shots.some((l) => /desktop|1440|wide/i.test(`${l.label} ${l.url}`))) err('no desktop screenshot (label it "desktop")')
-      if (!shots.some((l) => /phone|mobile|390/i.test(`${l.label} ${l.url}`))) err('no phone screenshot (label it "phone")')
+      for (const need of PLATFORMS[platform] ?? PLATFORMS.web) {
+        const [re, what] = SHOT[need]
+        if (need === 'window' && NO_WINDOW.test(see)) continue
+        if (!shots.some((l) => re.test(`${l.label} ${l.url}`))) err(what)
+      }
     }
+    if (unarchived) err('its OpenSpec change is not archived yet: run agent-kit spec archive <name> and commit it before you end the turn')
     const risk = section(t, 'Risk and undo') ?? ''
     if (risk && !/\b(?:revert|undo|roll ?back|flag|switch off|turn off|restore)\b/i.test(risk)) err('Risk and undo does not say how to undo it')
     const rec = section(t, 'Recommendation') ?? ''
